@@ -1,0 +1,137 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --color-cream: #FAF3ED;
+  --color-terracotta: #B8654F;
+  --color-terracotta-dark: #9C4F3B;
+  --color-ink: #2E2119;
+  --color-beige: #8C7A6E;
+
+  --color-background: var(--color-cream);
+  --color-foreground: var(--color-ink);
+  --color-card: #FFFFFF;
+  --color-card-foreground: var(--color-ink);
+  --color-primary: var(--color-terracotta);
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: #F5EDE6;
+  --color-secondary-foreground: var(--color-ink);
+  --color-muted: #F0E8DF;
+  --color-muted-foreground: var(--color-beige);
+  --color-accent: #F5EDE6;
+  --color-accent-foreground: var(--color-ink);
+  --color-destructive: #DC3545;
+  --color-destructive-foreground: #FFFFFF;
+  --color-border: #E8DDD3;
+  --color-input: #E8DDD3;
+  --color-ring: var(--color-terracotta);
+  --color-sidebar-background: var(--color-ink);
+  --color-sidebar-foreground: var(--color-cream);
+  --color-sidebar-primary: var(--color-terracotta);
+  --color-sidebar-primary-foreground: #FFFFFF;
+  --color-sidebar-accent: rgba(184, 101, 79, 0.2);
+  --color-sidebar-accent-foreground: var(--color-cream);
+  --color-sidebar-border: rgba(255, 255, 255, 0.1);
+  --color-sidebar-ring: var(--color-terracotta);
+  --radius: 0.625rem;
+
+  --status-processing: #F59E0B;
+  --status-confirmed: #3B82F6;
+  --status-shipped: #8B5CF6;
+  --status-delivered: #10B981;
+  --status-no-answer: #EF4444;
+  --status-cancelled: #6B7280;
+
+  --chart-1: var(--color-terracotta);
+  --chart-2: var(--color-terracotta-dark);
+  --chart-3: var(--color-beige);
+  --chart-4: #D4A574;
+  --chart-5: #C4956A;
+}
+
+.dark {
+  --color-background: #1A1210;
+  --color-foreground: #F5EDE6;
+  --color-card: #2A201B;
+  --color-card-foreground: #F5EDE6;
+  --color-primary: var(--color-terracotta);
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: #2A201B;
+  --color-secondary-foreground: #F5EDE6;
+  --color-muted: #2A201B;
+  --color-muted-foreground: #A09080;
+  --color-accent: #2A201B;
+  --color-accent-foreground: #F5EDE6;
+  --color-border: #3D302A;
+  --color-input: #3D302A;
+  --color-ring: var(--color-terracotta);
+  --color-sidebar-background: #1A1210;
+  --color-sidebar-foreground: #F5EDE6;
+  --color-sidebar-accent: rgba(184, 101, 79, 0.15);
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+}
+
+@theme inline {
+  --color-background: var(--color-background);
+  --color-foreground: var(--color-foreground);
+  --color-card: var(--color-card);
+  --color-card-foreground: var(--color-card-foreground);
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--color-primary-foreground);
+  --color-secondary: var(--color-secondary);
+  --color-secondary-foreground: var(--color-secondary-foreground);
+  --color-muted: var(--color-muted);
+  --color-muted-foreground: var(--color-muted-foreground);
+  --color-accent: var(--color-accent);
+  --color-accent-foreground: var(--color-accent-foreground);
+  --color-destructive: var(--color-destructive);
+  --color-destructive-foreground: var(--color-destructive-foreground);
+  --color-border: var(--color-border);
+  --color-input: var(--color-input);
+  --color-ring: var(--color-ring);
+  --color-sidebar-background: var(--color-sidebar-background);
+  --color-sidebar-foreground: var(--color-sidebar-foreground);
+  --color-sidebar-primary: var(--color-sidebar-primary);
+  --color-sidebar-primary-foreground: var(--color-sidebar-primary-foreground);
+  --color-sidebar-accent: var(--color-sidebar-accent);
+  --color-sidebar-accent-foreground: var(--color-sidebar-accent-foreground);
+  --color-sidebar-border: var(--color-sidebar-border);
+  --color-sidebar-ring: var(--color-sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: 'Tajawal', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+html[dir="rtl"] {
+  direction: rtl;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
