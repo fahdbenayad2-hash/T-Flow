@@ -1,126 +1,136 @@
-# T-Flow — إدارة الطلبات
+# T-Flow
 
-تطبيق إدارة الطلبات للمتجر الإلكتروني **T-Flow** — مبني بـ TanStack Start + Supabase.
+Arabic RTL order management system for e-commerce stores, built with TanStack Start, Supabase, and Google Apps Script.
 
-## المميزات
+## Features
 
-- **لوحة تحكم** — KPIs حية (طلبات اليوم، نسبة التأكيد، نسبة التسليم، معلقة +48 ساعة)
-- **جدول الطلبات** — فلاتر (حالة، ولاية، منتج، وكيل) + بحث + تعديل عبر Drawer + تصدير Excel/CSV
-- **_bulk actions** — تحديث جماعي مع progress indicator
-- **كشف التكرار** — طلبات مكررة (هاتف مكرر < 7 أيام)
-- **العملاء** — تجميع تلقائي بالهاتف + إحصائيات + blacklist
-- **مركز المكالمات** — طابور الوكيل + بطاقات مكالمات (ردّ/ما ردّش/مؤجّل) + تذكيرات
-- **الإشعارات** — طلب معلق +48 ساعة، مكالمة مؤجلة، طلب مكرر
-- **RTL عربي كامل** + **Dark mode** + **Mobile responsive**
+- **Dashboard** — KPIs, status distribution, recent orders
+- **Orders** — Search, filter, sort, bulk status update, duplicate detection, Excel/CSV export
+- **Customers** — Auto-aggregation by phone, stats (orders, revenue, cancellations, no-answer)
+- **Call Center** — Agent queue, call cards with outcomes, daily stats
+- **Products** — Product-level analytics, revenue breakdown, color/size tracking
+- **Earnings** — Financial metrics by product, wilaya, and date
+- **Delivery** — Home delivery vs stop desk, per-wilaya analysis
+- **Reports** — Performance metrics, top customers, full Excel export
+- **Settings** — Apps Script config, connection test, cache management
+- **Notifications** — Real-time via Supabase Realtime, pending +48h alerts, duplicate detection
+- **Dark mode** — Toggle with OKLCH color tokens
+- **Mobile** — Bottom nav, responsive layout
+- **RTL** — Full Arabic right-to-left layout
 
-## التقنيات
+## Tech Stack
 
-| الطبقة | التقنية |
-|--------|---------|
-| Framework | TanStack Start (Vite + SSR) |
-| Routing | TanStack Router (file-based) |
-| UI | React 19 + shadcn/ui + Tailwind CSS v4 |
-| State | TanStack Query (react-query) |
-| Auth + DB | Supabase (Auth + PostgreSQL + RLS) |
-| Server | TanStack Server Functions (`createServerFn`) |
-| بيانات الطلبات | Google Apps Script → Google Sheets |
+| Layer | Technology |
+|-------|-----------|
+| Framework | TanStack Start (React 19, Vite 7) |
+| Styling | Tailwind CSS v4, OKLCH tokens |
+| State | TanStack Query, react-hot-toast |
+| Auth | Supabase Auth (client-side) |
+| Database | Supabase (PostgreSQL + RLS) |
+| Proxy | Google Apps Script → Google Sheets |
+| Animations | Framer Motion |
+| Export | SheetJS (xlsx) |
+| Fonts | Tajawal (Arabic), JetBrains Mono (numbers) |
 
-## التشغيل المحلي
-
-### 1. تثبيت الاعتماديات
+## Getting Started
 
 ```bash
-git clone https://github.com/fahdbenayad2-hash/T-Flow.git
-cd T-Flow
 npm install
 ```
 
-### 2. تكوين متغيرات البيئة
-
-```bash
-cp .env.example .env
-```
-
-املأ `.env`:
+Create `.env`:
 
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 APP_SUPABASE_URL=https://your-project.supabase.co
-APP_SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-APPS_SCRIPT_URL=https://script.google.com/macros/s/.../exec
-DEFAULT_ADMIN_EMAIL=fahdbenayad2@gmail.com
+APP_SUPABASE_ANON_KEY=your-anon-key
+VITE_APP_SCRIPT_URL=https://script.google.com/macros/s/.../exec
 ```
 
-### 3. إعداد قاعدة البيانات
-
-1. افتح Supabase Dashboard → **SQL Editor**
-2. انسخ محتوى `db/migrations/001_init.sql` والصقو
-3. اضغط **Run**
-
-### 4. إنشاء حساب المدير
-
-1. Supabase Dashboard → **Authentication** → **Users** → **Add user**
-2. حط الإيميل المحدد في `DEFAULT_ADMIN_EMAIL`
-3. اضغط **Create user**
-
-### 5. تشغيل التطبيق
+Run the dev server:
 
 ```bash
 npm run dev
 ```
 
-التطبيق يفتح على `http://localhost:3000`
+Open `http://localhost:3000`.
 
-## هيكل المشروع
+## Database Setup
+
+Run `db/migrations/001_init.sql` in the Supabase SQL Editor. This creates:
+
+- `audit_log` — tracks all order changes
+- `user_roles` — role-based access (admin, manager, agent)
+- `profiles` — user metadata
+- `notifications` — notification queue
+- `settings` — key-value config store
+- `blacklisted_phones` — blocked phone numbers
+
+Includes `has_role()` security definer function and `handle_new_user()` trigger that auto-assigns admin to the first user.
+
+## Authentication
+
+- First user with a configured Supabase email is auto-assigned `admin` role
+- Login via `signInWithPassword` (client-side Supabase)
+- Server reads session from cookies
+- Demo mode activates when Supabase env vars are placeholders
+
+## Project Structure
 
 ```
 src/
-  routes/
-    __root.tsx                     — RTL shell + خطوط + providers
-    index.tsx                      — Redirect إلى /auth أو /dashboard
-    auth.tsx                       — صفحة تسجيل الدخول
-    _authenticated/
-      route.tsx                    — Auth gate + Sidebar + Header
-      dashboard.tsx                — KPIs + تنبيهات + نشاط
-      orders.tsx                   — جدول الطلبات
-      orders.$row.tsx              — تفاصيل + تعديل + سجل تدقيق
-      customers.tsx                — عملاء + إحصائيات
-      customers.$phone.tsx         — ملف العميل
-      call-center.tsx              — طابور الوكيل
-  server/
-    auth.ts                        — Server functions للـ Auth
-    orders.ts                      — Proxy للـ Apps Script + cache + audit
-  components/                      — UI components (shadcn/ui)
-  hooks/                           — useRole, useNotifications
-  lib/                             — types, utils, queries
-  styles/app.css                   — Design system (OKLCH + dark mode)
-db/
-  migrations/001_init.sql          — Supabase migration كاملة
+  components/       # Shared UI components
+    ui/             # shadcn/ui primitives
+    sidebar.tsx     # Desktop navigation
+    bottom-nav.tsx  # Mobile navigation
+    header.tsx      # Top bar with notifications
+    empty-state.tsx # Reusable empty/error states
+    page-transition.tsx # Framer Motion wrappers
+  hooks/            # Custom React hooks
+  lib/              # Queries, types, utilities
+  routes/           # TanStack Router file-based routes
+    auth.tsx        # Login page
+    _authenticated/ # Protected layout + pages
+      dashboard.tsx
+      orders.tsx
+      orders.$row.tsx
+      customers.tsx
+      customers.$phone.tsx
+      call-center.tsx
+      products.tsx
+      earnings.tsx
+      delivery.tsx
+      reports.tsx
+      settings.tsx
+  server/           # Server functions (proxy, auth)
+  styles/           # Global CSS with design tokens
+  utils/            # Supabase client/server factories
 ```
 
-## الصلاحيات
+## Google Sheets Schema
 
-| الدور | الصلاحيات |
-|-------|-----------|
-| **Admin** | كل شيء |
-| **Confirmation Agent** | Dashboard + Orders (مسندة له) + Call Center + Customers (قراءة) |
-| **Shipping Manager** | Orders (فقط تغيير الحالة من مؤكد إلى مشحون/مسلّم) |
+Expected columns (Arabic):
 
-## هيكل قاعدة البيانات
+| Column | Description |
+|--------|-------------|
+| الاسم | Customer name |
+| الهاتف | Phone number |
+| الولاية | Wilaya (province) |
+| البلدية | Municipality |
+| العنوان | Address |
+| الملاحظات | Notes |
+| المنتج | Product name |
+| اللون | Color |
+| المقاس | Size |
+| السعر | Price |
+| الكمية | Quantity |
+| نوع التوصيل | Delivery type |
+| التاريخ | Date/time |
+| الحالة | Status |
 
-- `profiles` — ملفات المستخدمين
-- `user_roles` — أدوار المستخدمين (admin, confirmation_agent, shipping_manager)
-- `order_assignments` — تعيين الطلبات للوكلاء
-- `audit_log` — سجل التعديلات
-- `customer_notes` — ملاحظات + blacklist العملاء
-- `call_logs` — سجل المكالمات
+Status values: `جاري التجهيز`, `قيد المعالجة`, `مؤكد`, `مشحون`, `تم التسليم`, `ملغي`, `ما جاوبش`
 
-RLS مفعّل على كل جدول مع policies حسب الدور.
+## License
 
-## خارج النطاق (مرحلة قادمة)
-
-- الأرباح/التحليلات المالية
-- المنتجات/المخزون
-- صفحة الإعدادات
-- تكامل شركات التوصيل
+MIT
