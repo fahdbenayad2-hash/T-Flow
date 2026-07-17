@@ -17,6 +17,7 @@ import {
 import { STATUS_MAP, formatCurrency } from '~/lib/utils'
 import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
 import { ErrorState, EmptyState } from '~/components/empty-state'
+import { RoleGuard } from '~/components/role-guard'
 
 export const Route = createFileRoute('/_authenticated/products')({
   component: ProductsPage,
@@ -118,6 +119,7 @@ function ProductsPage() {
   }
 
   return (
+    <RoleGuard roles={['admin']}>
     <StaggerContainer className="space-y-4">
       <FadeIn>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
@@ -257,5 +259,6 @@ function ProductsPage() {
         </div>
       )}
     </StaggerContainer>
+    </RoleGuard>
   )
 }

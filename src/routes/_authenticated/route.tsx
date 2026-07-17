@@ -5,6 +5,7 @@ import { Header } from '~/components/header'
 import { useState } from 'react'
 import { supabase } from '~/utils/supabase-client'
 import { PageTransition } from '~/components/page-transition'
+import { RoleProvider } from '~/hooks/useRole'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ location }) => {
@@ -28,19 +29,22 @@ export const Route = createFileRoute('/_authenticated')({
 
 function AuthenticatedLayout() {
   const [title, setTitle] = useState('لوحة التحكم')
+  const { user } = Route.useRouteContext()
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-      <div className="md:pr-64">
-        <Header title={title} />
-        <main className="p-4 md:p-6 pb-20 md:pb-6">
-          <PageTransition>
-            <Outlet />
-          </PageTransition>
-        </main>
+    <RoleProvider userId={user?.id || null}>
+      <div className="min-h-screen bg-background">
+        <Sidebar />
+        <div className="md:pr-64">
+          <Header title={title} />
+          <main className="p-4 md:p-6 pb-20 md:pb-6">
+            <PageTransition>
+              <Outlet />
+            </PageTransition>
+          </main>
+        </div>
+        <BottomNav />
       </div>
-      <BottomNav />
-    </div>
+    </RoleProvider>
   )
 }

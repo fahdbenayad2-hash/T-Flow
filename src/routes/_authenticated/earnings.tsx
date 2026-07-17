@@ -16,6 +16,7 @@ import {
 import { STATUS_MAP, formatCurrency } from '~/lib/utils'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
 import { ErrorState, EmptyState } from '~/components/empty-state'
+import { RoleGuard } from '~/components/role-guard'
 
 export const Route = createFileRoute('/_authenticated/earnings')({
   component: EarningsPage,
@@ -113,6 +114,7 @@ function EarningsPage() {
   }
 
   return (
+    <RoleGuard roles={['admin']}>
     <StaggerContainer className="space-y-4">
       <FadeIn>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
@@ -277,5 +279,6 @@ function EarningsPage() {
         </Tabs>
       </FadeIn>
     </StaggerContainer>
+    </RoleGuard>
   )
 }

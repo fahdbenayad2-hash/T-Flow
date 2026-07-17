@@ -18,6 +18,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
+import { RoleGuard } from '~/components/role-guard'
 import toast from 'react-hot-toast'
 
 export const Route = createFileRoute('/_authenticated/settings')({
@@ -81,6 +82,7 @@ function SettingsPage() {
   }
 
   return (
+    <RoleGuard roles={['admin']}>
     <StaggerContainer className="space-y-6">
       <FadeIn>
         <div>
@@ -270,5 +272,6 @@ function SettingsPage() {
         </Tabs>
       </FadeIn>
     </StaggerContainer>
+    </RoleGuard>
   )
 }

@@ -12,35 +12,53 @@ import {
   DollarSign,
   Truck,
   BarChart3,
+  Shield,
 } from 'lucide-react'
-
 import { useTheme } from 'next-themes'
 import { Button } from '~/components/ui/button'
+import { Badge } from '~/components/ui/badge'
 import { cn } from '~/lib/utils'
 import { supabase } from '~/utils/supabase-client'
 import { motion } from 'framer-motion'
+import { useRole, getRoleLabel } from '~/hooks/useRole'
+import type { AppRole } from '~/lib/types'
 
-const navItems = [
+interface NavItem {
+  to: string
+  label: string
+  icon: typeof LayoutDashboard
+  roles?: AppRole[]
+}
+
+const navItems: NavItem[] = [
   { to: '/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
   { to: '/orders', label: 'الطلبات', icon: ShoppingCart },
   { to: '/customers', label: 'العملاء', icon: Users },
   { to: '/call-center', label: 'مركز المكالمات', icon: Phone },
-  { to: '/products', label: 'المنتجات', icon: Package },
-  { to: '/earnings', label: 'الإيرادات', icon: DollarSign },
-  { to: '/delivery', label: 'التوصيل', icon: Truck },
-  { to: '/reports', label: 'التقارير', icon: BarChart3 },
-  { to: '/settings', label: 'الإعدادات', icon: Settings },
+  { to: '/products', label: 'المنتجات', icon: Package, roles: ['admin'] },
+  { to: '/earnings', label: 'الإيرادات', icon: DollarSign, roles: ['admin'] },
+  { to: '/delivery', label: 'التوصيل', icon: Truck, roles: ['admin', 'shipping_manager'] },
+  { to: '/reports', label: 'التقارير', icon: BarChart3, roles: ['admin'] },
+  { to: '/settings', label: 'الإعدادات', icon: Settings, roles: ['admin'] },
 ]
 
 export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
+  const { roles, isAdmin } = useRole()
+
+  const visibleNavItems = navItems.filter((item) => {
+    if (!item.roles) return true
+    return item.roles.some((r) => roles.includes(r))
+  })
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     navigate({ to: '/auth' })
   }
+
+  const primaryRole = roles[0]
 
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-sidebar-background text-sidebar-foreground">
@@ -55,8 +73,8 @@ export function Sidebar() {
         </motion.h1>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map((item, i) => {
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {visibleNavItems.map((item, i) => {
           const isActive = location.pathname.startsWith(item.to)
           return (
             <motion.div
@@ -87,9 +105,41 @@ export function Sidebar() {
             </motion.div>
           )
         })}
+
+        {isAdmin && (
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: visibleNavItems.length * 0.05 }}
+          >
+            <Link
+              to="/users"
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                location.pathname.startsWith('/users')
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+              )}
+            >
+              <Shield className="h-5 w-5" />
+              إدارة المستخدمين
+            </Link>
+          </motion.div>
+        )}
       </nav>
 
       <div className="p-3 border-t border-sidebar-border space-y-1">
+        {primaryRole && (
+          <div className="px-3 py-2">
+            <Badge
+              className="text-[10px] text-white"
+              style={{ backgroundColor: undefined }}
+            >
+              <Shield className="h-3 w-3 ml-1" />
+              {getRoleLabel(primaryRole)}
+            </Badge>
+          </div>
+        )}
         <Button
           variant="ghost"
           size="sm"

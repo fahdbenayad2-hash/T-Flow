@@ -6,6 +6,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Badge } from '~/components/ui/badge'
 import { Checkbox } from '~/components/ui/checkbox'
+import { useRole } from '~/hooks/useRole'
 import {
   Select,
   SelectContent,
@@ -53,6 +54,7 @@ function OrdersSkeleton() {
 function OrdersPage() {
   const { data, isLoading, isError, error, refetch } = useOrders()
   const bulkMutation = useBulkUpdateOrders()
+  const { canBulkEdit } = useRole()
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -269,7 +271,7 @@ function OrdersPage() {
 
       <FadeIn delay={0.1}>
         <div className="flex flex-wrap items-center gap-2">
-          {selectedRows.size > 0 && (
+          {canBulkEdit && selectedRows.size > 0 && (
             <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
               <span className="text-sm font-medium">{selectedRows.size} محدد</span>
               <Select value={bulkStatus} onValueChange={setBulkStatus}>
@@ -334,12 +336,14 @@ function OrdersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="p-3 w-10">
-                    <Checkbox
-                      checked={selectedRows.size === filteredOrders.length && filteredOrders.length > 0}
-                      onCheckedChange={toggleAll}
-                    />
-                  </th>
+                  {canBulkEdit && (
+                    <th className="p-3 w-10">
+                      <Checkbox
+                        checked={selectedRows.size === filteredOrders.length && filteredOrders.length > 0}
+                        onCheckedChange={toggleAll}
+                      />
+                    </th>
+                  )}
                   <th className="p-3 text-right font-medium">#</th>
                   <th className="p-3 text-right font-medium cursor-pointer hover:bg-muted/80 transition-colors"
                       onClick={() => { setSortField('_row'); setSortDir(d => d === 'asc' ? 'desc' : 'asc') }}>
@@ -381,12 +385,14 @@ function OrdersPage() {
                       }`}
                       style={{ animationDelay: `${i * 20}ms` }}
                     >
-                      <td className="p-3">
-                        <Checkbox
-                          checked={selectedRows.has(order._row)}
-                          onCheckedChange={() => toggleRow(order._row)}
-                        />
-                      </td>
+                      {canBulkEdit && (
+                        <td className="p-3">
+                          <Checkbox
+                            checked={selectedRows.has(order._row)}
+                            onCheckedChange={() => toggleRow(order._row)}
+                          />
+                        </td>
+                      )}
                       <td className="p-3 font-mono text-xs text-muted-foreground">{order._row}</td>
                       <td className="p-3">
                         <Link

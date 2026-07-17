@@ -15,6 +15,7 @@ import {
 import { STATUS_MAP, formatCurrency } from '~/lib/utils'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
 import { ErrorState, EmptyState } from '~/components/empty-state'
+import { RoleGuard } from '~/components/role-guard'
 
 export const Route = createFileRoute('/_authenticated/delivery')({
   component: DeliveryPage,
@@ -95,6 +96,7 @@ function DeliveryPage() {
     .sort((a, b) => b[1].total - a[1].total)
 
   return (
+    <RoleGuard roles={['admin', 'shipping_manager']}>
     <StaggerContainer className="space-y-4">
       <FadeIn>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
@@ -211,5 +213,6 @@ function DeliveryPage() {
         </Card>
       </FadeIn>
     </StaggerContainer>
+    </RoleGuard>
   )
 }

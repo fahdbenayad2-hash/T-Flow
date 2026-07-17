@@ -18,6 +18,7 @@ import {
 import { STATUS_MAP, formatCurrency } from '~/lib/utils'
 import { FadeIn, StaggerContainer } from '~/components/page-transition'
 import { ErrorState, EmptyState } from '~/components/empty-state'
+import { RoleGuard } from '~/components/role-guard'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 
@@ -129,6 +130,7 @@ function ReportsPage() {
   if (orders.length === 0) return <EmptyState icon={<BarChart3 className="h-8 w-8 text-muted-foreground" />} title="لا توجد بيانات كافية للتحليل" />
 
   return (
+    <RoleGuard roles={['admin']}>
     <StaggerContainer className="space-y-4">
       <FadeIn>
         <div className="flex items-center justify-between">
@@ -282,5 +284,6 @@ function ReportsPage() {
         </FadeIn>
       </div>
     </StaggerContainer>
+    </RoleGuard>
   )
 }
