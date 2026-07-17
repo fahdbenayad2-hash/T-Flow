@@ -1,11 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '~/utils/supabase-client'
+import { listUsers, createUser, addUserRole, removeUserRole, deleteUser } from '~/server/users'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Badge } from '~/components/ui/badge'
+import { Label } from '~/components/ui/label'
 import { Separator } from '~/components/ui/separator'
 import {
   Select,
@@ -19,10 +20,10 @@ import {
   UserPlus,
   Trash2,
   RefreshCw,
-  Mail,
   ShieldCheck,
+  Users,
 } from 'lucide-react'
-import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
+import { FadeIn, StaggerContainer } from '~/components/page-transition'
 import { RoleGuard } from '~/components/role-guard'
 import { getRoleLabel } from '~/hooks/useRole'
 import toast from 'react-hot-toast'
@@ -31,14 +32,6 @@ import type { AppRole } from '~/lib/types'
 export const Route = createFileRoute('/_authenticated/users')({
   component: UsersPage,
 })
-
-interface UserWithRoles {
-  id: string
-  email: string
-  full_name: string | null
-  roles: AppRole[]
-  created_at: string
-}
 
 function UsersSkeleton() {
   return (
@@ -52,183 +45,167 @@ function UsersSkeleton() {
 
 function UsersPage() {
   const queryClient = useQueryClient()
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState<AppRole>('confirmation_agent')
-  const [isInviting, setIsInviting] = useState(false)
 
-  const { data: users = [], isLoading, refetch } = useQuery({
+  const [newEmail, setNewEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [newName, setNewName] = useState('')
+  const [newRole, setNewRole] = useState<AppRole>('confirmation_agent')
+  const [showForm, setShowForm] = useState(false)
+
+  const { data: users = [], isLoading } = useQuery({
     queryKey: ['admin-users'],
-    queryFn: async (): Promise<UserWithRoles[]> => {
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-
-      if (profilesError) {
-        console.error('Failed to fetch profiles:', profilesError)
-        return []
-      }
-
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*')
-
-      if (rolesError) {
-        console.error('Failed to fetch roles:', rolesError)
-        return []
-      }
-
-      const rolesByUser = new Map<string, AppRole[]>()
-      for (const r of roles || []) {
-        const existing = rolesByUser.get(r.user_id) || []
-        existing.push(r.role as AppRole)
-        rolesByUser.set(r.user_id, existing)
-      }
-
-      // Also include auth users not in profiles
-      const { data: authData } = await supabase.auth.admin.listUsers().catch(() => ({ data: { users: [] } }))
-
-      const allUsers: UserWithRoles[] = []
-
-      // From profiles
-      for (const p of profiles || []) {
-        allUsers.push({
-          id: p.id,
-          email: '',
-          full_name: p.full_name,
-          roles: rolesByUser.get(p.id) || [],
-          created_at: p.created_at,
-        })
-      }
-
-      // From auth users not in profiles
-      for (const u of (authData?.users || [])) {
-        if (!allUsers.find((au) => au.id === u.id)) {
-          allUsers.push({
-            id: u.id,
-            email: u.email || '',
-            full_name: u.user_metadata?.full_name || null,
-            roles: rolesByUser.get(u.id) || [],
-            created_at: u.created_at,
-          })
-        }
-      }
-
-      return allUsers
-    },
+    queryFn: () => listUsers(),
     staleTime: 30_000,
   })
 
-  const addRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { error } = await supabase
-        .from('user_roles')
-        .upsert({ user_id: userId, role }, { onConflict: 'user_id,role' })
-      if (error) throw error
+  const createUserMutation = useMutation({
+    mutationFn: () => createUser({
+      data: { email: newEmail, password: newPassword, fullName: newName, role: newRole },
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      toast.success(`تم إنشاء المستخدم ${newEmail}`)
+      setNewEmail('')
+      setNewPassword('')
+      setNewName('')
+      setShowForm(false)
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'فشل إنشاء المستخدم')
+    },
+  })
+
+  const addRoleMutation = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: AppRole }) =>
+      addUserRole({ data: { userId, role } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       toast.success('تمت إضافة الدور')
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'فشل إضافة الدور')
+      toast.error(error instanceof Error ? error.message : 'فشل')
     },
   })
 
   const removeRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { error } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId)
-        .eq('role', role)
-      if (error) throw error
-    },
+    mutationFn: ({ userId, role }: { userId: string; role: AppRole }) =>
+      removeUserRole({ data: { userId, role } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       toast.success('تم إزالة الدور')
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'فشل إزالة الدور')
+      toast.error(error instanceof Error ? error.message : 'فشل')
     },
   })
 
-  const handleInvite = async () => {
-    if (!inviteEmail) {
-      toast.error('أدخل البريد الإلكتروني')
-      return
-    }
-    setIsInviting(true)
-    try {
-      const { error } = await supabase.auth.admin.inviteUserByEmail(inviteEmail, {
-        data: { role: inviteRole },
-      })
-      if (error) throw error
-      toast.success(`تم إرسال الدعوة إلى ${inviteEmail}`)
-      setInviteEmail('')
-      refetch()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'فشل إرسال الدعوة')
-    } finally {
-      setIsInviting(false)
-    }
-  }
+  const deleteUserMutation = useMutation({
+    mutationFn: ({ userId }: { userId: string }) =>
+      deleteUser({ data: { userId } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      toast.success('تم حذف المستخدم')
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'فشل الحذف')
+    },
+  })
 
   return (
     <RoleGuard roles={['admin']}>
       <StaggerContainer className="space-y-4">
         <FadeIn>
-          <div>
-            <h2 className="text-lg font-semibold">إدارة المستخدمين</h2>
-            <p className="text-sm text-muted-foreground">إضافة وتعديل أدوار المستخدمين</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">إدارة المستخدمين</h2>
+              <p className="text-sm text-muted-foreground">إضافة وتعديل وحذف المستخدمين</p>
+            </div>
+            <Button onClick={() => setShowForm(!showForm)}>
+              <UserPlus className="h-4 w-4 ml-1" />
+              مستخدم جديد
+            </Button>
           </div>
         </FadeIn>
+
+        {showForm && (
+          <FadeIn delay={0.05}>
+            <Card className="hover:shadow-md transition-shadow border-primary/30">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  إنشاء مستخدم جديد
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>الاسم الكامل</Label>
+                    <Input
+                      placeholder="محمد أحمد"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>البريد الإلكتروني</Label>
+                    <Input
+                      type="email"
+                      placeholder="user@example.com"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>كلمة المرور</Label>
+                    <Input
+                      type="password"
+                      placeholder="6 أحرف على الأقل"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>الدور</Label>
+                    <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">مدير</SelectItem>
+                        <SelectItem value="confirmation_agent">وكيل تأكيد</SelectItem>
+                        <SelectItem value="shipping_manager">مدير شحن</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 justify-end">
+                  <Button variant="ghost" onClick={() => setShowForm(false)}>
+                    إلغاء
+                  </Button>
+                  <Button
+                    onClick={() => createUserMutation.mutate()}
+                    disabled={createUserMutation.isPending || !newEmail || !newPassword}
+                  >
+                    {createUserMutation.isPending ? (
+                      <RefreshCw className="h-4 w-4 ml-1 animate-spin" />
+                    ) : (
+                      <UserPlus className="h-4 w-4 ml-1" />
+                    )}
+                    إنشاء المستخدم
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </FadeIn>
+        )}
 
         <FadeIn delay={0.1}>
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <UserPlus className="h-4 w-4" />
-                دعوة مستخدم جديد
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-col md:flex-row gap-3">
-                <Input
-                  type="email"
-                  placeholder="البريد الإلكتروني"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="flex-1"
-                  dir="ltr"
-                />
-                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">مدير</SelectItem>
-                    <SelectItem value="confirmation_agent">وكيل تأكيد</SelectItem>
-                    <SelectItem value="shipping_manager">مدير شحن</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button onClick={handleInvite} disabled={isInviting || !inviteEmail}>
-                  {isInviting ? (
-                    <RefreshCw className="h-4 w-4 ml-1 animate-spin" />
-                  ) : (
-                    <Mail className="h-4 w-4 ml-1" />
-                  )}
-                  إرسال الدعوة
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </FadeIn>
-
-        <FadeIn delay={0.15}>
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Shield className="h-4 w-4" />
+                <Users className="h-4 w-4" />
                 المستخدمون ({users.length})
               </CardTitle>
             </CardHeader>
@@ -247,7 +224,7 @@ function UsersPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-sm">
-                            {user.full_name || user.email || 'مستخدم'}
+                            {user.full_name || 'مستخدم'}
                           </p>
                           {user.email && (
                             <span className="text-xs text-muted-foreground font-mono" dir="ltr">
@@ -258,19 +235,15 @@ function UsersPage() {
                         <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                           {user.roles.length > 0 ? (
                             user.roles.map((role) => (
-                              <Badge
-                                key={role}
-                                className="text-[10px] text-white"
-                              >
+                              <Badge key={role} className="text-[10px] text-white">
                                 {getRoleLabel(role)}
-                                {user.roles.length > 1 && (
-                                  <button
-                                    className="mr-1 hover:text-red-200"
-                                    onClick={() => removeRoleMutation.mutate({ userId: user.id, role })}
-                                  >
-                                    ×
-                                  </button>
-                                )}
+                                <button
+                                  className="mr-1 hover:text-red-200"
+                                  onClick={() => removeRoleMutation.mutate({ userId: user.id, role })}
+                                  title={`إزالة ${getRoleLabel(role)}`}
+                                >
+                                  ×
+                                </button>
                               </Badge>
                             ))
                           ) : (
@@ -300,22 +273,19 @@ function UsersPage() {
                               ))}
                           </SelectContent>
                         </Select>
-                        {user.roles.length > 1 && (
-                          <div className="flex gap-1">
-                            {user.roles.map((role) => (
-                              <Button
-                                key={role}
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                onClick={() => removeRoleMutation.mutate({ userId: user.id, role })}
-                                title={`إزالة ${getRoleLabel(role)}`}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            ))}
-                          </div>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            if (confirm(`هل أنت متأكد من حذف ${user.email || user.full_name}؟`)) {
+                              deleteUserMutation.mutate({ userId: user.id })
+                            }
+                          }}
+                          title="حذف المستخدم"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -325,7 +295,7 @@ function UsersPage() {
           </Card>
         </FadeIn>
 
-        <FadeIn delay={0.2}>
+        <FadeIn delay={0.15}>
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
