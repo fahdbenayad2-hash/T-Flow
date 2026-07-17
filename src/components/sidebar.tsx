@@ -7,17 +7,29 @@ import {
   Moon,
   Sun,
   LogOut,
+  Settings,
+  Package,
+  DollarSign,
+  Truck,
+  BarChart3,
 } from 'lucide-react'
+
 import { useTheme } from 'next-themes'
 import { Button } from '~/components/ui/button'
 import { cn } from '~/lib/utils'
 import { supabase } from '~/utils/supabase-client'
+import { motion } from 'framer-motion'
 
 const navItems = [
   { to: '/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
   { to: '/orders', label: 'الطلبات', icon: ShoppingCart },
   { to: '/customers', label: 'العملاء', icon: Users },
   { to: '/call-center', label: 'مركز المكالمات', icon: Phone },
+  { to: '/products', label: 'المنتجات', icon: Package },
+  { to: '/earnings', label: 'الإيرادات', icon: DollarSign },
+  { to: '/delivery', label: 'التوصيل', icon: Truck },
+  { to: '/reports', label: 'التقارير', icon: BarChart3 },
+  { to: '/settings', label: 'الإعدادات', icon: Settings },
 ]
 
 export function Sidebar() {
@@ -33,28 +45,46 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-sidebar-background text-sidebar-foreground">
       <div className="flex h-16 items-center px-6 border-b border-sidebar-border">
-        <h1 className="text-xl font-bold tracking-tight">
+        <motion.h1
+          className="text-xl font-bold tracking-tight"
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4 }}
+        >
           <span className="text-primary">T</span>-Flow
-        </h1>
+        </motion.h1>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map((item) => {
+        {navItems.map((item, i) => {
           const isActive = location.pathname.startsWith(item.to)
           return (
-            <Link
+            <motion.div
               key={item.to}
-              to={item.to}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-              )}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: i * 0.05 }}
             >
-              <item.icon className="h-5 w-5" />
-              {item.label}
-            </Link>
+              <Link
+                to={item.to}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                  isActive
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.label}
+                {isActive && (
+                  <motion.div
+                    className="absolute right-0 w-1 h-6 bg-primary rounded-l-full"
+                    layoutId="sidebar-indicator"
+                    transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                  />
+                )}
+              </Link>
+            </motion.div>
           )
         })}
       </nav>

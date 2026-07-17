@@ -4,6 +4,7 @@ import { BottomNav } from '~/components/bottom-nav'
 import { Header } from '~/components/header'
 import { useState } from 'react'
 import { supabase } from '~/utils/supabase-client'
+import { PageTransition } from '~/components/page-transition'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ location }) => {
@@ -34,7 +35,9 @@ function AuthenticatedLayout() {
       <div className="md:pr-64">
         <Header title={title} />
         <main className="p-4 md:p-6 pb-20 md:pb-6">
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </main>
       </div>
       <BottomNav />

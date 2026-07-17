@@ -4,6 +4,7 @@ import {
   ShoppingCart,
   Users,
   Phone,
+  Settings,
 } from 'lucide-react'
 import { cn } from '~/lib/utils'
 
@@ -12,6 +13,7 @@ const navItems = [
   { to: '/orders', label: 'الطلبات', icon: ShoppingCart },
   { to: '/customers', label: 'العملاء', icon: Users },
   { to: '/call-center', label: 'المكالمات', icon: Phone },
+  { to: '/settings', label: 'الإعدادات', icon: Settings },
 ]
 
 export function BottomNav() {

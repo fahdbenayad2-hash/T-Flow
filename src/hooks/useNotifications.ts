@@ -1,5 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
 import { useOrders } from '~/lib/queries'
+import { supabase } from '~/utils/supabase-client'
 import type { Notification } from '~/lib/types'
 
 function isPendingOver48h(dateStr: string): boolean {
@@ -31,8 +33,42 @@ function isPendingOver48h(dateStr: string): boolean {
 
 export function useNotifications() {
   const { data } = useOrders()
+  const queryClient = useQueryClient()
+  const [realtimeEnabled, setRealtimeEnabled] = useState(false)
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
-  return useQuery({
+  useEffect(() => {
+    const url = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL
+    if (!url || url.includes('your-project')) return
+
+    try {
+      channelRef.current = supabase
+        .channel('orders-realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'audit_log' },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ['orders'] })
+            queryClient.invalidateQueries({ queryKey: ['notifications'] })
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            setRealtimeEnabled(true)
+          }
+        })
+    } catch {
+      // Supabase not configured, fall back to polling
+    }
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+      }
+    }
+  }, [queryClient])
+
+  const query = useQuery({
     queryKey: ['notifications'],
     queryFn: async () => {
       const notifications: Notification[] = []
@@ -75,7 +111,12 @@ export function useNotifications() {
       return notifications
     },
     enabled: !!data,
-    refetchInterval: 60_000,
-    staleTime: 30_000,
+    refetchInterval: realtimeEnabled ? false : 60_000,
+    staleTime: realtimeEnabled ? 10_000 : 30_000,
   })
+
+  return {
+    ...query,
+    realtimeEnabled,
+  }
 }
