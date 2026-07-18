@@ -15,10 +15,12 @@ Arabic RTL order management system for e-commerce stores, built with TanStack St
 - **Users** — Create users, assign roles, invite with email (admin only)
 - **Settings** — Apps Script config, connection test, cache management
 - **Notifications** — Real-time via Supabase Realtime, pending +48h alerts, duplicate detection
+- **Landing Page** — Marketing home page with hero, features, how-it-works, CTA
 - **RBAC** — Admin, confirmation_agent, shipping_manager roles
 - **Dark mode** — Toggle with OKLCH color tokens
 - **Mobile** — Bottom nav, responsive layout
 - **RTL** — Full Arabic right-to-left layout
+- **Intro Animation** — Full-screen branded loader with logo reveal, speed lines, progress bar (once per session)
 
 ## Tech Stack
 
@@ -38,7 +40,10 @@ Arabic RTL order management system for e-commerce stores, built with TanStack St
 
 ```bash
 npm install
+npm run dev
 ```
+
+Open `http://localhost:3000`. Authenticated users are redirected to `/dashboard`; unauthenticated visitors see the landing page.
 
 Create `.env`:
 
@@ -50,14 +55,6 @@ APP_SUPABASE_ANON_KEY=your-anon-key
 APP_SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 VITE_APP_SCRIPT_URL=https://script.google.com/macros/s/.../exec
 ```
-
-Run the dev server:
-
-```bash
-npm run dev
-```
-
-Open `http://localhost:3000`.
 
 ## Roles
 
@@ -96,12 +93,16 @@ Includes `has_role()` security definer function and `handle_new_user()` trigger.
 src/
   components/       # Shared UI components
     ui/             # shadcn/ui primitives
+    landing/        # Landing page components
+      landing-page.tsx
+      dashboard-preview.tsx
     sidebar.tsx     # Desktop navigation + logo
     bottom-nav.tsx  # Mobile navigation
     header.tsx      # Top bar with notifications
     empty-state.tsx # Reusable empty/error states
     page-transition.tsx # Framer Motion wrappers
     role-guard.tsx  # Role-based access gate
+    app-loader.tsx  # Intro animation overlay
   hooks/            # Custom React hooks
   lib/              # Queries, types, utilities
   routes/           # TanStack Router file-based routes
