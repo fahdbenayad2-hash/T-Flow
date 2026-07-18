@@ -10,6 +10,7 @@ import { TooltipProvider } from '~/components/ui/tooltip'
 import { Toaster } from 'react-hot-toast'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
+import { AppLoader } from '~/components/app-loader'
 import '~/styles/app.css'
 
 export const Route = createRootRoute({
@@ -62,6 +63,7 @@ function RootComponent() {
         <HeadContent />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
+        <AppLoader />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <QueryClientProvider client={queryClient}>
             <TooltipProvider>

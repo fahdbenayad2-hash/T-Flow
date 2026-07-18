@@ -50,7 +50,7 @@ function AuthPage() {
       <div className="relative w-full max-w-md">
         <div className="flex justify-center mb-6">
           <img
-            src="/logo-full.png"
+            src="/logo.png"
             alt="T-Flow"
             className="h-20 w-auto object-contain drop-shadow-[0_8px_24px_rgba(231,39,52,0.35)]"
           />

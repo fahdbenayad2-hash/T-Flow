@@ -156,3 +156,137 @@ html[dir="rtl"] {
 .brand-glow {
   background: radial-gradient(60% 60% at 50% 30%, rgba(231, 39, 52, 0.18), transparent 70%);
 }
+
+/* ===== T-Flow intro loader ===== */
+.tflow-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  overflow: hidden;
+}
+.tflow-loader.is-hiding {
+  animation: loaderOut 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+@keyframes loaderOut {
+  to { opacity: 0; transform: scale(1.03); }
+}
+
+.tflow-loader .stage {
+  position: relative;
+  width: min(78vw, 480px);
+  aspect-ratio: 900 / 580;
+  opacity: 0;
+  animation: stageIn 0.4s ease-out 0.1s forwards;
+}
+@keyframes stageIn {
+  to { opacity: 1; }
+}
+
+.tflow-loader .stage .logo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 1;
+  animation: logoPulse 0.7s ease-in-out 0.3s both;
+}
+
+@keyframes logoPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+.tflow-loader .stage .glow {
+  position: absolute;
+  left: 35%;
+  top: 35%;
+  width: 30%;
+  height: 30%;
+  background: radial-gradient(circle, rgba(229, 22, 27, 0.35), transparent 70%);
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  animation: glowPulse 0.6s ease-out 0.25s both;
+  z-index: 0;
+  border-radius: 50%;
+}
+@keyframes glowPulse {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); }
+}
+
+.tflow-loader .speed-burst {
+  position: absolute;
+  left: 38%;
+  top: 0;
+  width: 64%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+.tflow-loader .speed-burst span {
+  position: absolute;
+  left: 0;
+  height: 3px;
+  width: 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #e5161b 60%, #e5161b);
+  opacity: 0;
+}
+.tflow-loader .speed-burst span:nth-child(1) { top: 38%; animation: streak 0.5s ease-out 0.4s forwards; }
+.tflow-loader .speed-burst span:nth-child(2) { top: 48%; animation: streak 0.46s ease-out 0.46s forwards; }
+.tflow-loader .speed-burst span:nth-child(3) { top: 58%; animation: streak 0.5s ease-out 0.42s forwards; }
+.tflow-loader .speed-burst span:nth-child(4) { top: 30%; animation: streak 0.4s ease-out 0.52s forwards; }
+.tflow-loader .speed-burst span:nth-child(5) { top: 66%; animation: streak 0.4s ease-out 0.5s forwards; }
+
+@keyframes streak {
+  0% { width: 0; opacity: 0; transform: translateX(0); }
+  25% { opacity: 1; }
+  100% { width: 65%; opacity: 0; transform: translateX(90%); }
+}
+
+.tflow-loader .progress-track {
+  margin-top: 18px;
+  width: 180px;
+  height: 3px;
+  background: #eee;
+  border-radius: 2px;
+  overflow: hidden;
+  opacity: 0;
+  animation: trackIn 0.3s ease-out 0.9s forwards;
+}
+@keyframes trackIn {
+  to { opacity: 1; }
+}
+.tflow-loader .progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #a3080c, #e5161b);
+  animation: fill 1.2s cubic-bezier(0.3, 0.7, 0.3, 1) 0.95s forwards;
+}
+@keyframes fill {
+  to { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tflow-loader .stage .glow,
+  .tflow-loader .speed-burst { display: none; }
+  .tflow-loader .stage .logo,
+  .tflow-loader .progress-track,
+  .tflow-loader .progress-fill,
+  .tflow-loader .stage {
+    animation-duration: 0.01s !important;
+    animation-delay: 0s !important;
+    filter: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}

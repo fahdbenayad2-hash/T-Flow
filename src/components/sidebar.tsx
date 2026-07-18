@@ -55,7 +55,7 @@ export function Sidebar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    navigate({ to: '/auth' })
+    navigate({ to: '/' })
   }
 
   const primaryRole = roles[0]
@@ -65,7 +65,7 @@ export function Sidebar() {
       <div className="relative flex h-16 items-center gap-2.5 px-6 border-b border-sidebar-border overflow-hidden">
         <div className="absolute inset-0 brand-speedlines pointer-events-none" />
         <motion.img
-          src="/logo-mark.png"
+          src="/logo.png"
           alt="T-Flow"
           className="relative h-8 w-8 object-contain shrink-0"
           initial={{ opacity: 0, scale: 0.8 }}
