@@ -43,46 +43,59 @@ function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">
-            <span className="text-primary">T</span>-Flow
-          </CardTitle>
-          <p className="text-muted-foreground text-sm">تسجيل الدخول</p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">البريد الإلكتروني</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
-                required
-                dir="ltr"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">كلمة المرور</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                dir="ltr"
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'جاري الدخول...' : 'دخول'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen flex items-center justify-center bg-[var(--color-ink)] p-4 relative overflow-hidden">
+      <div className="absolute inset-0 brand-glow" />
+      <div className="absolute inset-0 brand-speedlines opacity-60" />
+
+      <div className="relative w-full max-w-md">
+        <div className="flex justify-center mb-6">
+          <img
+            src="/logo-full.png"
+            alt="T-Flow"
+            className="h-20 w-auto object-contain drop-shadow-[0_8px_24px_rgba(231,39,52,0.35)]"
+          />
+        </div>
+
+        <Card className="w-full border-white/10 bg-card/95 backdrop-blur shadow-2xl">
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="text-xl font-bold text-foreground">تسجيل الدخول</CardTitle>
+            <p className="text-muted-foreground text-sm">أدخل بياناتك للوصول إلى لوحة التحكم</p>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">البريد الإلكتروني</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@example.com"
+                  required
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">كلمة المرور</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  dir="ltr"
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'جاري الدخول...' : 'دخول'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <p className="text-center text-white/30 text-xs mt-6">T-Flow — إدارة الطلبات بسرعة الفهد</p>
+      </div>
     </div>
   )
 }

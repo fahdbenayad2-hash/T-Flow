@@ -62,9 +62,18 @@ export function Sidebar() {
 
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-sidebar-background text-sidebar-foreground">
-      <div className="flex h-16 items-center px-6 border-b border-sidebar-border">
+      <div className="relative flex h-16 items-center gap-2.5 px-6 border-b border-sidebar-border overflow-hidden">
+        <div className="absolute inset-0 brand-speedlines pointer-events-none" />
+        <motion.img
+          src="/logo-mark.png"
+          alt="T-Flow"
+          className="relative h-8 w-8 object-contain shrink-0"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+        />
         <motion.h1
-          className="text-xl font-bold tracking-tight"
+          className="relative text-xl font-bold tracking-tight"
           initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4 }}
@@ -86,7 +95,7 @@ export function Sidebar() {
               <Link
                 to={item.to}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                  'relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                   isActive
                     ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
                     : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
@@ -115,7 +124,7 @@ export function Sidebar() {
             <Link
               to="/users"
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                'relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                 location.pathname.startsWith('/users')
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
                   : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
@@ -131,10 +140,7 @@ export function Sidebar() {
       <div className="p-3 border-t border-sidebar-border space-y-1">
         {primaryRole && (
           <div className="px-3 py-2">
-            <Badge
-              className="text-[10px] text-white"
-              style={{ backgroundColor: undefined }}
-            >
+            <Badge className="text-[10px] text-white bg-primary border-transparent">
               <Shield className="h-3 w-3 ml-1" />
               {getRoleLabel(primaryRole)}
             </Badge>

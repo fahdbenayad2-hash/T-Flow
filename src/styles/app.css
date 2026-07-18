@@ -4,73 +4,76 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --color-cream: #FAF3ED;
-  --color-terracotta: #B8654F;
-  --color-terracotta-dark: #9C4F3B;
-  --color-ink: #2E2119;
-  --color-beige: #8C7A6E;
+  /* T-Flow brand — sampled directly from the logo mark */
+  --color-crimson: #E72734;       /* the running cheetah */
+  --color-crimson-600: #C81F2A;   /* hover / pressed */
+  --color-maroon: #7D1622;        /* the cheetah's shadow — used for destructive/serious states */
+  --color-ink: #0E1113;           /* the T letterform */
+  --color-paper: #FAFAFA;         /* the logo's background field */
 
-  --color-background: var(--color-cream);
+  --color-background: var(--color-paper);
   --color-foreground: var(--color-ink);
   --color-card: #FFFFFF;
   --color-card-foreground: var(--color-ink);
-  --color-primary: var(--color-terracotta);
+  --color-primary: var(--color-crimson);
   --color-primary-foreground: #FFFFFF;
-  --color-secondary: #F5EDE6;
+  --color-secondary: #F2F2F3;
   --color-secondary-foreground: var(--color-ink);
-  --color-muted: #F0E8DF;
-  --color-muted-foreground: var(--color-beige);
-  --color-accent: #F5EDE6;
-  --color-accent-foreground: var(--color-ink);
-  --color-destructive: #DC3545;
+  --color-muted: #F0F0F1;
+  --color-muted-foreground: #6B7280;
+  --color-accent: #FCE9EA;
+  --color-accent-foreground: var(--color-maroon);
+  --color-destructive: var(--color-maroon);
   --color-destructive-foreground: #FFFFFF;
-  --color-border: #E8DDD3;
-  --color-input: #E8DDD3;
-  --color-ring: var(--color-terracotta);
+  --color-border: #E7E7E9;
+  --color-input: #E7E7E9;
+  --color-ring: var(--color-crimson);
   --color-sidebar-background: var(--color-ink);
-  --color-sidebar-foreground: var(--color-cream);
-  --color-sidebar-primary: var(--color-terracotta);
+  --color-sidebar-foreground: #F2F2F3;
+  --color-sidebar-primary: var(--color-crimson);
   --color-sidebar-primary-foreground: #FFFFFF;
-  --color-sidebar-accent: rgba(184, 101, 79, 0.2);
-  --color-sidebar-accent-foreground: var(--color-cream);
-  --color-sidebar-border: rgba(255, 255, 255, 0.1);
-  --color-sidebar-ring: var(--color-terracotta);
-  --radius: 0.625rem;
+  --color-sidebar-accent: rgba(231, 39, 52, 0.16);
+  --color-sidebar-accent-foreground: #FFFFFF;
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+  --color-sidebar-ring: var(--color-crimson);
+  --radius: 0.75rem;
 
   --status-processing: #F59E0B;
-  --status-confirmed: #3B82F6;
-  --status-shipped: #8B5CF6;
-  --status-delivered: #10B981;
-  --status-no-answer: #EF4444;
+  --status-confirmed: #2563EB;
+  --status-shipped: #7C3AED;
+  --status-delivered: #16A34A;
+  --status-no-answer: #EA580C;
   --status-cancelled: #6B7280;
 
-  --chart-1: var(--color-terracotta);
-  --chart-2: var(--color-terracotta-dark);
-  --chart-3: var(--color-beige);
-  --chart-4: #D4A574;
-  --chart-5: #C4956A;
+  --chart-1: var(--color-crimson);
+  --chart-2: var(--color-ink);
+  --chart-3: #F59E0B;
+  --chart-4: #6B7280;
+  --chart-5: var(--color-maroon);
 }
 
 .dark {
-  --color-background: #1A1210;
-  --color-foreground: #F5EDE6;
-  --color-card: #2A201B;
-  --color-card-foreground: #F5EDE6;
-  --color-primary: var(--color-terracotta);
+  --color-background: #0E1113;
+  --color-foreground: #F2F2F3;
+  --color-card: #17191C;
+  --color-card-foreground: #F2F2F3;
+  --color-primary: var(--color-crimson);
   --color-primary-foreground: #FFFFFF;
-  --color-secondary: #2A201B;
-  --color-secondary-foreground: #F5EDE6;
-  --color-muted: #2A201B;
-  --color-muted-foreground: #A09080;
-  --color-accent: #2A201B;
-  --color-accent-foreground: #F5EDE6;
-  --color-border: #3D302A;
-  --color-input: #3D302A;
-  --color-ring: var(--color-terracotta);
-  --color-sidebar-background: #1A1210;
-  --color-sidebar-foreground: #F5EDE6;
-  --color-sidebar-accent: rgba(184, 101, 79, 0.15);
-  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+  --color-secondary: #1D2023;
+  --color-secondary-foreground: #F2F2F3;
+  --color-muted: #1D2023;
+  --color-muted-foreground: #8B9198;
+  --color-accent: rgba(231, 39, 52, 0.12);
+  --color-accent-foreground: #F2F2F3;
+  --color-destructive: #A32531;
+  --color-destructive-foreground: #FFFFFF;
+  --color-border: #26292D;
+  --color-input: #26292D;
+  --color-ring: var(--color-crimson);
+  --color-sidebar-background: #0A0C0D;
+  --color-sidebar-foreground: #F2F2F3;
+  --color-sidebar-accent: rgba(231, 39, 52, 0.18);
+  --color-sidebar-border: rgba(255, 255, 255, 0.06);
 }
 
 @theme inline {
@@ -134,4 +137,22 @@ html[dir="rtl"] {
 
 .font-mono {
   font-family: 'JetBrains Mono', monospace;
+}
+
+/* T-Flow signature — the three motion streaks under the cheetah's stride.
+   Used sparingly, only on brand moments (sidebar header, auth screen). */
+.brand-speedlines {
+  background-image: repeating-linear-gradient(
+    -18deg,
+    rgba(231, 39, 52, 0.5) 0px,
+    rgba(231, 39, 52, 0.5) 2px,
+    transparent 2px,
+    transparent 34px
+  );
+  mask-image: linear-gradient(to left, black, transparent 70%);
+  -webkit-mask-image: linear-gradient(to left, black, transparent 70%);
+}
+
+.brand-glow {
+  background: radial-gradient(60% 60% at 50% 30%, rgba(231, 39, 52, 0.18), transparent 70%);
 }

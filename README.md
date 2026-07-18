@@ -12,8 +12,10 @@ Arabic RTL order management system for e-commerce stores, built with TanStack St
 - **Earnings** — Financial metrics by product, wilaya, and date
 - **Delivery** — Home delivery vs stop desk, per-wilaya analysis
 - **Reports** — Performance metrics, top customers, full Excel export
+- **Users** — Create users, assign roles, invite with email (admin only)
 - **Settings** — Apps Script config, connection test, cache management
 - **Notifications** — Real-time via Supabase Realtime, pending +48h alerts, duplicate detection
+- **RBAC** — Admin, confirmation_agent, shipping_manager roles
 - **Dark mode** — Toggle with OKLCH color tokens
 - **Mobile** — Bottom nav, responsive layout
 - **RTL** — Full Arabic right-to-left layout
@@ -45,6 +47,7 @@ VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 APP_SUPABASE_URL=https://your-project.supabase.co
 APP_SUPABASE_ANON_KEY=your-anon-key
+APP_SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 VITE_APP_SCRIPT_URL=https://script.google.com/macros/s/.../exec
 ```
 
@@ -56,24 +59,35 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+## Roles
+
+| Role | Access |
+|------|--------|
+| `admin` | Full access to all pages + user management |
+| `confirmation_agent` | Orders, Customers, Call Center, Bulk Edit |
+| `shipping_manager` | Orders, Delivery |
+
+First user with a configured Supabase email is auto-assigned `admin` via a database trigger.
+
 ## Database Setup
 
 Run `db/migrations/001_init.sql` in the Supabase SQL Editor. This creates:
 
 - `audit_log` — tracks all order changes
-- `user_roles` — role-based access (admin, manager, agent)
+- `user_roles` — role-based access (admin, confirmation_agent, shipping_manager)
 - `profiles` — user metadata
 - `notifications` — notification queue
 - `settings` — key-value config store
 - `blacklisted_phones` — blocked phone numbers
 
-Includes `has_role()` security definer function and `handle_new_user()` trigger that auto-assigns admin to the first user.
+Includes `has_role()` security definer function and `handle_new_user()` trigger.
 
 ## Authentication
 
 - First user with a configured Supabase email is auto-assigned `admin` role
 - Login via `signInWithPassword` (client-side Supabase)
 - Server reads session from cookies
+- Server functions use `service_role` key for user management (create, delete, assign roles)
 - Demo mode activates when Supabase env vars are placeholders
 
 ## Project Structure
@@ -82,11 +96,12 @@ Includes `has_role()` security definer function and `handle_new_user()` trigger 
 src/
   components/       # Shared UI components
     ui/             # shadcn/ui primitives
-    sidebar.tsx     # Desktop navigation
+    sidebar.tsx     # Desktop navigation + logo
     bottom-nav.tsx  # Mobile navigation
     header.tsx      # Top bar with notifications
     empty-state.tsx # Reusable empty/error states
     page-transition.tsx # Framer Motion wrappers
+    role-guard.tsx  # Role-based access gate
   hooks/            # Custom React hooks
   lib/              # Queries, types, utilities
   routes/           # TanStack Router file-based routes
@@ -103,7 +118,8 @@ src/
       delivery.tsx
       reports.tsx
       settings.tsx
-  server/           # Server functions (proxy, auth)
+      users.tsx
+  server/           # Server functions (proxy, auth, users)
   styles/           # Global CSS with design tokens
   utils/            # Supabase client/server factories
 ```

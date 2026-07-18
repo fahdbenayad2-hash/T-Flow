@@ -35,8 +35,8 @@ export function BottomNav() {
   })
 
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 bg-background border-t border-border z-50">
-      <div className="flex items-center justify-around h-16">
+    <nav className="md:hidden fixed bottom-0 inset-x-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t border-border z-50">
+      <div className="flex items-center justify-around h-16 px-1">
         {visibleItems.map((item) => {
           const isActive = location.pathname.startsWith(item.to)
           return (
@@ -44,13 +44,20 @@ export function BottomNav() {
               key={item.to}
               to={item.to}
               className={cn(
-                'flex flex-col items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors',
+                'flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors duration-200 min-w-[3.75rem]',
                 isActive
                   ? 'text-primary'
-                  : 'text-muted-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <item.icon className="h-5 w-5" />
+              <span
+                className={cn(
+                  'flex items-center justify-center h-8 w-8 rounded-full transition-colors duration-200',
+                  isActive && 'bg-primary/10'
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+              </span>
               {item.label}
             </Link>
           )

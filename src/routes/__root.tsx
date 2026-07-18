@@ -18,8 +18,14 @@ export const Route = createRootRoute({
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { title: 'T-Flow — إدارة الطلبات' },
+      { name: 'theme-color', content: '#0E1113' },
     ],
     links: [
+      {
+        rel: 'icon',
+        type: 'image/png',
+        href: '/favicon.png',
+      },
       {
         rel: 'preconnect',
         href: 'https://fonts.googleapis.com',
