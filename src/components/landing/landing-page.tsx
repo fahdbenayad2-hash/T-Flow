@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
 import { DashboardPreview } from '~/components/landing/dashboard-preview'
+import LogoIntroAnimation from '~/components/landing/LogoAnimation'
 import {
   Zap,
   ArrowLeft,
@@ -270,17 +272,22 @@ function LandingFooter() {
 }
 
 export function LandingPage() {
+  const [showAnimation, setShowAnimation] = useState(true)
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <LandingHeader />
-      <main>
-        <HeroSection />
-        <FeaturesSection />
-        <HowItWorksSection />
-        <HighlightsStrip />
-        <CtaSection />
-      </main>
-      <LandingFooter />
-    </div>
+    <>
+      {showAnimation && <LogoIntroAnimation onComplete={() => setShowAnimation(false)} />}
+      <div className="min-h-screen bg-background text-foreground">
+        <LandingHeader />
+        <main>
+          <HeroSection />
+          <FeaturesSection />
+          <HowItWorksSection />
+          <HighlightsStrip />
+          <CtaSection />
+        </main>
+        <LandingFooter />
+      </div>
+    </>
   )
 }
