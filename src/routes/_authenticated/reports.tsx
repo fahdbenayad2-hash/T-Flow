@@ -18,6 +18,7 @@ import {
 import { STATUS_MAP, formatCurrency } from '~/lib/utils'
 import { FadeIn, StaggerContainer } from '~/components/page-transition'
 import { ErrorState, EmptyState } from '~/components/empty-state'
+import { Skeleton } from '~/components/ui/skeleton'
 import { RoleGuard } from '~/components/role-guard'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
@@ -30,7 +31,7 @@ function ReportsSkeleton() {
   return (
     <div className="space-y-4">
       {[...Array(3)].map((_, i) => (
-        <Card key={i}><CardContent className="p-6"><div className="h-40 bg-muted rounded animate-pulse" /></CardContent></Card>
+        <Card key={i}><CardContent className="p-6"><Skeleton className="skeleton-shimmer h-40 w-full rounded-lg" /></CardContent></Card>
       ))}
     </div>
   )
@@ -146,7 +147,7 @@ function ReportsPage() {
       </FadeIn>
 
       <FadeIn delay={0.1}>
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="card-hover">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
@@ -155,19 +156,19 @@ function ReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-3 rounded-lg bg-[var(--status-delivered)]/10">
+              <div className="text-center p-4 rounded-xl bg-[var(--status-delivered)]/10 border border-[var(--status-delivered)]/10">
                 <p className="text-xs text-muted-foreground mb-1">نسبة التحويل</p>
                 <p className="text-2xl font-bold font-mono text-[var(--status-delivered)]">{analytics.conversionRate}%</p>
               </div>
-              <div className="text-center p-3 rounded-lg bg-[var(--status-cancelled)]/10">
+              <div className="text-center p-4 rounded-xl bg-[var(--status-cancelled)]/10 border border-[var(--status-cancelled)]/10">
                 <p className="text-xs text-muted-foreground mb-1">نسبة الإلغاء</p>
                 <p className="text-2xl font-bold font-mono text-[var(--status-cancelled)]">{analytics.cancelRate}%</p>
               </div>
-              <div className="text-center p-3 rounded-lg bg-[var(--status-no-answer)]/10">
+              <div className="text-center p-4 rounded-xl bg-[var(--status-no-answer)]/10 border border-[var(--status-no-answer)]/10">
                 <p className="text-xs text-muted-foreground mb-1">نسبة عدم الرد</p>
                 <p className="text-2xl font-bold font-mono text-[var(--status-no-answer)]">{analytics.noAnswerRate}%</p>
               </div>
-              <div className="text-center p-3 rounded-lg bg-primary/10">
+              <div className="text-center p-4 rounded-xl bg-primary/10 border border-primary/10">
                 <p className="text-xs text-muted-foreground mb-1">نسبة الزبائن العائدين</p>
                 <p className="text-2xl font-bold font-mono text-primary">{analytics.repeatRate}%</p>
               </div>
@@ -178,7 +179,7 @@ function ReportsPage() {
 
       <FadeIn delay={0.15}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="card-hover">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
@@ -214,7 +215,7 @@ function ReportsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FadeIn delay={0.15}>
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="card-hover">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Users className="h-4 w-4" />
@@ -241,7 +242,7 @@ function ReportsPage() {
         </FadeIn>
 
         <FadeIn delay={0.2}>
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="card-hover">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />

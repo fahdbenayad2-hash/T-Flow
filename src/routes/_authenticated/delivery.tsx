@@ -16,6 +16,8 @@ import { STATUS_MAP, formatCurrency } from '~/lib/utils'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
 import { ErrorState, EmptyState } from '~/components/empty-state'
 import { RoleGuard } from '~/components/role-guard'
+import { Skeleton } from '~/components/ui/skeleton'
+import { motion } from 'framer-motion'
 
 export const Route = createFileRoute('/_authenticated/delivery')({
   component: DeliveryPage,
@@ -36,10 +38,10 @@ function DeliverySkeleton() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {[...Array(3)].map((_, i) => (
-          <Card key={i}><CardContent className="p-4"><div className="h-16 bg-muted rounded animate-pulse" /></CardContent></Card>
+          <Card key={i}><CardContent className="p-4"><Skeleton className="skeleton-shimmer rounded-lg h-16" /></CardContent></Card>
         ))}
       </div>
-      <div className="h-64 bg-muted rounded animate-pulse" />
+      <Skeleton className="skeleton-shimmer rounded-lg h-64" />
     </div>
   )
 }
@@ -100,7 +102,7 @@ function DeliveryPage() {
     <StaggerContainer className="space-y-4">
       <FadeIn>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-          <Card className="overflow-hidden hover:shadow-md transition-shadow">
+          <Card className="overflow-hidden card-hover">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Truck className="h-4 w-4 text-primary" />
@@ -111,8 +113,9 @@ function DeliveryPage() {
                 {stats.totalOrders > 0 ? Math.round((stats.homeDelivery / stats.totalOrders) * 100) : 0}% من الإجمالي
               </p>
             </CardContent>
+            <div className="h-[3px] bg-primary" />
           </Card>
-          <Card className="overflow-hidden hover:shadow-md transition-shadow">
+          <Card className="overflow-hidden card-hover">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Package className="h-4 w-4 text-[var(--status-shipped)]" />
@@ -123,8 +126,9 @@ function DeliveryPage() {
                 {stats.totalOrders > 0 ? Math.round((stats.stopDesk / stats.totalOrders) * 100) : 0}% من الإجمالي
               </p>
             </CardContent>
+            <div className="h-[3px] bg-[var(--status-shipped)]" />
           </Card>
-          <Card className="overflow-hidden hover:shadow-md transition-shadow col-span-2 md:col-span-1">
+          <Card className="overflow-hidden card-hover col-span-2 md:col-span-1">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle className="h-4 w-4 text-[var(--status-delivered)]" />
@@ -137,6 +141,7 @@ function DeliveryPage() {
                 {stats.delivered} مسلّم من {stats.totalOrders}
               </p>
             </CardContent>
+            <div className="h-[3px] bg-[var(--status-delivered)]" />
           </Card>
         </div>
       </FadeIn>
@@ -163,7 +168,7 @@ function DeliveryPage() {
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="card-hover">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <MapPin className="h-4 w-4" />
@@ -190,13 +195,17 @@ function DeliveryPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden flex">
-                      <div
-                        className="h-full bg-[var(--status-delivered)] transition-all duration-500"
-                        style={{ width: `${deliveryRate}%` }}
+                      <motion.div
+                        className="h-full bg-[var(--status-delivered)]"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${deliveryRate}%` }}
+                        transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
                       />
-                      <div
-                        className="h-full bg-[var(--status-cancelled)] transition-all duration-500"
-                        style={{ width: `${data.total > 0 ? (data.cancelled / data.total) * 100 : 0}%` }}
+                      <motion.div
+                        className="h-full bg-[var(--status-cancelled)]"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${data.total > 0 ? (data.cancelled / data.total) * 100 : 0}%` }}
+                        transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
                       />
                     </div>
                     <span className="font-mono text-xs w-20 text-left">{formatCurrency(data.revenue)}</span>

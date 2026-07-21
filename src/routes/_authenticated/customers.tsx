@@ -5,6 +5,7 @@ import { Card, CardContent } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Badge } from '~/components/ui/badge'
+import { Skeleton } from '~/components/ui/skeleton'
 import {
   Search,
   Users,
@@ -61,13 +62,13 @@ function CustomersSkeleton() {
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[...Array(3)].map((_, i) => (
-          <Card key={i}><CardContent className="p-4"><div className="h-16 bg-muted rounded animate-pulse" /></CardContent></Card>
+          <Card key={i}><CardContent className="p-4"><Skeleton className="h-16 skeleton-shimmer rounded-lg" /></CardContent></Card>
         ))}
       </div>
-      <div className="h-10 bg-muted rounded animate-pulse" />
+      <Skeleton className="h-10 skeleton-shimmer rounded-lg" />
       <div className="space-y-2">
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-14 bg-muted rounded animate-pulse" style={{ animationDelay: `${i * 50}ms` }} />
+          <Skeleton key={i} className="h-14 skeleton-shimmer rounded-lg" style={{ animationDelay: `${i * 50}ms` }} />
         ))}
       </div>
     </div>
@@ -118,6 +119,7 @@ function CustomersPage() {
               </div>
               <p className="text-2xl font-bold font-mono">{customers.length}</p>
             </CardContent>
+            <div className="h-[3px] bg-primary" />
           </Card>
           <Card className="overflow-hidden hover:shadow-md transition-shadow">
             <CardContent className="p-4">
@@ -127,6 +129,7 @@ function CustomersPage() {
               </div>
               <p className="text-2xl font-bold font-mono">{avgOrders}</p>
             </CardContent>
+            <div className="h-[3px] bg-[var(--status-confirmed)]" />
           </Card>
           <Card className="overflow-hidden hover:shadow-md transition-shadow">
             <CardContent className="p-4">
@@ -135,6 +138,7 @@ function CustomersPage() {
               </div>
               <p className="text-2xl font-bold font-mono">{formatCurrency(totalRevenue)}</p>
             </CardContent>
+            <div className="h-[3px] bg-[var(--status-delivered)]" />
           </Card>
         </div>
       </FadeIn>
@@ -169,25 +173,25 @@ function CustomersPage() {
         </FadeIn>
       ) : (
         <FadeIn delay={0.2}>
-          <div className="overflow-x-auto rounded-lg border">
+          <div className="overflow-x-auto rounded-xl border bg-card">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="p-3 text-right font-medium">الاسم</th>
-                  <th className="p-3 text-right font-medium">الهاتف</th>
-                  <th className="p-3 text-right font-medium">عدد الطلبات</th>
-                  <th className="p-3 text-right font-medium">إجمالي الإنفاق</th>
-                  <th className="p-3 text-right font-medium">إلغاء</th>
-                  <th className="p-3 text-right font-medium">ما جاوبش</th>
-                  <th className="p-3 text-right font-medium">آخر طلب</th>
-                  <th className="p-3 text-right font-medium">الملف</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">الاسم</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">الهاتف</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">عدد الطلبات</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">إجمالي الإنفاق</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">إلغاء</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">ما جاوبش</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">آخر طلب</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">الملف</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredCustomers.map((customer, i) => (
                   <tr
                     key={customer.phone}
-                    className="border-b hover:bg-muted/30 transition-colors"
+                    className="border-b last:border-0 table-row-hover"
                     style={{ animationDelay: `${i * 20}ms` }}
                   >
                     <td className="p-3 font-medium">{customer.name}</td>

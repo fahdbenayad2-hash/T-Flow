@@ -61,19 +61,19 @@ export function Sidebar() {
   const primaryRole = roles[0]
 
   return (
-    <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-sidebar-background text-sidebar-foreground">
-      <div className="relative flex h-16 items-center gap-2.5 px-6 border-b border-sidebar-border overflow-hidden">
-        <div className="absolute inset-0 brand-speedlines pointer-events-none" />
+    <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-sidebar-background text-sidebar-foreground border-l border-sidebar-border">
+      <div className="relative flex h-14 items-center gap-2.5 px-5 border-b border-sidebar-border overflow-hidden">
+        <div className="absolute inset-0 brand-speedlines pointer-events-none opacity-60" />
         <motion.img
           src="/logo.png"
           alt="T-Flow"
-          className="relative h-8 w-8 object-contain shrink-0"
+          className="relative h-7 w-7 object-contain shrink-0"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4 }}
         />
         <motion.h1
-          className="relative text-xl font-bold tracking-tight"
+          className="relative text-lg font-bold tracking-tight"
           initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4 }}
@@ -82,32 +82,32 @@ export function Sidebar() {
         </motion.h1>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-2.5 py-3 space-y-0.5 overflow-y-auto">
         {visibleNavItems.map((item, i) => {
           const isActive = location.pathname.startsWith(item.to)
           return (
             <motion.div
               key={item.to}
-              initial={{ opacity: 0, x: -10 }}
+              initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: i * 0.05 }}
+              transition={{ duration: 0.25, delay: i * 0.03 }}
             >
               <Link
                 to={item.to}
                 className={cn(
-                  'relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                  'relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
                   isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
-                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                    : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground'
                 )}
               >
-                <item.icon className="h-5 w-5" />
+                <item.icon className="h-4.5 w-4.5 shrink-0" />
                 {item.label}
                 {isActive && (
                   <motion.div
-                    className="absolute right-0 w-1 h-6 bg-primary rounded-l-full"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-primary rounded-l-full"
                     layoutId="sidebar-indicator"
-                    transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   />
                 )}
               </Link>
@@ -117,31 +117,31 @@ export function Sidebar() {
 
         {isAdmin && (
           <motion.div
-            initial={{ opacity: 0, x: -10 }}
+            initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: visibleNavItems.length * 0.05 }}
+            transition={{ duration: 0.25, delay: visibleNavItems.length * 0.03 }}
           >
             <Link
               to="/users"
               className={cn(
-                'relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                'relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
                 location.pathname.startsWith('/users')
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
-                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground'
               )}
             >
-              <Shield className="h-5 w-5" />
+              <Shield className="h-4.5 w-4.5 shrink-0" />
               إدارة المستخدمين
             </Link>
           </motion.div>
         )}
       </nav>
 
-      <div className="p-3 border-t border-sidebar-border space-y-1">
+      <div className="p-2.5 border-t border-sidebar-border space-y-0.5">
         {primaryRole && (
-          <div className="px-3 py-2">
-            <Badge className="text-[10px] text-white bg-primary border-transparent">
-              <Shield className="h-3 w-3 ml-1" />
+          <div className="px-2.5 py-1.5">
+            <Badge className="text-[10px] text-white bg-primary border-transparent gap-1">
+              <Shield className="h-3 w-3" />
               {getRoleLabel(primaryRole)}
             </Badge>
           </div>
@@ -149,19 +149,19 @@ export function Sidebar() {
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+          className="w-full justify-start gap-2 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         >
-          {theme === 'dark' ? <Sun className="h-4 w-4 ml-2" /> : <Moon className="h-4 w-4 ml-2" />}
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           {theme === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن'}
         </Button>
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10"
+          className="w-full justify-start gap-2 text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10"
           onClick={handleLogout}
         >
-          <LogOut className="h-4 w-4 ml-2" />
+          <LogOut className="h-4 w-4" />
           خروج
         </Button>
       </div>

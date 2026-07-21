@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { cn } from '~/lib/utils'
 import { useRole } from '~/hooks/useRole'
+import { motion } from 'framer-motion'
 import type { AppRole } from '~/lib/types'
 
 interface NavItem {
@@ -35,7 +36,7 @@ export function BottomNav() {
   })
 
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t border-border z-50">
+    <nav className="md:hidden fixed bottom-0 inset-x-0 bg-surface-1/90 backdrop-blur-xl border-t border-border z-50 safe-area-bottom">
       <div className="flex items-center justify-around h-16 px-1">
         {visibleItems.map((item) => {
           const isActive = location.pathname.startsWith(item.to)
@@ -43,22 +44,33 @@ export function BottomNav() {
             <Link
               key={item.to}
               to={item.to}
-              className={cn(
-                'flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors duration-200 min-w-[3.75rem]',
-                isActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
+              className="relative flex flex-col items-center gap-0.5 px-2 py-1.5 min-w-[3.5rem]"
             >
               <span
                 className={cn(
-                  'flex items-center justify-center h-8 w-8 rounded-full transition-colors duration-200',
-                  isActive && 'bg-primary/10'
+                  'flex items-center justify-center h-8 w-8 rounded-xl transition-all duration-200',
+                  isActive
+                    ? 'bg-primary/15 text-primary'
+                    : 'text-muted-foreground'
                 )}
               >
                 <item.icon className="h-5 w-5" />
               </span>
-              {item.label}
+              <span
+                className={cn(
+                  'text-[10px] font-medium transition-colors duration-200',
+                  isActive ? 'text-primary' : 'text-muted-foreground'
+                )}
+              >
+                {item.label}
+              </span>
+              {isActive && (
+                <motion.div
+                  className="absolute -top-px left-1/2 -translate-x-1/2 w-5 h-[2px] bg-primary rounded-full"
+                  layoutId="bottomnav-indicator"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
             </Link>
           )
         })}

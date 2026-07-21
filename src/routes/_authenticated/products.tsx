@@ -2,6 +2,8 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { useOrders } from '~/lib/queries'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
+import { Skeleton } from '~/components/ui/skeleton'
+import { motion } from 'framer-motion'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Badge } from '~/components/ui/badge'
@@ -78,13 +80,13 @@ function ProductsSkeleton() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
-          <Card key={i}><CardContent className="p-4"><div className="h-16 bg-muted rounded animate-pulse" /></CardContent></Card>
+          <Card key={i}><CardContent className="p-4"><Skeleton className="h-16 skeleton-shimmer rounded-lg" /></CardContent></Card>
         ))}
       </div>
-      <div className="h-10 bg-muted rounded animate-pulse" />
+      <Skeleton className="h-10 skeleton-shimmer rounded-lg" />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-40 bg-muted rounded animate-pulse" style={{ animationDelay: `${i * 60}ms` }} />
+          <Skeleton key={i} className="h-40 skeleton-shimmer rounded-lg" />
         ))}
       </div>
     </div>
@@ -131,6 +133,7 @@ function ProductsPage() {
               </div>
               <p className="text-2xl font-bold font-mono">{products.length}</p>
             </CardContent>
+            <div className="h-[3px] bg-primary" />
           </Card>
           <Card className="overflow-hidden hover:shadow-md transition-shadow">
             <CardContent className="p-4">
@@ -140,6 +143,7 @@ function ProductsPage() {
               </div>
               <p className="text-2xl font-bold font-mono">{totalOrders}</p>
             </CardContent>
+            <div className="h-[3px] bg-status-confirmed" />
           </Card>
           <Card className="overflow-hidden hover:shadow-md transition-shadow">
             <CardContent className="p-4">
@@ -149,6 +153,7 @@ function ProductsPage() {
               </div>
               <p className="text-2xl font-bold font-mono">{formatCurrency(totalRevenue)}</p>
             </CardContent>
+            <div className="h-[3px] bg-status-delivered" />
           </Card>
           <Card className="overflow-hidden hover:shadow-md transition-shadow">
             <CardContent className="p-4">
@@ -160,6 +165,7 @@ function ProductsPage() {
                 {totalOrders > 0 ? formatCurrency(Math.round(totalRevenue / totalOrders)) : '0 دج'}
               </p>
             </CardContent>
+            <div className="h-[3px] bg-status-processing" />
           </Card>
         </div>
       </FadeIn>
@@ -196,7 +202,7 @@ function ProductsPage() {
 
             return (
               <FadeIn key={product.name} delay={0.15 + i * 0.05}>
-                <Card className="hover:shadow-md transition-all duration-200 overflow-hidden">
+                <Card className="transition-all duration-200 overflow-hidden card-hover">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">{product.name}</CardTitle>
@@ -210,9 +216,12 @@ function ProductsPage() {
                       <span className="text-sm text-muted-foreground">الإيرادات</span>
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-[var(--status-delivered)] rounded-full transition-all duration-700"
+                          <motion.div
+                            className="h-full bg-[var(--status-delivered)] rounded-full"
                             style={{ width: `${revenuePercent}%` }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${revenuePercent}%` }}
+                            transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
                           />
                         </div>
                         <span className="font-mono text-sm font-bold">{formatCurrency(product.totalRevenue)}</span>

@@ -7,6 +7,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Badge } from '~/components/ui/badge'
 import { Label } from '~/components/ui/label'
+import { Skeleton } from '~/components/ui/skeleton'
 import { Separator } from '~/components/ui/separator'
 import {
   Select,
@@ -37,7 +38,7 @@ function UsersSkeleton() {
   return (
     <div className="space-y-4">
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="h-20 bg-muted rounded animate-pulse" style={{ animationDelay: `${i * 50}ms` }} />
+        <Skeleton key={i} className="h-20 skeleton-shimmer rounded-lg" />
       ))}
     </div>
   )
@@ -129,7 +130,7 @@ function UsersPage() {
 
         {showForm && (
           <FadeIn delay={0.05}>
-            <Card className="hover:shadow-md transition-shadow border-primary/30">
+            <Card className="card-hover border-primary/30">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <UserPlus className="h-4 w-4" />
@@ -202,7 +203,7 @@ function UsersPage() {
         )}
 
         <FadeIn delay={0.1}>
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="card-hover">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Users className="h-4 w-4" />
@@ -219,7 +220,7 @@ function UsersPage() {
                   {users.map((user) => (
                     <div
                       key={user.id}
-                      className="flex flex-col md:flex-row md:items-center justify-between py-3 border-b last:border-0 hover:bg-muted/30 -mx-2 px-2 rounded transition-colors"
+                      className="flex flex-col md:flex-row md:items-center justify-between py-3 border-b last:border-0 table-row-hover -mx-2 px-2 rounded-lg"
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
@@ -296,7 +297,7 @@ function UsersPage() {
         </FadeIn>
 
         <FadeIn delay={0.15}>
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="card-hover">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4" />

@@ -6,6 +6,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Badge } from '~/components/ui/badge'
 import { Checkbox } from '~/components/ui/checkbox'
+import { Skeleton } from '~/components/ui/skeleton'
 import { useRole } from '~/hooks/useRole'
 import {
   Select,
@@ -15,19 +16,15 @@ import {
   SelectValue,
 } from '~/components/ui/select'
 import {
-  Search,
-  Download,
-  X,
-  AlertCircle,
-  ArrowUpDown,
-  Filter,
-  ShoppingCart,
+  Search, Download, X, AlertCircle, ArrowUpDown,
+  Filter, ShoppingCart,
 } from 'lucide-react'
 import { STATUS_MAP, STATUS_OPTIONS, formatCurrency, formatDate } from '~/lib/utils'
 import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
 import { ErrorState, OrdersEmptyState } from '~/components/empty-state'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
+import { motion } from 'framer-motion'
 
 export const Route = createFileRoute('/_authenticated/orders')({
   component: OrdersPage,
@@ -36,17 +33,28 @@ export const Route = createFileRoute('/_authenticated/orders')({
 function OrdersSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="h-10 bg-muted rounded animate-pulse" />
+      <Skeleton className="h-10 w-full rounded-lg" />
       <div className="flex gap-2">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-9 w-32 bg-muted rounded animate-pulse" />
+        {[...Array(3)].map((_, i) => (
+          <Skeleton key={i} className="h-9 w-32 rounded-lg" />
         ))}
       </div>
-      <div className="space-y-2">
-        {[...Array(8)].map((_, i) => (
-          <div key={i} className="h-14 bg-muted rounded animate-pulse" style={{ animationDelay: `${i * 50}ms` }} />
-        ))}
-      </div>
+      <Card>
+        <CardContent className="p-0">
+          <div className="space-y-0">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-4 py-3 border-b last:border-0">
+                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -206,9 +214,11 @@ function OrdersPage() {
   }
 
   const hasActiveFilters = search || statusFilter !== 'all' || wilayaFilter !== 'all' || productFilter !== 'all'
+  const activeFilterCount = [statusFilter, wilayaFilter, productFilter].filter((f) => f !== 'all').length + (search ? 1 : 0)
 
   return (
     <StaggerContainer className="space-y-4">
+      {/* Search + Filters */}
       <FadeIn>
         <div className="flex flex-col md:flex-row md:items-center gap-3">
           <div className="relative flex-1">
@@ -220,7 +230,7 @@ function OrdersPage() {
               className="pr-9"
             />
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="الحالة" />
@@ -259,70 +269,84 @@ function OrdersPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => { setSearch(''); setStatusFilter('all'); setWilayaFilter('all'); setProductFilter('all') }}
-                className="text-muted-foreground"
+                className="text-muted-foreground gap-1"
               >
-                <X className="h-4 w-4 ml-1" />
-                مسح الفلاتر
+                <X className="h-3.5 w-3.5" />
+                مسح
+                {activeFilterCount > 0 && (
+                  <span className="h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
               </Button>
             )}
           </div>
         </div>
       </FadeIn>
 
+      {/* Bulk edit + Export */}
       <FadeIn delay={0.1}>
-        <div className="flex flex-wrap items-center gap-2">
-          {canBulkEdit && selectedRows.size > 0 && (
-            <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
-              <span className="text-sm font-medium">{selectedRows.size} محدد</span>
-              <Select value={bulkStatus} onValueChange={setBulkStatus}>
-                <SelectTrigger className="w-[140px] h-8">
-                  <SelectValue placeholder="تغيير الحالة" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button size="sm" onClick={handleBulkUpdate} disabled={bulkMutation.isPending || !bulkStatus}>
-                تطبيق
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setSelectedRows(new Set())}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-          <div className="mr-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => handleExport('xlsx')}>
-              <Download className="h-4 w-4 ml-1" />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {canBulkEdit && selectedRows.size > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center gap-2 bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-lg"
+              >
+                <span className="text-sm font-medium text-primary">{selectedRows.size} محدد</span>
+                <Select value={bulkStatus} onValueChange={setBulkStatus}>
+                  <SelectTrigger className="w-[130px] h-8">
+                    <SelectValue placeholder="تغيير الحالة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" onClick={handleBulkUpdate} disabled={bulkMutation.isPending || !bulkStatus}>
+                  تطبيق
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setSelectedRows(new Set())} className="h-8 w-8 p-0">
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </motion.div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => handleExport('xlsx')} className="gap-1.5">
+              <Download className="h-3.5 w-3.5" />
               Excel
             </Button>
-            <Button variant="outline" size="sm" onClick={() => handleExport('csv')}>
-              <Download className="h-4 w-4 ml-1" />
+            <Button variant="outline" size="sm" onClick={() => handleExport('csv')} className="gap-1.5">
+              <Download className="h-3.5 w-3.5" />
               CSV
             </Button>
           </div>
         </div>
       </FadeIn>
 
+      {/* Duplicate warning */}
       {duplicates.size > 0 && (
-        <FadeIn delay={0.15}>
-          <div className="flex items-center gap-2 bg-[var(--status-processing)]/10 text-[var(--status-processing)] px-3 py-2 rounded-lg text-sm">
+        <FadeIn delay={0.12}>
+          <div className="flex items-center gap-2 bg-[var(--status-processing)]/10 border border-[var(--status-processing)]/20 text-[var(--status-processing)] px-3 py-2 rounded-lg text-sm">
             <AlertCircle className="h-4 w-4 shrink-0" />
             تم كشف {duplicates.size} طلب مكرر (هاتف مكرر خلال 7 أيام)
           </div>
         </FadeIn>
       )}
 
+      {/* Table */}
       {filteredOrders.length === 0 ? (
-        <FadeIn delay={0.2}>
+        <FadeIn delay={0.15}>
           {hasActiveFilters ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="rounded-full bg-muted p-4 mb-4">
-                <Filter className="h-8 w-8 text-muted-foreground" />
+              <div className="rounded-2xl bg-muted p-5 mb-4">
+                <Filter className="h-7 w-7 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">لا توجد نتائج</h3>
-              <p className="text-sm text-muted-foreground max-w-sm">
+              <h3 className="text-base font-semibold mb-1">لا توجد نتائج</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">
                 جرّب تغيير معايير البحث أو الفلتر
               </p>
             </div>
@@ -331,11 +355,11 @@ function OrdersPage() {
           )}
         </FadeIn>
       ) : (
-        <FadeIn delay={0.2}>
-          <div className="overflow-x-auto rounded-lg border">
+        <FadeIn delay={0.15}>
+          <div className="overflow-x-auto rounded-xl border bg-card">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/50">
+                <tr className="border-b bg-surface-1/50">
                   {canBulkEdit && (
                     <th className="p-3 w-10">
                       <Checkbox
@@ -344,27 +368,27 @@ function OrdersPage() {
                       />
                     </th>
                   )}
-                  <th className="p-3 text-right font-medium">#</th>
-                  <th className="p-3 text-right font-medium cursor-pointer hover:bg-muted/80 transition-colors"
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">#</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                       onClick={() => { setSortField('_row'); setSortDir(d => d === 'asc' ? 'desc' : 'asc') }}>
                     <span className="flex items-center gap-1">
                       الطلب
                       <ArrowUpDown className="h-3 w-3" />
                     </span>
                   </th>
-                  <th className="p-3 text-right font-medium">الاسم</th>
-                  <th className="p-3 text-right font-medium">الهاتف</th>
-                  <th className="p-3 text-right font-medium">الولاية</th>
-                  <th className="p-3 text-right font-medium">المنتج</th>
-                  <th className="p-3 text-right font-medium">السعر</th>
-                  <th className="p-3 text-right font-medium cursor-pointer hover:bg-muted/80 transition-colors"
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">الاسم</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">الهاتف</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">الولاية</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">المنتج</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">السعر</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                       onClick={() => { setSortField('الحالة'); setSortDir(d => d === 'asc' ? 'desc' : 'asc') }}>
                     <span className="flex items-center gap-1">
                       الحالة
                       <ArrowUpDown className="h-3 w-3" />
                     </span>
                   </th>
-                  <th className="p-3 text-right font-medium cursor-pointer hover:bg-muted/80 transition-colors"
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                       onClick={() => { setSortField('التاريخ'); setSortDir(d => d === 'asc' ? 'desc' : 'asc') }}>
                     <span className="flex items-center gap-1">
                       التاريخ
@@ -374,16 +398,15 @@ function OrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map((order, i) => {
+                {filteredOrders.map((order) => {
                   const statusInfo = STATUS_MAP[order['الحالة']]
                   const isDup = duplicates.has(order._row)
                   return (
                     <tr
                       key={order._row}
-                      className={`border-b hover:bg-muted/30 cursor-pointer transition-colors ${
+                      className={`border-b last:border-0 table-row-hover cursor-pointer ${
                         isDup ? 'bg-[var(--status-processing)]/5' : ''
                       }`}
-                      style={{ animationDelay: `${i * 20}ms` }}
                     >
                       {canBulkEdit && (
                         <td className="p-3">
@@ -398,15 +421,15 @@ function OrdersPage() {
                         <Link
                           to="/orders/$row"
                           params={{ row: String(order._row) }}
-                          className="text-primary hover:underline font-medium text-xs"
+                          className="text-primary hover:underline font-medium text-xs font-mono"
                         >
                           {order.order_id}
                         </Link>
                         {isDup && (
-                          <Badge className="mr-1 text-[9px] bg-[var(--status-processing)] text-white">مكرر</Badge>
+                          <Badge className="mr-1 text-[9px] bg-[var(--status-processing)] text-white border-transparent">مكرر</Badge>
                         )}
                       </td>
-                      <td className="p-3 font-medium">{order['الاسم']}</td>
+                      <td className="p-3 font-medium text-sm">{order['الاسم']}</td>
                       <td className="p-3 font-mono text-xs" dir="ltr">{order['الهاتف']}</td>
                       <td className="p-3 text-xs">{order['الولاية']}</td>
                       <td className="p-3 text-xs max-w-[150px] truncate">{order['المنتج']}</td>
@@ -434,9 +457,10 @@ function OrdersPage() {
         </FadeIn>
       )}
 
-      <FadeIn delay={0.25}>
+      {/* Footer */}
+      <FadeIn delay={0.2}>
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>إجمالي: {filteredOrders.length} طلب من {orders.length}</span>
+          <span>{filteredOrders.length} طلب من {orders.length}</span>
           {data?.fromCache && <span>بيانات مؤقتة — آخر تحديث: {new Date().toLocaleTimeString('ar-DZ')}</span>}
         </div>
       </FadeIn>

@@ -6,7 +6,9 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Badge } from '~/components/ui/badge'
 import { Separator } from '~/components/ui/separator'
+import { Skeleton } from '~/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
+import { motion } from 'framer-motion'
 import {
   Phone,
   PhoneOff,
@@ -38,12 +40,16 @@ function CallCenterSkeleton() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {[...Array(4)].map((_, i) => (
-          <Card key={i}><CardContent className="p-4"><div className="h-14 bg-muted rounded animate-pulse" /></CardContent></Card>
+          <Card key={i}>
+            <CardContent className="p-4">
+              <Skeleton className="h-14 w-full skeleton-shimmer rounded-lg" />
+            </CardContent>
+          </Card>
         ))}
       </div>
       <div className="space-y-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-40 bg-muted rounded animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
+          <Skeleton key={i} className="h-40 w-full skeleton-shimmer rounded-lg" />
         ))}
       </div>
     </div>
@@ -76,11 +82,11 @@ function CallCenterPage() {
     setCallStates((prev) => ({
       ...prev,
       [orderId]: {
-        outcome: '',
-        note: '',
-        followUpDate: '',
-        followUpTime: '',
         ...prev[orderId],
+        outcome: prev[orderId]?.outcome || '',
+        note: prev[orderId]?.note || '',
+        followUpDate: prev[orderId]?.followUpDate || '',
+        followUpTime: prev[orderId]?.followUpTime || '',
         [field]: value,
       },
     }))
@@ -127,6 +133,7 @@ function CallCenterPage() {
               </div>
               <p className="text-2xl font-bold font-mono">{queueOrders.length}</p>
             </CardContent>
+            <div className="h-[3px] bg-primary" />
           </Card>
           <Card className="overflow-hidden hover:shadow-md transition-shadow">
             <CardContent className="p-4">
@@ -136,6 +143,7 @@ function CallCenterPage() {
               </div>
               <p className="text-2xl font-bold font-mono text-[var(--status-delivered)]">{todayStats.answered}</p>
             </CardContent>
+            <div className="h-[3px] bg-[var(--status-delivered)]" />
           </Card>
           <Card className="overflow-hidden hover:shadow-md transition-shadow">
             <CardContent className="p-4">
@@ -145,6 +153,7 @@ function CallCenterPage() {
               </div>
               <p className="text-2xl font-bold font-mono text-[var(--status-no-answer)]">{todayStats.noAnswer}</p>
             </CardContent>
+            <div className="h-[3px] bg-[var(--status-no-answer)]" />
           </Card>
           <Card className="overflow-hidden hover:shadow-md transition-shadow">
             <CardContent className="p-4">
@@ -154,6 +163,7 @@ function CallCenterPage() {
               </div>
               <p className="text-2xl font-bold font-mono text-[var(--status-processing)]">{todayStats.postponed}</p>
             </CardContent>
+            <div className="h-[3px] bg-[var(--status-processing)]" />
           </Card>
         </div>
       </FadeIn>
@@ -178,7 +188,7 @@ function CallCenterPage() {
                   const state = callStates[order.order_id]
                   return (
                     <StaggerItem key={order._row}>
-                      <Card className={`transition-all duration-200 ${state?.outcome ? 'border-[var(--status-delivered)] shadow-md' : 'hover:shadow-sm'}`}>
+                      <Card className={`transition-all duration-200 ${state?.outcome ? 'border-primary/30 shadow-md' : 'hover:shadow-sm'}`}>
                         <CardContent className="p-4">
                           <div className="flex flex-col md:flex-row md:items-start gap-4">
                             <div className="flex-1">

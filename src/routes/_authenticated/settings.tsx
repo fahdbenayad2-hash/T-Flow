@@ -18,6 +18,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
+import { Skeleton } from '~/components/ui/skeleton'
 import { RoleGuard } from '~/components/role-guard'
 import toast from 'react-hot-toast'
 
@@ -105,7 +106,7 @@ function SettingsPage() {
           </TabsList>
 
           <TabsContent value="connection" className="space-y-4 mt-4">
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="card-hover">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <Globe className="h-4 w-4" />
@@ -168,7 +169,7 @@ function SettingsPage() {
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="card-hover">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <Shield className="h-4 w-4" />
@@ -202,7 +203,7 @@ function SettingsPage() {
           </TabsContent>
 
           <TabsContent value="general" className="space-y-4 mt-4">
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="card-hover">
               <CardHeader>
                 <CardTitle className="text-base">معلومات التطبيق</CardTitle>
               </CardHeader>
@@ -234,7 +235,7 @@ function SettingsPage() {
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="card-hover">
               <CardHeader>
                 <CardTitle className="text-base">البيانات المخزنة</CardTitle>
                 <p className="text-sm text-muted-foreground">

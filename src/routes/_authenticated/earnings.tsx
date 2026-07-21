@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Separator } from '~/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
+import { Skeleton } from '~/components/ui/skeleton'
+import { motion } from 'framer-motion'
 import {
   DollarSign,
   TrendingUp,
@@ -27,10 +29,10 @@ function EarningsSkeleton() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
-          <Card key={i}><CardContent className="p-4"><div className="h-16 bg-muted rounded animate-pulse" /></CardContent></Card>
+          <Card key={i}><CardContent className="p-4"><Skeleton className="skeleton-shimmer rounded-lg h-16 w-full" /></CardContent></Card>
         ))}
       </div>
-      <div className="h-64 bg-muted rounded animate-pulse" />
+      <Skeleton className="skeleton-shimmer rounded-lg h-64 w-full" />
     </div>
   )
 }
@@ -118,7 +120,7 @@ function EarningsPage() {
     <StaggerContainer className="space-y-4">
       <FadeIn>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <Card className="overflow-hidden hover:shadow-md transition-shadow">
+          <Card className="overflow-hidden card-hover">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <DollarSign className="h-4 w-4 text-[var(--status-delivered)]" />
@@ -126,8 +128,9 @@ function EarningsPage() {
               </div>
               <p className="text-2xl font-bold font-mono text-[var(--status-delivered)]">{formatCurrency(stats.totalRevenue)}</p>
             </CardContent>
+            <div className="h-[3px] bg-status-delivered" />
           </Card>
-          <Card className="overflow-hidden hover:shadow-md transition-shadow">
+          <Card className="overflow-hidden card-hover">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="h-4 w-4 text-primary" />
@@ -135,8 +138,9 @@ function EarningsPage() {
               </div>
               <p className="text-2xl font-bold font-mono">{formatCurrency(stats.totalPotentialRevenue)}</p>
             </CardContent>
+            <div className="h-[3px] bg-primary" />
           </Card>
-          <Card className="overflow-hidden hover:shadow-md transition-shadow">
+          <Card className="overflow-hidden card-hover">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingDown className="h-4 w-4 text-[var(--status-cancelled)]" />
@@ -144,8 +148,9 @@ function EarningsPage() {
               </div>
               <p className="text-2xl font-bold font-mono text-[var(--status-cancelled)]">{formatCurrency(stats.lostRevenue)}</p>
             </CardContent>
+            <div className="h-[3px] bg-status-cancelled" />
           </Card>
-          <Card className="overflow-hidden hover:shadow-md transition-shadow">
+          <Card className="overflow-hidden card-hover">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <BarChart3 className="h-4 w-4 text-[var(--status-processing)]" />
@@ -153,6 +158,7 @@ function EarningsPage() {
               </div>
               <p className="text-2xl font-bold font-mono">{formatCurrency(stats.avgOrderValue)}</p>
             </CardContent>
+            <div className="h-[3px] bg-status-processing" />
           </Card>
         </div>
       </FadeIn>
@@ -187,7 +193,7 @@ function EarningsPage() {
           </TabsList>
 
           <TabsContent value="overview" className="mt-4">
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="card-hover">
               <CardHeader>
                 <CardTitle className="text-base">الإيرادات حسب المنتج</CardTitle>
               </CardHeader>
@@ -202,9 +208,12 @@ function EarningsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-[var(--status-delivered)] rounded-full transition-all duration-700"
+                          <motion.div
+                            className="h-full bg-[var(--status-delivered)] rounded-full"
                             style={{ width: `${percent}%` }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${percent}%` }}
+                            transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1], delay: 0.3 }}
                           />
                         </div>
                         <span className="text-xs text-muted-foreground w-16 text-left">{data.orders} طلب</span>
@@ -217,7 +226,7 @@ function EarningsPage() {
           </TabsContent>
 
           <TabsContent value="wilaya" className="mt-4">
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="card-hover">
               <CardHeader>
                 <CardTitle className="text-base">الإيرادات حسب الولاية</CardTitle>
               </CardHeader>
@@ -232,9 +241,12 @@ function EarningsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary rounded-full transition-all duration-700"
+                          <motion.div
+                            className="h-full bg-primary rounded-full"
                             style={{ width: `${percent}%` }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${percent}%` }}
+                            transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1], delay: 0.3 }}
                           />
                         </div>
                         <span className="text-xs text-muted-foreground w-16 text-left">{data.orders} طلب</span>
@@ -247,7 +259,7 @@ function EarningsPage() {
           </TabsContent>
 
           <TabsContent value="daily" className="mt-4">
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="card-hover">
               <CardHeader>
                 <CardTitle className="text-base">الإيرادات حسب التاريخ</CardTitle>
               </CardHeader>
@@ -263,9 +275,12 @@ function EarningsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-[var(--status-shipped)] rounded-full transition-all duration-700"
+                          <motion.div
+                            className="h-full bg-[var(--status-shipped)] rounded-full"
                             style={{ width: `${percent}%` }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${percent}%` }}
+                            transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1], delay: 0.3 }}
                           />
                         </div>
                         <span className="text-xs text-muted-foreground w-16 text-left">{data.orders} طلب</span>

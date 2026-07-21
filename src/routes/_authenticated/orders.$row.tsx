@@ -7,6 +7,7 @@ import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Badge } from '~/components/ui/badge'
 import { Separator } from '~/components/ui/separator'
+import { Skeleton } from '~/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -15,18 +16,13 @@ import {
   SelectValue,
 } from '~/components/ui/select'
 import {
-  ArrowRight,
-  RefreshCw,
-  Save,
-  Clock,
-  User,
-  MapPin,
-  Package,
+  ArrowRight, RefreshCw, Save, Clock, User, MapPin, Package,
 } from 'lucide-react'
 import { STATUS_MAP, STATUS_OPTIONS, formatCurrency } from '~/lib/utils'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
 import { ErrorState } from '~/components/empty-state'
 import toast from 'react-hot-toast'
+import { motion } from 'framer-motion'
 
 export const Route = createFileRoute('/_authenticated/orders/$row')({
   component: OrderDetailPage,
@@ -47,11 +43,12 @@ function OrderDetailPage() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-10 w-32 bg-muted rounded animate-pulse" />
+        <Skeleton className="h-10 w-48 rounded-lg" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="h-64 bg-muted rounded animate-pulse" />
-          <div className="h-64 bg-muted rounded animate-pulse" />
+          <Card><CardContent className="p-5"><Skeleton className="h-48 w-full" /></CardContent></Card>
+          <Card><CardContent className="p-5"><Skeleton className="h-48 w-full" /></CardContent></Card>
         </div>
+        <Card><CardContent className="p-5"><Skeleton className="h-32 w-full" /></CardContent></Card>
       </div>
     )
   }
@@ -93,120 +90,107 @@ function OrderDetailPage() {
 
   return (
     <StaggerContainer className="space-y-4">
+      {/* Header */}
       <FadeIn>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.navigate({ to: '/orders' })}>
-            <ArrowRight className="h-5 w-5" />
+          <Button variant="ghost" size="icon" onClick={() => router.navigate({ to: '/orders' })} className="h-8 w-8">
+            <ArrowRight className="h-4 w-4" />
           </Button>
-          <div>
-            <h2 className="text-lg font-semibold">تفاصيل الطلب</h2>
-            <p className="text-sm text-muted-foreground font-mono">{order.order_id}</p>
+          <div className="flex-1">
+            <h2 className="text-base font-semibold">تفاصيل الطلب</h2>
+            <p className="text-xs text-muted-foreground font-mono">{order.order_id}</p>
           </div>
+          <Badge
+            className="text-xs"
+            style={{
+              backgroundColor: `var(${statusInfo?.var || '--status-processing'})`,
+              color: '#fff',
+            }}
+          >
+            {order['الحالة']}
+          </Badge>
         </div>
       </FadeIn>
 
+      {/* Info cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FadeIn delay={0.1}>
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="overflow-hidden">
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <User className="h-4 w-4" />
+              <CardTitle className="text-sm flex items-center gap-2">
+                <User className="h-4 w-4 text-primary" />
                 معلومات العميل
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">الاسم</span>
-                <span className="font-medium">{order['الاسم']}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">الهاتف</span>
-                <span className="font-mono" dir="ltr">{order['الهاتف']}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">الولاية</span>
-                <span>{order['الولاية']}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">البلدية</span>
-                <span>{order['البلدية']}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">العنوان</span>
-                <span>{order['العنوان']}</span>
-              </div>
+            <CardContent className="space-y-0">
+              {[
+                { label: 'الاسم', value: order['الاسم'] },
+                { label: 'الهاتف', value: order['الهاتف'], dir: 'ltr' as const, mono: true },
+                { label: 'الولاية', value: order['الولاية'] },
+                { label: 'البلدية', value: order['البلدية'] },
+                { label: 'العنوان', value: order['العنوان'] },
+              ].map((item, i) => (
+                <div key={i}>
+                  {i > 0 && <Separator />}
+                  <div className="flex justify-between py-2.5">
+                    <span className="text-xs text-muted-foreground">{item.label}</span>
+                    <span className={`text-sm font-medium ${item.mono ? 'font-mono text-xs' : ''}`} dir={item.dir}>
+                      {item.value || '-'}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
         </FadeIn>
 
         <FadeIn delay={0.15}>
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="overflow-hidden">
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Package className="h-4 w-4" />
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Package className="h-4 w-4 text-primary" />
                 تفاصيل الطلب
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">المنتج</span>
-                <span className="font-medium">{order['المنتج']}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">اللون</span>
-                <span>{order['اللون']}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">المقاس</span>
-                <span>{order['المقاس']}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">السعر</span>
-                <span className="font-mono font-bold">{formatCurrency(Number(order['السعر']) || 0)}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">الكمية</span>
-                <span className="font-mono">{order['الكمية'] || '1'}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">التوصيل</span>
-                <span>{order['نوع التوصيل'] || '-'}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">الحالة</span>
-                <Badge
-                  style={{
-                    backgroundColor: `var(${statusInfo?.var || '--status-processing'})`,
-                    color: '#fff',
-                  }}
-                >
-                  {order['الحالة']}
-                </Badge>
-              </div>
+            <CardContent className="space-y-0">
+              {[
+                { label: 'المنتج', value: order['المنتج'] },
+                { label: 'اللون', value: order['اللون'] },
+                { label: 'المقاس', value: order['المقاس'] },
+                {
+                  label: 'السعر',
+                  value: formatCurrency(Number(order['السعر']) || 0),
+                  mono: true, bold: true,
+                },
+                { label: 'الكمية', value: order['الكمية'] || '1', mono: true },
+                { label: 'التوصيل', value: order['نوع التوصيل'] },
+                { label: 'التاريخ', value: order['التاريخ'] },
+              ].map((item, i) => (
+                <div key={i}>
+                  {i > 0 && <Separator />}
+                  <div className="flex justify-between py-2.5">
+                    <span className="text-xs text-muted-foreground">{item.label}</span>
+                    <span className={`text-sm ${item.mono ? 'font-mono text-xs' : ''} ${item.bold ? 'font-bold' : 'font-medium'}`}>
+                      {item.value || '-'}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
         </FadeIn>
       </div>
 
+      {/* Edit form */}
       <FadeIn delay={0.2}>
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-base">تعديل الطلب</CardTitle>
+            <CardTitle className="text-sm">تعديل الطلب</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>الحالة</Label>
+                <Label className="text-xs">الحالة</Label>
                 <Select value={editStatus || order['الحالة']} onValueChange={setEditStatus}>
                   <SelectTrigger>
                     <SelectValue />
@@ -219,7 +203,7 @@ function OrderDetailPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>الملاحظات</Label>
+                <Label className="text-xs">الملاحظات</Label>
                 <Input
                   value={editNotes || order['الملاحظات']}
                   onChange={(e) => setEditNotes(e.target.value)}
@@ -228,11 +212,11 @@ function OrderDetailPage() {
               </div>
             </div>
             <div className="flex justify-end">
-              <Button onClick={handleSave} disabled={updateMutation.isPending}>
+              <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-1.5">
                 {updateMutation.isPending ? (
-                  <RefreshCw className="h-4 w-4 ml-2 animate-spin" />
+                  <RefreshCw className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Save className="h-4 w-4 ml-2" />
+                  <Save className="h-4 w-4" />
                 )}
                 حفظ التعديلات
               </Button>
@@ -241,28 +225,35 @@ function OrderDetailPage() {
         </Card>
       </FadeIn>
 
+      {/* Audit log */}
       {auditLogs && auditLogs.length > 0 && (
         <FadeIn delay={0.25}>
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="overflow-hidden">
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Clock className="h-4 w-4" />
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
                 سجل التدقيق
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {auditLogs.map((log: any) => (
-                  <div key={log.id} className="flex items-center justify-between py-2 border-b last:border-0 hover:bg-muted/20 -mx-2 px-2 rounded transition-colors">
-                    <div>
+              <div className="space-y-0">
+                {auditLogs.map((log: any, i: number) => (
+                  <div key={log.id} className="relative flex items-start gap-3 py-2.5 border-b last:border-0">
+                    <div className="relative mt-1">
+                      <div className="h-2 w-2 rounded-full bg-primary" />
+                      {i < auditLogs.length - 1 && (
+                        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-px h-full bg-border" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{log.action}</p>
                       {log.new_value && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
                           {JSON.stringify(log.new_value)}
                         </p>
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground font-mono">
+                    <span className="text-[10px] text-muted-foreground font-mono shrink-0">
                       {new Date(log.created_at).toLocaleString('ar-DZ')}
                     </span>
                   </div>

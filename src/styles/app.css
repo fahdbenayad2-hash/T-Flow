@@ -4,45 +4,52 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* T-Flow brand — sampled directly from the logo mark */
-  --color-crimson: #E72734;       /* the running cheetah */
-  --color-crimson-600: #C81F2A;   /* hover / pressed */
-  --color-maroon: #7D1622;        /* the cheetah's shadow — used for destructive/serious states */
-  --color-ink: #0E1113;           /* the T letterform */
-  --color-paper: #FAFAFA;         /* the logo's background field */
+  /* T-Flow brand — the cheetah's DNA */
+  --color-crimson: #E31E24;
+  --color-crimson-600: #C41A1F;
+  --color-crimson-700: #A31519;
+  --color-maroon: #7D1622;
+  --color-ink: #0E1113;
+  --color-paper: #FAFAFA;
 
-  --color-background: var(--color-paper);
+  /* Surface elevation (light mode) */
+  --surface-0: var(--color-paper);
+  --surface-1: #FFFFFF;
+  --surface-2: #F5F5F6;
+  --surface-3: #EEEDEF;
+
+  --color-background: var(--surface-0);
   --color-foreground: var(--color-ink);
-  --color-card: #FFFFFF;
+  --color-card: var(--surface-1);
   --color-card-foreground: var(--color-ink);
   --color-primary: var(--color-crimson);
   --color-primary-foreground: #FFFFFF;
-  --color-secondary: #F2F2F3;
+  --color-secondary: var(--surface-2);
   --color-secondary-foreground: var(--color-ink);
-  --color-muted: #F0F0F1;
+  --color-muted: var(--surface-2);
   --color-muted-foreground: #6B7280;
-  --color-accent: #FCE9EA;
+  --color-accent: #FEF2F2;
   --color-accent-foreground: var(--color-maroon);
   --color-destructive: var(--color-maroon);
   --color-destructive-foreground: #FFFFFF;
-  --color-border: #E7E7E9;
-  --color-input: #E7E7E9;
+  --color-border: #E5E5E7;
+  --color-input: #E5E5E7;
   --color-ring: var(--color-crimson);
   --color-sidebar-background: var(--color-ink);
   --color-sidebar-foreground: #F2F2F3;
   --color-sidebar-primary: var(--color-crimson);
   --color-sidebar-primary-foreground: #FFFFFF;
-  --color-sidebar-accent: rgba(231, 39, 52, 0.16);
+  --color-sidebar-accent: rgba(227, 30, 36, 0.14);
   --color-sidebar-accent-foreground: #FFFFFF;
   --color-sidebar-border: rgba(255, 255, 255, 0.08);
   --color-sidebar-ring: var(--color-crimson);
   --radius: 0.75rem;
 
   --status-processing: #F59E0B;
-  --status-confirmed: #2563EB;
-  --status-shipped: #7C3AED;
-  --status-delivered: #16A34A;
-  --status-no-answer: #EA580C;
+  --status-confirmed: #3B82F6;
+  --status-shipped: #8B5CF6;
+  --status-delivered: #22C55E;
+  --status-no-answer: #F97316;
   --status-cancelled: #6B7280;
 
   --chart-1: var(--color-crimson);
@@ -53,17 +60,23 @@
 }
 
 .dark {
-  --color-background: #0E1113;
+  /* Surface elevation (dark mode) */
+  --surface-0: #0E1113;
+  --surface-1: #15181B;
+  --surface-2: #1C1F23;
+  --surface-3: #23272B;
+
+  --color-background: var(--surface-0);
   --color-foreground: #F2F2F3;
-  --color-card: #17191C;
+  --color-card: var(--surface-1);
   --color-card-foreground: #F2F2F3;
   --color-primary: var(--color-crimson);
   --color-primary-foreground: #FFFFFF;
-  --color-secondary: #1D2023;
+  --color-secondary: var(--surface-2);
   --color-secondary-foreground: #F2F2F3;
-  --color-muted: #1D2023;
+  --color-muted: var(--surface-2);
   --color-muted-foreground: #8B9198;
-  --color-accent: rgba(231, 39, 52, 0.12);
+  --color-accent: rgba(227, 30, 36, 0.10);
   --color-accent-foreground: #F2F2F3;
   --color-destructive: #A32531;
   --color-destructive-foreground: #FFFFFF;
@@ -72,7 +85,7 @@
   --color-ring: var(--color-crimson);
   --color-sidebar-background: #0A0C0D;
   --color-sidebar-foreground: #F2F2F3;
-  --color-sidebar-accent: rgba(231, 39, 52, 0.18);
+  --color-sidebar-accent: rgba(227, 30, 36, 0.16);
   --color-sidebar-border: rgba(255, 255, 255, 0.06);
 }
 
@@ -137,6 +150,91 @@ html[dir="rtl"] {
 
 .font-mono {
   font-family: 'JetBrains Mono', monospace;
+}
+
+/* ===== Shimmer skeleton animation ===== */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-3) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ===== KPI accent stripe ===== */
+.kpi-accent {
+  position: relative;
+}
+.kpi-accent::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--kpi-color, var(--color-crimson));
+  opacity: 0.8;
+}
+
+/* ===== Card interactive states ===== */
+.card-hover {
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+.card-hover:hover {
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(227, 30, 36, 0.06);
+  transform: translateY(-1px);
+}
+.card-hover:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.dark .card-hover:hover {
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(227, 30, 36, 0.08);
+}
+.dark .card-hover:active {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== Table row hover ===== */
+.table-row-hover {
+  transition: background-color 0.15s ease;
+}
+.table-row-hover:hover {
+  background-color: var(--surface-2);
+}
+
+/* ===== Button press scale ===== */
+.btn-press {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* ===== Focus ring ===== */
+.focus-ring {
+  transition: box-shadow 0.15s ease;
+}
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface-0), 0 0 0 4px var(--color-crimson);
+}
+
+/* ===== Stagger entrance for lists ===== */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-slide-up {
+  animation: fadeSlideUp 0.3s ease-out both;
 }
 
 /* T-Flow signature — the three motion streaks under the cheetah's stride.
