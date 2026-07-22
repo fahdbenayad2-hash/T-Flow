@@ -64,3 +64,15 @@ export interface Notification {
   orderId?: string
   createdAt?: string
 }
+
+export interface ServerError {
+  ok: false
+  error: { code: string; message: string }
+}
+
+export interface ServerSuccess<T> {
+  ok: true
+  data: T
+}
+
+export type ServerResult<T> = ServerSuccess<T> | ServerError

@@ -1,4 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
+import { ensureEnvChecked } from '~/server/env-check'
+
+ensureEnvChecked()
 
 let _client: ReturnType<typeof createClient> | null = null
 

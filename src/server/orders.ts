@@ -63,17 +63,29 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
 export const updateOrder = createServerFn({ method: 'POST' })
   .validator((data: { row: number; updates: Record<string, unknown>; lastModified?: string }) => data)
   .handler(async ({ data }) => {
-    const response = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        _row: data.row,
-        updates: data.updates,
-      }),
-    })
+    try {
+      const response = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          _row: data.row,
+          updates: data.updates,
+        }),
+      })
 
-    if (!response.ok) {
-      throw new Error(`Failed to update order: ${response.status}`)
+      if (!response.ok) {
+        const text = await response.text().catch(() => '')
+        if (response.status === 429 || text.includes('quota') || text.includes('Quota')) {
+          return { ok: false as const, error: { code: 'QUOTA_EXCEEDED', message: 'تم تجاوز حد الطلبات في Google Sheets، حاول مرة أخرى بعد دقائق' } }
+        }
+        return { ok: false as const, error: { code: 'PROXY_ERROR', message: `فشل الاتصال بالخادوم (${response.status})` } }
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'خطأ غير معروف'
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('timeout')) {
+        return { ok: false as const, error: { code: 'NETWORK_ERROR', message: 'خطأ في الاتصال بالخادوم، تحقق من اتصالك وأعد المحاولة' } }
+      }
+      return { ok: false as const, error: { code: 'UNKNOWN', message: `خطأ غير متوقع: ${msg}` } }
     }
 
     if (!DEMO_MODE) {
@@ -98,7 +110,7 @@ export const updateOrder = createServerFn({ method: 'POST' })
 
     cache = null
 
-    return { success: true }
+    return { ok: true as const, data: { success: true } }
   })
 
 export const getAuditLog = createServerFn({ method: 'GET' })

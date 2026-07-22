@@ -163,6 +163,14 @@ Open [http://localhost:3000](http://localhost:3000). Authenticated users are red
 
 Run `db/migrations/001_init.sql` in the Supabase SQL Editor. This creates all tables, RLS policies, and triggers. It is safe to re-run (uses `IF NOT EXISTS` and `drop policy if exists`).
 
+## Testing
+
+```bash
+npm test
+```
+
+Unit tests use Vitest and cover core utilities: `generateOrderId`, `formatCurrency`, and `STATUS_MAP`/`STATUS_OPTIONS` consistency. Tests live alongside source files in `src/lib/*.test.ts`.
+
 ## Roles & Permissions
 
 | Role | Access |

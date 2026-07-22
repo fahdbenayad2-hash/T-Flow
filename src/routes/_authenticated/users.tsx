@@ -60,9 +60,13 @@ function UsersPage() {
   })
 
   const createUserMutation = useMutation({
-    mutationFn: () => createUser({
-      data: { email: newEmail, password: newPassword, fullName: newName, role: newRole },
-    }),
+    mutationFn: async () => {
+      const result = await createUser({
+        data: { email: newEmail, password: newPassword, fullName: newName, role: newRole },
+      })
+      if (!result.ok) throw new Error(result.error.message)
+      return result.data
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       toast.success(`تم إنشاء المستخدم ${newEmail}`)
@@ -77,8 +81,11 @@ function UsersPage() {
   })
 
   const addRoleMutation = useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: AppRole }) =>
-      addUserRole({ data: { userId, role } }),
+    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
+      const result = await addUserRole({ data: { userId, role } })
+      if (!result.ok) throw new Error(result.error.message)
+      return result.data
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       toast.success('تمت إضافة الدور')
@@ -89,8 +96,11 @@ function UsersPage() {
   })
 
   const removeRoleMutation = useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: AppRole }) =>
-      removeUserRole({ data: { userId, role } }),
+    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
+      const result = await removeUserRole({ data: { userId, role } })
+      if (!result.ok) throw new Error(result.error.message)
+      return result.data
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       toast.success('تم إزالة الدور')
@@ -101,8 +111,11 @@ function UsersPage() {
   })
 
   const deleteUserMutation = useMutation({
-    mutationFn: ({ userId }: { userId: string }) =>
-      deleteUser({ data: { userId } }),
+    mutationFn: async ({ userId }: { userId: string }) => {
+      const result = await deleteUser({ data: { userId } })
+      if (!result.ok) throw new Error(result.error.message)
+      return result.data
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       toast.success('تم حذف المستخدم')

@@ -43,7 +43,7 @@ export const createUser = createServerFn({ method: 'POST' })
   .validator((data: { email: string; password: string; fullName?: string; role: AppRole }) => data)
   .handler(async ({ data }) => {
     if (DEMO_MODE) {
-      return { success: true, userId: 'demo-new-user' }
+      return { ok: true as const, data: { success: true, userId: 'demo-new-user' } }
     }
 
     const { getSupabaseServerClient } = await import('~/utils/supabase-server')
@@ -57,7 +57,7 @@ export const createUser = createServerFn({ method: 'POST' })
     })
 
     if (authError) {
-      throw new Error(authError.message)
+      return { ok: false as const, error: { code: 'CREATE_USER_FAILED', message: `فشل إنشاء المستخدم: ${authError.message}` } }
     }
 
     const { error: roleError } = await supabase
@@ -68,13 +68,13 @@ export const createUser = createServerFn({ method: 'POST' })
       console.error('Failed to assign role:', roleError)
     }
 
-    return { success: true, userId: authData.user.id }
+    return { ok: true as const, data: { success: true, userId: authData.user.id } }
   })
 
 export const addUserRole = createServerFn({ method: 'POST' })
   .validator((data: { userId: string; role: AppRole }) => data)
   .handler(async ({ data }) => {
-    if (DEMO_MODE) return { success: true }
+    if (DEMO_MODE) return { ok: true as const, data: { success: true } }
 
     const { getSupabaseServerClient } = await import('~/utils/supabase-server')
     const supabase = getSupabaseServerClient()
@@ -83,14 +83,16 @@ export const addUserRole = createServerFn({ method: 'POST' })
       .from('user_roles')
       .upsert({ user_id: data.userId, role: data.role }, { onConflict: 'user_id,role' })
 
-    if (error) throw new Error(error.message)
-    return { success: true }
+    if (error) {
+      return { ok: false as const, error: { code: 'ADD_ROLE_FAILED', message: `فشل إضافة الصلاحية: ${error.message}` } }
+    }
+    return { ok: true as const, data: { success: true } }
   })
 
 export const removeUserRole = createServerFn({ method: 'POST' })
   .validator((data: { userId: string; role: AppRole }) => data)
   .handler(async ({ data }) => {
-    if (DEMO_MODE) return { success: true }
+    if (DEMO_MODE) return { ok: true as const, data: { success: true } }
 
     const { getSupabaseServerClient } = await import('~/utils/supabase-server')
     const supabase = getSupabaseServerClient()
@@ -101,19 +103,23 @@ export const removeUserRole = createServerFn({ method: 'POST' })
       .eq('user_id', data.userId)
       .eq('role', data.role)
 
-    if (error) throw new Error(error.message)
-    return { success: true }
+    if (error) {
+      return { ok: false as const, error: { code: 'REMOVE_ROLE_FAILED', message: `فشل حذف الصلاحية: ${error.message}` } }
+    }
+    return { ok: true as const, data: { success: true } }
   })
 
 export const deleteUser = createServerFn({ method: 'POST' })
   .validator((data: { userId: string }) => data)
   .handler(async ({ data }) => {
-    if (DEMO_MODE) return { success: true }
+    if (DEMO_MODE) return { ok: true as const, data: { success: true } }
 
     const { getSupabaseServerClient } = await import('~/utils/supabase-server')
     const supabase = getSupabaseServerClient()
 
     const { error } = await supabase.auth.admin.deleteUser(data.userId)
-    if (error) throw new Error(error.message)
-    return { success: true }
+    if (error) {
+      return { ok: false as const, error: { code: 'DELETE_USER_FAILED', message: `فشل حذف المستخدم: ${error.message}` } }
+    }
+    return { ok: true as const, data: { success: true } }
   })

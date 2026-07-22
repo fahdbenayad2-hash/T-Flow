@@ -17,8 +17,13 @@ export function useOrders() {
 export function useUpdateOrder() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { row: number; updates: Record<string, unknown>; lastModified?: string }) =>
-      updateOrder({ data }),
+    mutationFn: async (data: { row: number; updates: Record<string, unknown>; lastModified?: string }) => {
+      const result = await updateOrder({ data })
+      if (!result.ok) {
+        throw new Error(result.error.message)
+      }
+      return result.data
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
@@ -42,13 +47,17 @@ export function useBulkUpdateOrders() {
 
       for (let i = 0; i < items.length; i++) {
         try {
-          await updateOrder({ data: items[i] })
-          results.push({ row: items[i].row, success: true })
+          const result = await updateOrder({ data: items[i] })
+          if (!result.ok) {
+            results.push({ row: items[i].row, success: false, error: result.error.message })
+          } else {
+            results.push({ row: items[i].row, success: true })
+          }
         } catch (error) {
           results.push({
             row: items[i].row,
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : 'خطأ غير معروف',
           })
         }
 
