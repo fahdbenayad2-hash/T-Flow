@@ -3,6 +3,7 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
+import { nitro } from 'nitro/vite'
 
 export default defineConfig({
   server: {
@@ -10,19 +11,9 @@ export default defineConfig({
   },
   plugins: [
     tanstackStart(),
+    nitro({ preset: 'vercel' }),
     react(),
     tailwindcss(),
     tsconfigPaths(),
   ],
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules/recharts')) return 'recharts'
-          if (id.includes('node_modules/xlsx')) return 'xlsx'
-          if (id.includes('node_modules/@radix-ui')) return 'radix-ui'
-        },
-      },
-    },
-  },
 })

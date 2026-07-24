@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 .output/
+.nitro/
 .vite/
 dist/
 
@@ -33,3 +34,5 @@ npm-debug.log*
 # Large media (repo root artifacts)
 *.html
 logo.png
+
+.vercel
