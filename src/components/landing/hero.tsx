@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { DashboardPreview } from '~/components/landing/dashboard-preview'
 
@@ -143,6 +143,33 @@ function MagneticButton({ children, className, to, href }: { children: React.Rea
   )
 }
 
+function HeroMark() {
+  const [reducedMotion, setReducedMotion] = useState(false)
+
+  useEffect(() => {
+    setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  }, [])
+
+  if (reducedMotion) {
+    return <img className="lp-hero-mark" src="/cheetah-run-poster.jpg" alt="" aria-hidden="true" />
+  }
+
+  return (
+    <video
+      className="lp-hero-mark"
+      poster="/cheetah-run-poster.jpg"
+      autoPlay
+      muted
+      loop
+      playsInline
+      aria-hidden="true"
+    >
+      <source src="/cheetah-run.webm" type="video/webm" />
+      <source src="/cheetah-run.mp4" type="video/mp4" />
+    </video>
+  )
+}
+
 export function Hero() {
   const stat9 = useRef<HTMLDivElement>(null)
   const stat3 = useRef<HTMLDivElement>(null)
@@ -187,7 +214,7 @@ export function Hero() {
       <div className="lp-hero-speedlines" />
       <div className="lp-orb lp-orb-1" />
       <div className="lp-orb lp-orb-2" />
-      <img className="lp-hero-mark" src="/logo.png" alt="" />
+      <HeroMark />
       <CursorGlow />
 
       <div className="lp-hero-inner">

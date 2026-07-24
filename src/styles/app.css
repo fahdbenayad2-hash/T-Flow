@@ -424,8 +424,10 @@ body.lp-loading { overflow: hidden; }
 }
 @keyframes lpDriftLines { from { background-position: 0 0; } to { background-position: -300px 160px; } }
 .lp-hero-mark {
-  position: absolute; left: -8%; top: -8%; width: 640px; max-width: 70vw; opacity: .05;
-  filter: grayscale(1) brightness(3); pointer-events: none; z-index: 0;
+  position: absolute; left: -8%; top: -4%; width: 720px; max-width: 78vw; opacity: .35;
+  object-fit: cover; pointer-events: none; z-index: 0;
+  mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%);
   animation: lpBreathe 8s ease-in-out infinite;
 }
 @keyframes lpBreathe { 0%,100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.04) rotate(1deg); } }

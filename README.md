@@ -5,6 +5,8 @@ Arabic RTL order management system for cash-on-delivery e-commerce sellers.
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 ![Stack: TanStack Start](https://img.shields.io/badge/Stack-TanStack%20Start%20+%20Supabase-red)
 
+![T-Flow](docs/media/cheetah-run-readme.gif)
+
 ## Overview
 
 T-Flow is built for Algerian and MENA-region e-commerce sellers who operate cash-on-delivery businesses via Google Sheets. It reads your existing Sheets-based order data through a Google Apps Script proxy, adds a full management interface on top — orders, customers, call center, delivery tracking, analytics, and team permissions — and persists audit logs and user roles in Supabase (PostgreSQL with RLS).
