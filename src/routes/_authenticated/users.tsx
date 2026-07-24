@@ -129,11 +129,7 @@ function UsersPage() {
     <RoleGuard roles={['admin']}>
       <StaggerContainer className="space-y-4">
         <FadeIn>
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">إدارة المستخدمين</h2>
-              <p className="text-sm text-muted-foreground">إضافة وتعديل وحذف المستخدمين</p>
-            </div>
+          <div className="flex items-center justify-end">
             <Button onClick={() => setShowForm(!showForm)}>
               <UserPlus className="h-4 w-4 ml-1" />
               مستخدم جديد

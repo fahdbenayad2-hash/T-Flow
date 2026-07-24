@@ -3,7 +3,6 @@ import { useMemo } from 'react'
 import { useOrders } from '~/lib/queries'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
-import { Badge } from '~/components/ui/badge'
 import {
   ArrowRight,
   Phone,
@@ -11,9 +10,10 @@ import {
   Ban,
   MapPin,
 } from 'lucide-react'
-import { STATUS_MAP, formatCurrency } from '~/lib/utils'
+import { formatCurrency } from '~/lib/utils'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
 import { ErrorState } from '~/components/empty-state'
+import { StatusBadge } from '~/components/status-badge'
 
 export const Route = createFileRoute('/_authenticated/customers/$phone')({
   component: CustomerDetailPage,
@@ -149,7 +149,6 @@ function CustomerDetailPage() {
           <CardContent>
             <div className="space-y-0">
               {customerOrders.map((order) => {
-                const statusInfo = STATUS_MAP[order['الحالة']]
                 return (
                   <div
                     key={order._row}
@@ -164,15 +163,7 @@ function CustomerDetailPage() {
                         >
                           {order.order_id}
                         </Link>
-                        <Badge
-                          className="text-[10px]"
-                          style={{
-                            backgroundColor: `var(${statusInfo?.var || '--status-processing'})`,
-                            color: '#fff',
-                          }}
-                        >
-                          {order['الحالة']}
-                        </Badge>
+                        <StatusBadge status={order['الحالة']} />
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{order['المنتج']} — {order['اللون']}</p>
                     </div>

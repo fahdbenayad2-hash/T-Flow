@@ -23,14 +23,14 @@ import { motion } from 'framer-motion'
 import { useRole, getRoleLabel } from '~/hooks/useRole'
 import type { AppRole } from '~/lib/types'
 
-interface NavItem {
+export interface NavItem {
   to: string
   label: string
   icon: typeof LayoutDashboard
   roles?: AppRole[]
 }
 
-const navItems: NavItem[] = [
+export const navItems: NavItem[] = [
   { to: '/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
   { to: '/orders', label: 'الطلبات', icon: ShoppingCart },
   { to: '/customers', label: 'العملاء', icon: Users },

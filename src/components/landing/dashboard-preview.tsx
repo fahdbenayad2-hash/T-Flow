@@ -7,18 +7,18 @@ const stats = [
 ]
 
 const recentOrders = [
-  { client: 'أحمد بن علي', product: 'تيشيرت رياضي, L', status: 'مؤكد', color: '#2563EB' },
-  { client: 'سارة محمود', product: 'فستان كلاسيكي, M', status: 'مشحون', color: '#7C3AED' },
-  { client: 'خالد ناصر', product: 'حذاء رياضي, 42', status: 'تم التسليم', color: '#16A34A' },
-  { client: 'مريم عبد الله', product: 'تيشيرت رياضي, S', status: 'قيد المعالجة', color: '#F59E0B' },
+  { client: 'أحمد بن علي', product: 'تيشيرت رياضي, L', status: 'مؤكد', color: 'var(--status-confirmed)' },
+  { client: 'سارة محمود', product: 'فستان كلاسيكي, M', status: 'مشحون', color: 'var(--status-shipped)' },
+  { client: 'خالد ناصر', product: 'حذاء رياضي, 42', status: 'تم التسليم', color: 'var(--status-delivered)' },
+  { client: 'مريم عبد الله', product: 'تيشيرت رياضي, S', status: 'قيد المعالجة', color: 'var(--status-processing)' },
 ]
 
 const bars = [
-  { label: 'معالجة', pct: 25, color: '#F59E0B' },
-  { label: 'مؤكد', pct: 30, color: '#2563EB' },
-  { label: 'مشحون', pct: 20, color: '#7C3AED' },
-  { label: 'تم', pct: 15, color: '#16A34A' },
-  { label: 'ملغي', pct: 10, color: '#6B7280' },
+  { label: 'معالجة', pct: 25, color: 'var(--status-processing)' },
+  { label: 'مؤكد', pct: 30, color: 'var(--status-confirmed)' },
+  { label: 'مشحون', pct: 20, color: 'var(--status-shipped)' },
+  { label: 'تم', pct: 15, color: 'var(--status-delivered)' },
+  { label: 'ملغي', pct: 10, color: 'var(--status-cancelled)' },
 ]
 
 export function DashboardPreview() {
@@ -95,7 +95,7 @@ export function DashboardPreview() {
                     <div className="lp-bar-track">
                       <div className="lp-bar-fill" style={{ height: `${b.pct}%`, background: b.color }} />
                     </div>
-                    <small style={{ fontSize: '.65rem', color: '#6B7280' }}>{b.label}</small>
+                    <small style={{ fontSize: '.65rem', color: 'var(--color-muted-foreground)' }}>{b.label}</small>
                   </div>
                 ))}
               </div>

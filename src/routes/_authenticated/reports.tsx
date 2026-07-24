@@ -134,11 +134,7 @@ function ReportsPage() {
     <RoleGuard roles={['admin']}>
     <StaggerContainer className="space-y-4">
       <FadeIn>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">التقارير والإحصائيات</h2>
-            <p className="text-sm text-muted-foreground">تحليل شامل لأداء المتجر</p>
-          </div>
+        <div className="flex items-center justify-end">
           <Button variant="outline" size="sm" onClick={handleExportFullReport}>
             <Download className="h-4 w-4 ml-1" />
             تصدير التقرير

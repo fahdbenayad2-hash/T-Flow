@@ -19,12 +19,13 @@ import {
   Search, Download, X, AlertCircle, ArrowUpDown,
   Filter, ShoppingCart,
 } from 'lucide-react'
-import { STATUS_MAP, STATUS_OPTIONS, formatCurrency, formatDate } from '~/lib/utils'
+import { STATUS_OPTIONS, formatCurrency, formatDate } from '~/lib/utils'
 import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
 import { ErrorState, OrdersEmptyState } from '~/components/empty-state'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 import { motion } from 'framer-motion'
+import { StatusBadge } from '~/components/status-badge'
 
 export const Route = createFileRoute('/_authenticated/orders')({
   component: OrdersPage,
@@ -399,7 +400,6 @@ function OrdersPage() {
               </thead>
               <tbody>
                 {filteredOrders.map((order) => {
-                  const statusInfo = STATUS_MAP[order['الحالة']]
                   const isDup = duplicates.has(order._row)
                   return (
                     <tr
@@ -437,15 +437,7 @@ function OrdersPage() {
                         {order['السعر'] ? formatCurrency(Number(order['السعر'])) : '-'}
                       </td>
                       <td className="p-3">
-                        <Badge
-                          className="text-[10px]"
-                          style={{
-                            backgroundColor: `var(${statusInfo?.var || '--status-processing'})`,
-                            color: '#fff',
-                          }}
-                        >
-                          {order['الحالة']}
-                        </Badge>
+                        <StatusBadge status={order['الحالة']} />
                       </td>
                       <td className="p-3 text-xs text-muted-foreground">{formatDate(order['التاريخ'])}</td>
                     </tr>

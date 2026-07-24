@@ -14,6 +14,7 @@ import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transit
 import { ErrorState } from '~/components/empty-state'
 import { useRole, getRoleLabel } from '~/hooks/useRole'
 import { motion } from 'framer-motion'
+import { StatusBadge } from '~/components/status-badge'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   component: DashboardPage,
@@ -255,12 +256,10 @@ function DashboardPage() {
                     const percentage = orders.length > 0 ? Math.round((count / orders.length) * 100) : 0
                     return (
                       <div key={status} className="flex items-center gap-3">
-                        <Badge
-                          className="text-[10px] shrink-0 min-w-[70px] justify-center"
-                          style={{ backgroundColor: `var(${statusInfo?.var})`, color: '#fff' }}
-                        >
-                          {status}
-                        </Badge>
+                        <StatusBadge
+                          status={status}
+                          className="shrink-0 min-w-[70px] justify-center"
+                        />
                         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                           <motion.div
                             className="h-full rounded-full"
@@ -315,15 +314,7 @@ function DashboardPage() {
                       </div>
                     </div>
                     <div className="text-left flex flex-col items-end gap-1 shrink-0">
-                      <Badge
-                        className="text-[10px]"
-                        style={{
-                          backgroundColor: `var(${STATUS_MAP[order['الحالة']]?.var || '--status-processing'})`,
-                          color: '#fff',
-                        }}
-                      >
-                        {order['الحالة']}
-                      </Badge>
+                      <StatusBadge status={order['الحالة']} />
                       <p className="text-[10px] font-mono text-muted-foreground" dir="ltr">
                         {order['الهاتف']}
                       </p>

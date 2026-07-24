@@ -85,13 +85,6 @@ function SettingsPage() {
   return (
     <RoleGuard roles={['admin']}>
     <StaggerContainer className="space-y-6">
-      <FadeIn>
-        <div>
-          <h2 className="text-lg font-semibold">الإعدادات</h2>
-          <p className="text-sm text-muted-foreground">إدارة إعدادات التطبيق والاتصال</p>
-        </div>
-      </FadeIn>
-
       <FadeIn delay={0.1}>
         <Tabs defaultValue="connection" dir="rtl">
           <TabsList>

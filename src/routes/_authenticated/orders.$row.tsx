@@ -18,11 +18,12 @@ import {
 import {
   ArrowRight, RefreshCw, Save, Clock, User, MapPin, Package,
 } from 'lucide-react'
-import { STATUS_MAP, STATUS_OPTIONS, formatCurrency } from '~/lib/utils'
+import { STATUS_OPTIONS, formatCurrency } from '~/lib/utils'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
 import { ErrorState } from '~/components/empty-state'
 import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
+import { StatusBadge } from '~/components/status-badge'
 
 export const Route = createFileRoute('/_authenticated/orders/$row')({
   component: OrderDetailPage,
@@ -86,8 +87,6 @@ function OrderDetailPage() {
     }
   }
 
-  const statusInfo = STATUS_MAP[order['الحالة']]
-
   return (
     <StaggerContainer className="space-y-4">
       {/* Header */}
@@ -100,15 +99,7 @@ function OrderDetailPage() {
             <h2 className="text-base font-semibold">تفاصيل الطلب</h2>
             <p className="text-xs text-muted-foreground font-mono">{order.order_id}</p>
           </div>
-          <Badge
-            className="text-xs"
-            style={{
-              backgroundColor: `var(${statusInfo?.var || '--status-processing'})`,
-              color: '#fff',
-            }}
-          >
-            {order['الحالة']}
-          </Badge>
+          <StatusBadge status={order['الحالة']} className="text-xs" />
         </div>
       </FadeIn>
 

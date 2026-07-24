@@ -1,12 +1,17 @@
-import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
+import { createFileRoute, Outlet, redirect, useRouterState } from '@tanstack/react-router'
 import { Sidebar } from '~/components/sidebar'
 import { BottomNav } from '~/components/bottom-nav'
 import { Header } from '~/components/header'
 import { ErrorBoundary } from '~/components/error-boundary'
-import { useState } from 'react'
 import { supabase } from '~/utils/supabase-client'
 import { PageTransition } from '~/components/page-transition'
 import { RoleProvider } from '~/hooks/useRole'
+import { navItems } from '~/components/sidebar'
+
+const allNavRoutes = [
+  ...navItems,
+  { to: '/users', label: 'إدارة المستخدمين' },
+].sort((a, b) => b.to.length - a.to.length)
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ location }) => {
@@ -29,8 +34,9 @@ export const Route = createFileRoute('/_authenticated')({
 })
 
 function AuthenticatedLayout() {
-  const [title, setTitle] = useState('لوحة التحكم')
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
   const { user } = Route.useRouteContext()
+  const title = allNavRoutes.find((item) => pathname.startsWith(item.to))?.label || 'لوحة التحكم'
 
   return (
     <RoleProvider userId={user?.id || null}>

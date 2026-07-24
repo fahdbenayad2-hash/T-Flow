@@ -206,7 +206,7 @@ function ProductsPage() {
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">{product.name}</CardTitle>
-                      <Badge className="text-xs" style={{ backgroundColor: 'var(--primary)', color: '#fff' }}>
+                      <Badge className="text-xs" style={{ backgroundColor: 'var(--primary)', color: 'var(--color-primary-foreground)' }}>
                         {product.totalOrders} طلب
                       </Badge>
                     </div>
