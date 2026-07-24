@@ -26,3 +26,10 @@ npm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# TanStack
+.tanstack/
+
+# Large media (repo root artifacts)
+*.html
+logo.png
