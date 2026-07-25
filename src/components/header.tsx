@@ -76,14 +76,14 @@ export function Header({ title }: HeaderProps) {
 
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 md:hidden"
+          className="fixed inset-0 z-[60] bg-black/50 md:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       <div
         className={cn(
-          'fixed top-0 right-0 z-50 h-full w-72 bg-surface-1 border-r border-border shadow-2xl transform transition-transform duration-300 ease-out md:hidden',
+          'fixed top-0 right-0 z-[60] h-full w-72 bg-surface-1 border-r border-border shadow-2xl transform transition-transform duration-300 ease-out md:hidden',
           mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         )}
       >
