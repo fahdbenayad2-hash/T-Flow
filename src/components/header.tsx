@@ -70,7 +70,7 @@ export function Header({ title }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex items-center gap-[18px] h-[66px] px-5 md:px-7 border-b border-border" style={{ background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(14px)' }}>
+      <header className="sticky top-0 z-40 flex items-center gap-[18px] h-[66px] px-5 md:px-7 border-b border-border" style={{ background: 'color-mix(in srgb, var(--color-background) 82%, transparent)', backdropFilter: 'blur(14px)' }}>
         <Button
           variant="ghost"
           size="icon"
@@ -92,7 +92,7 @@ export function Header({ title }: HeaderProps) {
           <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">⌕</span>
           <input
             placeholder="بحث سريع…"
-            className="w-full h-[38px] border border-border rounded-[10px] bg-muted ps-9 pe-14 font-sans text-[13px] text-foreground outline-none focus:border-primary focus:bg-white transition-colors"
+            className="w-full h-[38px] border border-border rounded-[10px] bg-muted ps-9 pe-14 font-sans text-[13px] text-foreground outline-none focus:border-primary focus:bg-card transition-colors"
           />
           <span className="absolute end-2.5 top-1/2 -translate-y-1/2 font-mono text-[10px] text-muted-foreground border border-border rounded-md px-1.5 py-0.5">
             ⌘K

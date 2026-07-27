@@ -115,7 +115,7 @@ export function Sidebar() {
   const userName = primaryRole ? getRoleLabel(primaryRole) : 'مستخدم'
 
   return (
-    <aside className="hidden md:flex md:w-[264px] md:flex-col md:fixed md:inset-y-0 bg-sidebar-background text-sidebar-foreground border-l border-sidebar-border">
+    <aside className="hidden md:flex md:w-[264px] md:flex-col md:fixed md:inset-y-0 md:overflow-hidden bg-sidebar-background text-sidebar-foreground border-l border-sidebar-border">
       {/* Brand header with diagonal stripes */}
       <div className="relative flex h-[66px] items-center gap-2.5 px-5 border-b border-white/[0.07] overflow-hidden">
         <div
