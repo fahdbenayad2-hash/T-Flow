@@ -9,6 +9,7 @@ import {
   DollarSign,
   Truck,
   BarChart3,
+  Shield,
 } from 'lucide-react'
 import { cn } from '~/lib/utils'
 import { useRole, getRoleLabel } from '~/hooks/useRole'
@@ -142,15 +143,23 @@ export function Sidebar() {
         {analyticsItems.length > 0 && (
           <NavGroup label="التحليلات" items={analyticsItems} pathname={location.pathname} />
         )}
-        {isAdmin && (
+        {(systemItems.length > 0 || isAdmin) && (
           <NavGroup
             label="النظام"
             items={[
-              ...systemItems.filter((i) => i.to === '/users'),
-              ...systemItems.filter(
-                (i) => i.to === '/users' && !systemItems.find((s) => s.to === i.to),
-              ),
-            ].filter((item, i, arr) => arr.findIndex((a) => a.to === item.to) === i)}
+              ...systemItems,
+              ...(isAdmin
+                ? [
+                    {
+                      to: '/users',
+                      label: 'إدارة المستخدمين',
+                      icon: Shield,
+                      group: 'system' as const,
+                      roles: ['admin'] as AppRole[],
+                    },
+                  ]
+                : []),
+            ]}
             pathname={location.pathname}
           />
         )}
