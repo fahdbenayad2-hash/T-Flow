@@ -31,7 +31,15 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
       throw new Error(`Apps Script responded with ${res.status}`)
     }
 
-    const raw: Array<Record<string, unknown>> = await res.json()
+    const json = await res.json()
+
+    const raw: Array<Record<string, unknown>> = Array.isArray(json)
+      ? json
+      : json.orders || []
+
+    if (!Array.isArray(json) && !json.orders) {
+      throw new Error('Unexpected Apps Script response format')
+    }
 
     const fetchedAt = Date.now()
     const orders: Order[] = raw.map((row) => {
@@ -78,13 +86,16 @@ export const updateOrder = createServerFn({ method: 'POST' })
     const sheetUpdates = toSheetUpdates(data.updates)
 
     try {
+      const body: Record<string, unknown> = {
+        _row: data.row,
+        updates: sheetUpdates,
+      }
+      if (APPS_SCRIPT_SECRET) body._secret = APPS_SCRIPT_SECRET
+
       const response = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         headers: scriptHeaders(),
-        body: JSON.stringify({
-          _row: data.row,
-          updates: sheetUpdates,
-        }),
+        body: JSON.stringify(body),
       })
 
       if (!response.ok) {
@@ -162,10 +173,13 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
     }))
 
     try {
+      const batchBody: Record<string, unknown> = { batch: sheetUpdates }
+      if (APPS_SCRIPT_SECRET) batchBody._secret = APPS_SCRIPT_SECRET
+
       const response = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         headers: scriptHeaders(),
-        body: JSON.stringify({ batch: sheetUpdates }),
+        body: JSON.stringify(batchBody),
       })
 
       if (!response.ok) {
