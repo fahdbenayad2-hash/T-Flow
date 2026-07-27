@@ -21,7 +21,7 @@ export function useUpdateOrder() {
     mutationFn: async (data: {
       row: number
       updates: Record<string, unknown>
-      lastModified?: string
+      lastModified?: number
       order_id?: string
     }) => {
       const result = await updateOrder({ data })

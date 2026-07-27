@@ -33,15 +33,17 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
 
     const raw: Array<Record<string, unknown>> = await res.json()
 
+    const fetchedAt = Date.now()
     const orders: Order[] = raw.map((row) => {
       const mapped = mapRawRowToOrder(row)
       return {
         ...mapped,
         order_id: generateOrderId(mapped.phone, mapped.date, mapped.product),
+        lastModified: fetchedAt,
       }
     })
 
-    cache = { data: orders, fetchedAt: Date.now() }
+    cache = { data: orders, fetchedAt }
 
     return { orders, fromCache: false }
   } catch (error) {
@@ -58,11 +60,21 @@ export const updateOrder = createServerFn({ method: 'POST' })
     (data: {
       row: number
       updates: Record<string, unknown>
-      lastModified?: string
+      lastModified?: number
       order_id?: string
     }) => data,
   )
   .handler(async ({ data }) => {
+    if (data.lastModified && cache && cache.fetchedAt > data.lastModified) {
+      return {
+        ok: false as const,
+        error: {
+          code: 'STALE_DATA',
+          message: 'البيانات لم تعد محدثة، يرجى تحديث الصفحة ثم إعادة المحاولة',
+        },
+      }
+    }
+
     const sheetUpdates = toSheetUpdates(data.updates)
 
     try {
@@ -133,6 +145,88 @@ export const updateOrder = createServerFn({ method: 'POST' })
     cache = null
 
     return { ok: true as const, data: { success: true } }
+  })
+
+export const batchUpdateOrders = createServerFn({ method: 'POST' })
+  .validator(
+    (data: {
+      updates: Array<{ row: number; updates: Record<string, unknown>; order_id?: string }>
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    if (!data.updates.length) return { ok: true as const, data: { count: 0 } }
+
+    const sheetUpdates = data.updates.map((u) => ({
+      _row: u.row,
+      updates: toSheetUpdates(u.updates),
+    }))
+
+    try {
+      const response = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: scriptHeaders(),
+        body: JSON.stringify({ batch: sheetUpdates }),
+      })
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '')
+        if (response.status === 429 || text.includes('quota') || text.includes('Quota')) {
+          return {
+            ok: false as const,
+            error: {
+              code: 'QUOTA_EXCEEDED',
+              message: 'تم تجاوز حد الطلبات في Google Sheets، حاول مرة أخرى بعد دقائق',
+            },
+          }
+        }
+        return {
+          ok: false as const,
+          error: { code: 'PROXY_ERROR', message: `فشل الاتصال بالخادوم (${response.status})` },
+        }
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'خطأ غير معروف'
+      if (
+        msg.includes('Failed to fetch') ||
+        msg.includes('NetworkError') ||
+        msg.includes('timeout')
+      ) {
+        return {
+          ok: false as const,
+          error: {
+            code: 'NETWORK_ERROR',
+            message: 'خطأ في الاتصال بالخادوم، تحقق من اتصالك وأعد المحاولة',
+          },
+        }
+      }
+      return { ok: false as const, error: { code: 'UNKNOWN', message: `خطأ غير متوقع: ${msg}` } }
+    }
+
+    if (!DEMO_MODE) {
+      try {
+        const supabase = getSupabaseAdminClient()
+        for (const u of data.updates) {
+          const orderId =
+            u.order_id ||
+            generateOrderId(
+              String(u.updates.phone || ''),
+              String(u.updates.date || ''),
+              String(u.updates.product || ''),
+            )
+          await supabase.from('audit_log').insert({
+            order_id: orderId,
+            action: 'batch_update_order',
+            new_value: toSheetUpdates(u.updates),
+          })
+        }
+      } catch (e) {
+        console.warn('Audit log failed (non-critical):', e)
+      }
+    }
+
+    cache = null
+
+    return { ok: true as const, data: { count: data.updates.length } }
   })
 
 export const getAuditLog = createServerFn({ method: 'GET' })

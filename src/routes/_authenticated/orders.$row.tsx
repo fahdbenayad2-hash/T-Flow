@@ -88,7 +88,7 @@ function OrderDetailPage() {
       await updateMutation.mutateAsync({
         row: order._row,
         updates,
-        lastModified: order.date,
+        lastModified: order.lastModified,
       })
       toast.success('تم تحديث الطلب بنجاح')
       setEditStatus('')

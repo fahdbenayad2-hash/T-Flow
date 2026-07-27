@@ -17,6 +17,7 @@ export interface Order {
   deliveryType: string
   date: string
   status: OrderStatus | string
+  lastModified?: number
 }
 
 export interface Customer {
