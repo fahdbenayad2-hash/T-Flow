@@ -94,11 +94,12 @@ const AuthenticatedOrdersRowRoute = AuthenticatedOrdersRowRouteImport.update({
   path: '/$row',
   getParentRoute: () => AuthenticatedOrdersRoute,
 } as any)
-const AuthenticatedCustomersPhoneRoute = AuthenticatedCustomersPhoneRouteImport.update({
-  id: '/$phone',
-  path: '/$phone',
-  getParentRoute: () => AuthenticatedCustomersRoute,
-} as any)
+const AuthenticatedCustomersPhoneRoute =
+  AuthenticatedCustomersPhoneRouteImport.update({
+    id: '/$phone',
+    path: '/$phone',
+    getParentRoute: () => AuthenticatedCustomersRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -322,13 +323,15 @@ interface AuthenticatedCustomersRouteChildren {
   AuthenticatedCustomersPhoneRoute: typeof AuthenticatedCustomersPhoneRoute
 }
 
-const AuthenticatedCustomersRouteChildren: AuthenticatedCustomersRouteChildren = {
-  AuthenticatedCustomersPhoneRoute: AuthenticatedCustomersPhoneRoute,
-}
+const AuthenticatedCustomersRouteChildren: AuthenticatedCustomersRouteChildren =
+  {
+    AuthenticatedCustomersPhoneRoute: AuthenticatedCustomersPhoneRoute,
+  }
 
-const AuthenticatedCustomersRouteWithChildren = AuthenticatedCustomersRoute._addFileChildren(
-  AuthenticatedCustomersRouteChildren,
-)
+const AuthenticatedCustomersRouteWithChildren =
+  AuthenticatedCustomersRoute._addFileChildren(
+    AuthenticatedCustomersRouteChildren,
+  )
 
 interface AuthenticatedOrdersRouteChildren {
   AuthenticatedOrdersRowRoute: typeof AuthenticatedOrdersRowRoute
@@ -338,9 +341,8 @@ const AuthenticatedOrdersRouteChildren: AuthenticatedOrdersRouteChildren = {
   AuthenticatedOrdersRowRoute: AuthenticatedOrdersRowRoute,
 }
 
-const AuthenticatedOrdersRouteWithChildren = AuthenticatedOrdersRoute._addFileChildren(
-  AuthenticatedOrdersRouteChildren,
-)
+const AuthenticatedOrdersRouteWithChildren =
+  AuthenticatedOrdersRoute._addFileChildren(AuthenticatedOrdersRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCallCenterRoute: typeof AuthenticatedCallCenterRoute
@@ -368,9 +370,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
 }
 
-const AuthenticatedRouteRouteWithChildren = AuthenticatedRouteRoute._addFileChildren(
-  AuthenticatedRouteRouteChildren,
-)
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,

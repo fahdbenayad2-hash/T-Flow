@@ -6,41 +6,15 @@ import { ErrorBoundary } from '~/components/error-boundary'
 import { PageTransition } from '~/components/page-transition'
 import { RoleProvider } from '~/hooks/useRole'
 import { navItems } from '~/components/sidebar'
-import { AUTH_TOKEN_COOKIE } from '~/config'
+import { fetchUser } from '~/server/auth'
 
 const allNavRoutes = [...navItems, { to: '/users', label: 'إدارة المستخدمين' }].sort(
   (a, b) => b.to.length - a.to.length,
 )
 
-async function validateSession(): Promise<{ id: string; email: string } | null> {
-  if (typeof window !== 'undefined') {
-    const { supabase } = await import('~/utils/supabase-client')
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    if (!session) return null
-    return { id: session.user.id, email: session.user.email || '' }
-  }
-
-  // SSR: try to validate via the auth token cookie
-  try {
-    const { getCookie } = await import('@tanstack/react-start/server')
-    const token = getCookie(AUTH_TOKEN_COOKIE)
-    if (!token) return null
-
-    const { getSupabaseSessionClient } = await import('~/utils/supabase-server')
-    const supabase = getSupabaseSessionClient(token)
-    const { data, error } = await supabase.auth.getUser()
-    if (error || !data.user) return null
-    return { id: data.user.id, email: data.user.email || '' }
-  } catch {
-    return null
-  }
-}
-
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async () => {
-    const user = await validateSession()
+    const user = await fetchUser()
     if (!user) {
       throw redirect({ to: '/auth' })
     }

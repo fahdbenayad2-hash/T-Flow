@@ -5,7 +5,6 @@ import {
   getSupabaseSessionClient,
 } from '~/utils/supabase-server'
 import { DEMO_MODE_SERVER as DEMO_MODE, AUTH_TOKEN_COOKIE } from '~/config'
-import { getCookie } from '@tanstack/react-start/server'
 import type { AppRole } from '~/lib/types'
 
 export const fetchUser = createServerFn({ method: 'GET' }).handler(async () => {
@@ -13,6 +12,7 @@ export const fetchUser = createServerFn({ method: 'GET' }).handler(async () => {
     return { id: 'demo-admin-id', email: 'fahdbenayad2@gmail.com' }
   }
 
+  const { getCookie } = await import('@tanstack/react-start/server')
   const token = getCookie(AUTH_TOKEN_COOKIE)
   if (!token) return null
 
@@ -71,10 +71,10 @@ export const signIn = createServerFn({ method: 'POST' })
     }
   })
 
-/** Require the current user to have admin role. Throws redirect to /auth if not. */
-export async function requireAdmin() {
+const _requireAdmin = createServerFn({ method: 'GET' }).handler(async () => {
   if (DEMO_MODE) return 'demo-admin-id'
 
+  const { getCookie } = await import('@tanstack/react-start/server')
   const token = getCookie(AUTH_TOKEN_COOKIE)
   if (!token) throw new Error('UNAUTHORIZED')
 
@@ -89,4 +89,8 @@ export async function requireAdmin() {
   if (!userRoles.includes('admin')) throw new Error('FORBIDDEN')
 
   return data.user.id
+})
+
+export async function requireAdmin(): Promise<string> {
+  return _requireAdmin()
 }
