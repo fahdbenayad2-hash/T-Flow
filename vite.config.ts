@@ -9,11 +9,5 @@ export default defineConfig({
   server: {
     port: 3000,
   },
-  plugins: [
-    tanstackStart(),
-    nitro({ preset: 'vercel' }),
-    react(),
-    tailwindcss(),
-    tsconfigPaths(),
-  ],
+  plugins: [tanstackStart(), nitro({ preset: 'vercel' }), react(), tailwindcss(), tsconfigPaths()],
 })

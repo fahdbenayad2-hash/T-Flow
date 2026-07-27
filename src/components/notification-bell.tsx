@@ -35,16 +35,12 @@ export function NotificationBell() {
           )}
         </div>
         {count === 0 ? (
-          <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-            لا توجد تنبيهات
-          </div>
+          <div className="px-3 py-4 text-sm text-muted-foreground text-center">لا توجد تنبيهات</div>
         ) : (
           notifications?.map((n, i) => (
             <DropdownMenuItem key={i} className="flex flex-col items-start gap-1 py-2">
               <span className="text-sm font-medium">{n.message}</span>
-              {n.createdAt && (
-                <span className="text-xs text-muted-foreground">{n.createdAt}</span>
-              )}
+              {n.createdAt && <span className="text-xs text-muted-foreground">{n.createdAt}</span>}
             </DropdownMenuItem>
           ))
         )}

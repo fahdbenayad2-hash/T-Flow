@@ -16,7 +16,7 @@ function RaceBar() {
 
     const update = () => {
       const h = document.documentElement
-      const pct = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100
+      const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100
       fill.style.width = pct + '%'
       marker.style.right = `calc(${pct}% - 5px)`
     }
@@ -28,7 +28,9 @@ function RaceBar() {
 
   return (
     <>
-      <div id="lp-race-track"><div id="lp-race-fill" /></div>
+      <div id="lp-race-track">
+        <div id="lp-race-fill" />
+      </div>
       <div id="lp-race-marker" />
     </>
   )
@@ -40,14 +42,18 @@ function Header() {
       <div className="lp-nav-inner">
         <Link to="/" className="lp-nav-brand">
           <img src="/logo.png" alt="T-Flow" />
-          <span><b>T</b>-Flow</span>
+          <span>
+            <b>T</b>-Flow
+          </span>
         </Link>
         <div className="lp-nav-links">
           <a href="#features">المميزات</a>
           <a href="#how">كيف يعمل</a>
           <a href="#specs">المواصفات</a>
         </div>
-        <Link to="/auth" className="lp-btn lp-btn-primary">تسجيل الدخول</Link>
+        <Link to="/auth" className="lp-btn lp-btn-primary">
+          تسجيل الدخول
+        </Link>
       </div>
     </header>
   )
@@ -59,7 +65,9 @@ function Footer() {
       <div className="lp-footer-inner">
         <div className="lp-footer-brand">
           <img src="/logo.png" alt="T-Flow" />
-          <span><b>T</b>-Flow</span>
+          <span>
+            <b>T</b>-Flow
+          </span>
           <span>— إدارة الطلبات بسرعة الفهد</span>
         </div>
         <small style={{ fontFamily: "'JetBrains Mono', monospace" }}>© 2026 T-Flow</small>

@@ -50,7 +50,10 @@ function Particles() {
       pts.forEach((p) => {
         p.x += p.vx
         p.y += p.vy
-        if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w }
+        if (p.y < -10) {
+          p.y = h + 10
+          p.x = Math.random() * w
+        }
         if (p.x < -10) p.x = w + 10
         if (p.x > w + 10) p.x = -10
         ctx.beginPath()
@@ -82,11 +85,13 @@ function CursorGlow() {
 
     const onMove = (e: MouseEvent) => {
       const r = hero.getBoundingClientRect()
-      el.style.left = (e.clientX - r.left) + 'px'
-      el.style.top = (e.clientY - r.top) + 'px'
+      el.style.left = e.clientX - r.left + 'px'
+      el.style.top = e.clientY - r.top + 'px'
       el.style.opacity = '1'
     }
-    const onLeave = () => { el.style.opacity = '0' }
+    const onLeave = () => {
+      el.style.opacity = '0'
+    }
 
     hero.addEventListener('mousemove', onMove)
     hero.addEventListener('mouseleave', onLeave)
@@ -99,7 +104,17 @@ function CursorGlow() {
   return <div ref={ref} className="lp-cursor-glow" />
 }
 
-function MagneticButton({ children, className, to, href }: { children: React.ReactNode; className?: string; to?: string; href?: string }) {
+function MagneticButton({
+  children,
+  className,
+  to,
+  href,
+}: {
+  children: React.ReactNode
+  className?: string
+  to?: string
+  href?: string
+}) {
   const ref = useRef<HTMLAnchorElement>(null)
 
   useEffect(() => {
@@ -117,7 +132,9 @@ function MagneticButton({ children, className, to, href }: { children: React.Rea
     const onLeave = () => {
       el.style.transition = 'transform .5s cubic-bezier(.2,1,.3,1)'
       el.style.transform = 'translate(0,0)'
-      setTimeout(() => { el.style.transition = '' }, 500)
+      setTimeout(() => {
+        el.style.transition = ''
+      }, 500)
     }
 
     el.addEventListener('mousemove', onMove)
@@ -197,7 +214,9 @@ export function Hero() {
           duration: 1.6,
           ease: 'power2.out',
           delay: 0.5,
-          onUpdate: () => { t.el!.textContent = Math.round(obj.v) + t.suffix },
+          onUpdate: () => {
+            t.el!.textContent = Math.round(obj.v) + t.suffix
+          },
         })
       })
     })
@@ -223,21 +242,30 @@ export function Hero() {
         </span>
 
         <h1>
-          <span className="lp-hero-line"><span>من أول طلب</span></span>
+          <span className="lp-hero-line">
+            <span>من أول طلب</span>
+          </span>
           <br />
-          <span className="lp-hero-line"><span>إلى آخر تسليم —</span></span>
+          <span className="lp-hero-line">
+            <span>إلى آخر تسليم —</span>
+          </span>
           <br />
-          <span className="lp-hero-line"><span className="lp-accent">بسرعة الفهد.</span></span>
+          <span className="lp-hero-line">
+            <span className="lp-accent">بسرعة الفهد.</span>
+          </span>
         </h1>
 
         <p className="lp-hero-sub">
-          طلبات، عملاء، مركز اتصال، توصيل وتقارير — غرفة عمليات كاملة فوق جدول Google Sheets الذي تستخدمه فعلاً، دون تغيير طريقة عملك.
+          طلبات، عملاء، مركز اتصال، توصيل وتقارير — غرفة عمليات كاملة فوق جدول Google Sheets الذي
+          تستخدمه فعلاً، دون تغيير طريقة عملك.
         </p>
 
         <div className="lp-hero-cta">
           <MagneticButton to="/auth" className="lp-btn lp-btn-cta pulse">
             جرّب لوحة التحكم
-            <span className="lp-streak" /><span className="lp-streak" /><span className="lp-streak" />
+            <span className="lp-streak" />
+            <span className="lp-streak" />
+            <span className="lp-streak" />
           </MagneticButton>
           <MagneticButton href="#how" className="lp-btn lp-btn-ghost-dark">
             شاهد كيف يعمل ↓
@@ -246,15 +274,21 @@ export function Hero() {
 
         <div ref={statsRef} className="lp-stat-row">
           <div className="lp-stat">
-            <div ref={stat9} className="lp-stat-num">0</div>
+            <div ref={stat9} className="lp-stat-num">
+              0
+            </div>
             <div className="lp-stat-label">وحدات تشغيلية</div>
           </div>
           <div className="lp-stat">
-            <div ref={stat3} className="lp-stat-num">0</div>
+            <div ref={stat3} className="lp-stat-num">
+              0
+            </div>
             <div className="lp-stat-label">أدوار صلاحيات</div>
           </div>
           <div className="lp-stat">
-            <div ref={stat100} className="lp-stat-num">0</div>
+            <div ref={stat100} className="lp-stat-num">
+              0
+            </div>
             <div className="lp-stat-label">واجهة عربية RTL</div>
           </div>
         </div>

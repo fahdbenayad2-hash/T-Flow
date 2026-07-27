@@ -11,10 +11,7 @@ const REQUIRED_SERVER_VARS = [
   'APPS_SCRIPT_URL',
 ] as const
 
-const REQUIRED_CLIENT_VARS = [
-  'VITE_SUPABASE_URL',
-  'VITE_SUPABASE_ANON_KEY',
-] as const
+const REQUIRED_CLIENT_VARS = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'] as const
 
 function isPlaceholder(value: string): boolean {
   return PLACEHOLDER_PATTERNS.some((p) => value.includes(p))
@@ -46,12 +43,12 @@ export function validateEnv() {
     if (isProd) {
       throw new Error(
         `[T-Flow] Environment validation failed:\n${errors.map((e) => `  - ${e}`).join('\n')}\n\n` +
-        'The app cannot start in production with missing or placeholder env vars.\n' +
-        'Copy .env.example to .env and fill in your real values.'
+          'The app cannot start in production with missing or placeholder env vars.\n' +
+          'Copy .env.example to .env and fill in your real values.',
       )
     } else {
       console.warn(
-        `[T-Flow] Environment warnings (dev mode — falling back to demo):\n${errors.map((e) => `  - ${e}`).join('\n')}`
+        `[T-Flow] Environment warnings (dev mode — falling back to demo):\n${errors.map((e) => `  - ${e}`).join('\n')}`,
       )
     }
   }

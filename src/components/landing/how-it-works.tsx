@@ -1,15 +1,37 @@
 const STOPS = [
-  { num: '01', title: 'اربط جدول Google Sheets', desc: 'وصّل جدولك الحالي مباشرة — لا حاجة لأي تغيير في طريقة عملك.' },
-  { num: '02', title: 'مزامنة تلقائية', desc: 'كل تحديث في الشيت ينعكس فوراً على اللوحة، والعكس صحيح.' },
-  { num: '03', title: 'تحكم كامل بفريقك', desc: 'حدد الصلاحيات، تابع الأداء، وطوّر أعمالك بسرعة الفهد.' },
+  {
+    num: '01',
+    title: 'اربط جدول Google Sheets',
+    desc: 'وصّل جدولك الحالي مباشرة — لا حاجة لأي تغيير في طريقة عملك.',
+  },
+  {
+    num: '02',
+    title: 'مزامنة تلقائية',
+    desc: 'كل تحديث في الشيت ينعكس فوراً على اللوحة، والعكس صحيح.',
+  },
+  {
+    num: '03',
+    title: 'تحكم كامل بفريقك',
+    desc: 'حدد الصلاحيات، تابع الأداء، وطوّر أعمالك بسرعة الفهد.',
+  },
 ]
 
 export function HowItWorks() {
   return (
     <section className="lp-section lp-how" id="how">
-      <div style={{ maxWidth: 1180, margin: '0 auto', paddingInline: 24, position: 'relative', zIndex: 1 }}>
+      <div
+        style={{
+          maxWidth: 1180,
+          margin: '0 auto',
+          paddingInline: 24,
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
         <div className="lp-section-head">
-          <div className="lp-eyebrow-light"><span className="lp-dot" /> البداية</div>
+          <div className="lp-eyebrow-light">
+            <span className="lp-dot" /> البداية
+          </div>
           <h2>ابدأ في ثلاث خطوات فقط</h2>
           <p>بلا هجرة، بلا تعقيد — تبقى شغّال بنفس الجدول، ونحن نبني فوقه.</p>
         </div>
@@ -18,9 +40,15 @@ export function HowItWorks() {
           <line x1="40" y1="30" x2="860" y2="30" stroke="rgba(255,255,255,0.12)" strokeWidth="2" />
           <line
             id="lp-track-fill"
-            x1="40" y1="30" x2="860" y2="30"
-            stroke="url(#lp-grad)" strokeWidth="2"
-            pathLength="100" strokeDasharray="100" strokeDashoffset="100"
+            x1="40"
+            y1="30"
+            x2="860"
+            y2="30"
+            stroke="url(#lp-grad)"
+            strokeWidth="2"
+            pathLength="100"
+            strokeDasharray="100"
+            strokeDashoffset="100"
           />
           <defs>
             <linearGradient id="lp-grad" x1="0" x2="1">

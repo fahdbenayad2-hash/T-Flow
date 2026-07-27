@@ -1,20 +1,20 @@
 export interface Order {
   _row: number
   order_id: string
-  'الاسم': string
-  'الهاتف': number | string
-  'الولاية': string | number
-  'البلدية': string
-  'العنوان': string
-  'الملاحظات': string
-  'المنتج': string
-  'اللون': string
-  'المقاس': string
-  'السعر': number | string
-  'الكمية': number | string
+  الاسم: string
+  الهاتف: number | string
+  الولاية: string | number
+  البلدية: string
+  العنوان: string
+  الملاحظات: string
+  المنتج: string
+  اللون: string
+  المقاس: string
+  السعر: number | string
+  الكمية: number | string
   'نوع التوصيل': string
-  'التاريخ': string
-  'الحالة': string
+  التاريخ: string
+  الحالة: string
 }
 
 export interface Customer {

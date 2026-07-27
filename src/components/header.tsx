@@ -32,7 +32,9 @@ export function Header({ title }: HeaderProps) {
     } else {
       document.body.style.overflow = ''
     }
-    return () => { document.body.style.overflow = '' }
+    return () => {
+      document.body.style.overflow = ''
+    }
   }, [mobileMenuOpen])
 
   const visibleNavItems = navItems.filter((item) => {
@@ -84,7 +86,7 @@ export function Header({ title }: HeaderProps) {
       <div
         className={cn(
           'fixed top-0 right-0 z-[60] h-full w-72 bg-surface-1 border-r border-border shadow-2xl transform transition-transform duration-300 ease-out md:hidden',
-          mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          mobileMenuOpen ? 'translate-x-0' : 'translate-x-full',
         )}
       >
         <div className="flex h-14 items-center gap-3 px-5 border-b border-border">
@@ -94,7 +96,10 @@ export function Header({ title }: HeaderProps) {
           </h1>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 12rem)' }}>
+        <nav
+          className="flex-1 px-3 py-4 space-y-1 overflow-y-auto"
+          style={{ maxHeight: 'calc(100vh - 12rem)' }}
+        >
           {allItems.map((item) => {
             const isActive = location.pathname.startsWith(item.to)
             return (
@@ -105,7 +110,7 @@ export function Header({ title }: HeaderProps) {
                   'relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150',
                   isActive
                     ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
               >
                 <item.icon className="h-4.5 w-4.5 shrink-0" />

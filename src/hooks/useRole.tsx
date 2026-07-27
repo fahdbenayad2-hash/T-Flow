@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '~/utils/supabase-client'
+import { DEMO_MODE_CLIENT as DEMO_MODE } from '~/config'
 import type { AppRole } from '~/lib/types'
 
 interface RoleContextValue {
@@ -39,17 +40,11 @@ export function useRoleQuery(userId: string | null) {
     queryFn: async (): Promise<AppRole[]> => {
       if (!userId) return []
 
-      const DEMO_MODE = !import.meta.env.VITE_SUPABASE_URL ||
-        import.meta.env.VITE_SUPABASE_URL === 'https://your-project-ref.supabase.co'
-
       if (DEMO_MODE) {
         return ['admin']
       }
 
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
+      const { data, error } = await supabase.from('user_roles').select('role').eq('user_id', userId)
 
       if (error) {
         console.error('Failed to fetch roles:', error)
@@ -93,11 +88,7 @@ export function RoleProvider({
     }
   }, [roles, isLoading])
 
-  return (
-    <RoleContext.Provider value={value}>
-      {children}
-    </RoleContext.Provider>
-  )
+  return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>
 }
 
 const ROLE_LABELS: Record<AppRole, string> = {

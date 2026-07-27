@@ -1,12 +1,12 @@
 import { createServerFn } from '@tanstack/react-start'
+import { DEMO_MODE_SERVER as DEMO_MODE, ORDER_CACHE_TTL_S } from '~/config'
 import type { Order } from '~/lib/types'
 import { generateOrderId } from '~/lib/utils'
 
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL!
-const DEMO_MODE = !process.env.APP_SUPABASE_URL || process.env.APP_SUPABASE_URL === 'https://your-project-ref.supabase.co'
 
 let cache: { data: Order[]; fetchedAt: number } | null = null
-const CACHE_TTL = 45_000
+const CACHE_TTL = ORDER_CACHE_TTL_S * 1000
 
 export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL) {
@@ -27,25 +27,21 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
 
     const orders: Order[] = raw.map((row) => ({
       _row: row._row as number,
-      order_id: generateOrderId(
-        row['الهاتف'],
-        row['التاريخ'] as string,
-        row['المنتج'] as string
-      ),
-      'الاسم': (row['الاسم'] as string) || '',
-      'الهاتف': row['الهاتف'] || '',
-      'الولاية': row['الولاية'] || '',
-      'البلدية': (row['البلدية'] as string) || '',
-      'العنوان': (row['العنوان'] as string) || '',
-      'الملاحظات': (row['الملاحظات'] as string) || '',
-      'المنتج': (row['المنتج'] as string) || '',
-      'اللون': (row['اللون'] as string) || '',
-      'المقاس': (row['المقاس'] as string) || '',
-      'السعر': row['السعر'] || '',
-      'الكمية': row['الكمية'] || '',
+      order_id: generateOrderId(row['الهاتف'], row['التاريخ'] as string, row['المنتج'] as string),
+      الاسم: (row['الاسم'] as string) || '',
+      الهاتف: row['الهاتف'] || '',
+      الولاية: row['الولاية'] || '',
+      البلدية: (row['البلدية'] as string) || '',
+      العنوان: (row['العنوان'] as string) || '',
+      الملاحظات: (row['الملاحظات'] as string) || '',
+      المنتج: (row['المنتج'] as string) || '',
+      اللون: (row['اللون'] as string) || '',
+      المقاس: (row['المقاس'] as string) || '',
+      السعر: row['السعر'] || '',
+      الكمية: row['الكمية'] || '',
       'نوع التوصيل': (row['نوع التوصيل'] as string) || '',
-      'التاريخ': (row['التاريخ'] as string) || '',
-      'الحالة': (row['الحالة'] as string) || 'قيد المعالجة',
+      التاريخ: (row['التاريخ'] as string) || '',
+      الحالة: (row['الحالة'] as string) || 'قيد المعالجة',
     }))
 
     cache = { data: orders, fetchedAt: Date.now() }
@@ -61,7 +57,9 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
 })
 
 export const updateOrder = createServerFn({ method: 'POST' })
-  .validator((data: { row: number; updates: Record<string, unknown>; lastModified?: string }) => data)
+  .validator(
+    (data: { row: number; updates: Record<string, unknown>; lastModified?: string }) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const response = await fetch(APPS_SCRIPT_URL, {
@@ -76,14 +74,33 @@ export const updateOrder = createServerFn({ method: 'POST' })
       if (!response.ok) {
         const text = await response.text().catch(() => '')
         if (response.status === 429 || text.includes('quota') || text.includes('Quota')) {
-          return { ok: false as const, error: { code: 'QUOTA_EXCEEDED', message: 'تم تجاوز حد الطلبات في Google Sheets، حاول مرة أخرى بعد دقائق' } }
+          return {
+            ok: false as const,
+            error: {
+              code: 'QUOTA_EXCEEDED',
+              message: 'تم تجاوز حد الطلبات في Google Sheets، حاول مرة أخرى بعد دقائق',
+            },
+          }
         }
-        return { ok: false as const, error: { code: 'PROXY_ERROR', message: `فشل الاتصال بالخادوم (${response.status})` } }
+        return {
+          ok: false as const,
+          error: { code: 'PROXY_ERROR', message: `فشل الاتصال بالخادوم (${response.status})` },
+        }
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'خطأ غير معروف'
-      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('timeout')) {
-        return { ok: false as const, error: { code: 'NETWORK_ERROR', message: 'خطأ في الاتصال بالخادوم، تحقق من اتصالك وأعد المحاولة' } }
+      if (
+        msg.includes('Failed to fetch') ||
+        msg.includes('NetworkError') ||
+        msg.includes('timeout')
+      ) {
+        return {
+          ok: false as const,
+          error: {
+            code: 'NETWORK_ERROR',
+            message: 'خطأ في الاتصال بالخادوم، تحقق من اتصالك وأعد المحاولة',
+          },
+        }
       }
       return { ok: false as const, error: { code: 'UNKNOWN', message: `خطأ غير متوقع: ${msg}` } }
     }
@@ -95,7 +112,7 @@ export const updateOrder = createServerFn({ method: 'POST' })
         const orderId = generateOrderId(
           data.updates['الهاتف'] || '',
           data.updates['التاريخ'] || '',
-          data.updates['المنتج'] || ''
+          data.updates['المنتج'] || '',
         )
         await supabase.from('audit_log').insert({
           order_id: orderId,

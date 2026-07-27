@@ -57,7 +57,7 @@ describe('formatCurrency', () => {
   it('rounds to integers (no decimal fraction)', () => {
     const result = formatCurrency(1500.75)
     const stripped = result.replace(/\s/g, '').replace('دج', '')
-    expect(stripped).not.toMatch(/،|,\d/)  // no Arabic/Western decimal separator followed by digits
+    expect(stripped).not.toMatch(/،|,\d/) // no Arabic/Western decimal separator followed by digits
   })
 
   it('handles large numbers', () => {
@@ -81,8 +81,13 @@ describe('STATUS_MAP', () => {
 
   it('includes all expected status strings', () => {
     const expected = [
-      'جاري التجهيز', 'قيد المعالجة', 'مؤكد', 'مشحون',
-      'تم التسليم', 'ما جاوبش', 'ملغي',
+      'جاري التجهيز',
+      'قيد المعالجة',
+      'مؤكد',
+      'مشحون',
+      'تم التسليم',
+      'ما جاوبش',
+      'ملغي',
     ]
     for (const s of expected) {
       expect(STATUS_MAP[s], `missing status: ${s}`).toBeDefined()

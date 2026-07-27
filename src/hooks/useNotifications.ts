@@ -44,14 +44,10 @@ export function useNotifications() {
     try {
       channelRef.current = supabase
         .channel('orders-realtime')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'audit_log' },
-          () => {
-            queryClient.invalidateQueries({ queryKey: ['orders'] })
-            queryClient.invalidateQueries({ queryKey: ['notifications'] })
-          }
-        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'audit_log' }, () => {
+          queryClient.invalidateQueries({ queryKey: ['orders'] })
+          queryClient.invalidateQueries({ queryKey: ['notifications'] })
+        })
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             setRealtimeEnabled(true)

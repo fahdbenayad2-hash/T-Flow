@@ -16,14 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
-import {
-  Shield,
-  UserPlus,
-  Trash2,
-  RefreshCw,
-  ShieldCheck,
-  Users,
-} from 'lucide-react'
+import { Shield, UserPlus, Trash2, RefreshCw, ShieldCheck, Users } from 'lucide-react'
 import { FadeIn, StaggerContainer } from '~/components/page-transition'
 import { RoleGuard } from '~/components/role-guard'
 import { getRoleLabel } from '~/hooks/useRole'
@@ -233,9 +226,7 @@ function UsersPage() {
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm">
-                            {user.full_name || 'مستخدم'}
-                          </p>
+                          <p className="font-medium text-sm">{user.full_name || 'مستخدم'}</p>
                           {user.email && (
                             <span className="text-xs text-muted-foreground font-mono" dir="ltr">
                               {user.email}
@@ -249,7 +240,9 @@ function UsersPage() {
                                 {getRoleLabel(role)}
                                 <button
                                   className="mr-1 hover:text-red-200"
-                                  onClick={() => removeRoleMutation.mutate({ userId: user.id, role })}
+                                  onClick={() =>
+                                    removeRoleMutation.mutate({ userId: user.id, role })
+                                  }
                                   title={`إزالة ${getRoleLabel(role)}`}
                                 >
                                   ×
@@ -257,7 +250,9 @@ function UsersPage() {
                               </Badge>
                             ))
                           ) : (
-                            <Badge variant="outline" className="text-[10px]">بدون دور</Badge>
+                            <Badge variant="outline" className="text-[10px]">
+                              بدون دور
+                            </Badge>
                           )}
                         </div>
                       </div>
@@ -318,7 +313,8 @@ function UsersPage() {
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-[var(--status-delivered)]/5">
                   <Badge className="text-[10px] text-white shrink-0">مدير</Badge>
                   <div className="text-xs text-muted-foreground">
-                    وصول كامل — إدارة المستخدمين، الإعدادات، المنتجات، الإيرادات، التقارير، التوصيل، الطلبات، العملاء، مركز المكالمات
+                    وصول كامل — إدارة المستخدمين، الإعدادات، المنتجات، الإيرادات، التقارير، التوصيل،
+                    الطلبات، العملاء، مركز المكالمات
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-[var(--status-processing)]/5">

@@ -1,11 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router'
-import {
-  LayoutDashboard,
-  ShoppingCart,
-  Users,
-  Phone,
-  Settings,
-} from 'lucide-react'
+import { LayoutDashboard, ShoppingCart, Users, Phone, Settings } from 'lucide-react'
 import { cn } from '~/lib/utils'
 import { useRole } from '~/hooks/useRole'
 import { motion } from 'framer-motion'
@@ -49,9 +43,7 @@ export function BottomNav() {
               <span
                 className={cn(
                   'flex items-center justify-center h-8 w-8 rounded-xl transition-all duration-200',
-                  isActive
-                    ? 'bg-primary/15 text-primary'
-                    : 'text-muted-foreground'
+                  isActive ? 'bg-primary/15 text-primary' : 'text-muted-foreground',
                 )}
               >
                 <item.icon className="h-5 w-5" />
@@ -59,7 +51,7 @@ export function BottomNav() {
               <span
                 className={cn(
                   'text-[10px] font-medium transition-colors duration-200',
-                  isActive ? 'text-primary' : 'text-muted-foreground'
+                  isActive ? 'text-primary' : 'text-muted-foreground',
                 )}
               >
                 {item.label}

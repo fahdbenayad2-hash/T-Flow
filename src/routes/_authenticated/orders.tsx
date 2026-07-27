@@ -15,10 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
-import {
-  Search, Download, X, AlertCircle, ArrowUpDown,
-  Filter, ShoppingCart,
-} from 'lucide-react'
+import { Search, Download, X, AlertCircle, ArrowUpDown, Filter, ShoppingCart } from 'lucide-react'
 import { STATUS_OPTIONS, formatCurrency, formatDate } from '~/lib/utils'
 import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
 import { ErrorState, OrdersEmptyState } from '~/components/empty-state'
@@ -107,9 +104,7 @@ function OrdersPage() {
     if (search) {
       const q = search.toLowerCase()
       result = result.filter(
-        (o) =>
-          String(o['الاسم']).toLowerCase().includes(q) ||
-          String(o['الهاتف']).includes(q)
+        (o) => String(o['الاسم']).toLowerCase().includes(q) || String(o['الهاتف']).includes(q),
       )
     }
     if (statusFilter !== 'all') {
@@ -125,9 +120,16 @@ function OrdersPage() {
     result.sort((a, b) => {
       let aVal: string | number = ''
       let bVal: string | number = ''
-      if (sortField === '_row') { aVal = a._row; bVal = b._row }
-      else if (sortField === 'التاريخ') { aVal = a['التاريخ']; bVal = b['التاريخ'] }
-      else if (sortField === 'الحالة') { aVal = a['الحالة']; bVal = b['الحالة'] }
+      if (sortField === '_row') {
+        aVal = a._row
+        bVal = b._row
+      } else if (sortField === 'التاريخ') {
+        aVal = a['التاريخ']
+        bVal = b['التاريخ']
+      } else if (sortField === 'الحالة') {
+        aVal = a['الحالة']
+        bVal = b['الحالة']
+      }
       if (sortDir === 'asc') return aVal > bVal ? 1 : -1
       return aVal < bVal ? 1 : -1
     })
@@ -159,7 +161,7 @@ function OrdersPage() {
     }
     const items = Array.from(selectedRows).map((row) => ({
       row,
-      updates: { 'الحالة': bulkStatus },
+      updates: { الحالة: bulkStatus },
     }))
     toast.loading(`جاري تحديث ${items.length} طلب...`, { id: 'bulk' })
     const results = await bulkMutation.mutateAsync(items)
@@ -179,18 +181,18 @@ function OrdersPage() {
     const exportData = filteredOrders.map((o) => ({
       'رقم الصف': o._row,
       'رقم الطلب': o.order_id,
-      'الاسم': o['الاسم'],
-      'الهاتف': o['الهاتف'],
-      'الولاية': o['الولاية'],
-      'البلدية': o['البلدية'],
-      'المنتج': o['المنتج'],
-      'اللون': o['اللون'],
-      'المقاس': o['المقاس'],
-      'السعر': o['السعر'],
-      'الكمية': o['الكمية'],
+      الاسم: o['الاسم'],
+      الهاتف: o['الهاتف'],
+      الولاية: o['الولاية'],
+      البلدية: o['البلدية'],
+      المنتج: o['المنتج'],
+      اللون: o['اللون'],
+      المقاس: o['المقاس'],
+      السعر: o['السعر'],
+      الكمية: o['الكمية'],
       'نوع التوصيل': o['نوع التوصيل'],
-      'التاريخ': o['التاريخ'],
-      'الحالة': o['الحالة'],
+      التاريخ: o['التاريخ'],
+      الحالة: o['الحالة'],
     }))
     const ws = XLSX.utils.json_to_sheet(exportData)
     const wb = XLSX.utils.book_new()
@@ -214,8 +216,10 @@ function OrdersPage() {
     )
   }
 
-  const hasActiveFilters = search || statusFilter !== 'all' || wilayaFilter !== 'all' || productFilter !== 'all'
-  const activeFilterCount = [statusFilter, wilayaFilter, productFilter].filter((f) => f !== 'all').length + (search ? 1 : 0)
+  const hasActiveFilters =
+    search || statusFilter !== 'all' || wilayaFilter !== 'all' || productFilter !== 'all'
+  const activeFilterCount =
+    [statusFilter, wilayaFilter, productFilter].filter((f) => f !== 'all').length + (search ? 1 : 0)
 
   return (
     <StaggerContainer className="space-y-4">
@@ -239,7 +243,9 @@ function OrdersPage() {
               <SelectContent>
                 <SelectItem value="all">كل الحالات</SelectItem>
                 {STATUS_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -250,7 +256,9 @@ function OrdersPage() {
               <SelectContent>
                 <SelectItem value="all">كل الولايات</SelectItem>
                 {wilayas.map((w) => (
-                  <SelectItem key={w} value={w}>{w}</SelectItem>
+                  <SelectItem key={w} value={w}>
+                    {w}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -261,7 +269,9 @@ function OrdersPage() {
               <SelectContent>
                 <SelectItem value="all">كل المنتجات</SelectItem>
                 {products.map((p) => (
-                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -269,7 +279,12 @@ function OrdersPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { setSearch(''); setStatusFilter('all'); setWilayaFilter('all'); setProductFilter('all') }}
+                onClick={() => {
+                  setSearch('')
+                  setStatusFilter('all')
+                  setWilayaFilter('all')
+                  setProductFilter('all')
+                }}
                 className="text-muted-foreground gap-1"
               >
                 <X className="h-3.5 w-3.5" />
@@ -302,25 +317,46 @@ function OrdersPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Button size="sm" onClick={handleBulkUpdate} disabled={bulkMutation.isPending || !bulkStatus}>
+                <Button
+                  size="sm"
+                  onClick={handleBulkUpdate}
+                  disabled={bulkMutation.isPending || !bulkStatus}
+                >
                   تطبيق
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setSelectedRows(new Set())} className="h-8 w-8 p-0">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedRows(new Set())}
+                  className="h-8 w-8 p-0"
+                >
                   <X className="h-3.5 w-3.5" />
                 </Button>
               </motion.div>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => handleExport('xlsx')} className="gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport('xlsx')}
+              className="gap-1.5"
+            >
               <Download className="h-3.5 w-3.5" />
               Excel
             </Button>
-            <Button variant="outline" size="sm" onClick={() => handleExport('csv')} className="gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport('csv')}
+              className="gap-1.5"
+            >
               <Download className="h-3.5 w-3.5" />
               CSV
             </Button>
@@ -364,33 +400,60 @@ function OrdersPage() {
                   {canBulkEdit && (
                     <th className="p-3 w-10">
                       <Checkbox
-                        checked={selectedRows.size === filteredOrders.length && filteredOrders.length > 0}
+                        checked={
+                          selectedRows.size === filteredOrders.length && filteredOrders.length > 0
+                        }
                         onCheckedChange={toggleAll}
                       />
                     </th>
                   )}
                   <th className="p-3 text-right font-medium text-xs text-muted-foreground">#</th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-                      onClick={() => { setSortField('_row'); setSortDir(d => d === 'asc' ? 'desc' : 'asc') }}>
+                  <th
+                    className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => {
+                      setSortField('_row')
+                      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+                    }}
+                  >
                     <span className="flex items-center gap-1">
                       الطلب
                       <ArrowUpDown className="h-3 w-3" />
                     </span>
                   </th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">الاسم</th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">الهاتف</th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">الولاية</th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">المنتج</th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">السعر</th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-                      onClick={() => { setSortField('الحالة'); setSortDir(d => d === 'asc' ? 'desc' : 'asc') }}>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
+                    الاسم
+                  </th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
+                    الهاتف
+                  </th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
+                    الولاية
+                  </th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
+                    المنتج
+                  </th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
+                    السعر
+                  </th>
+                  <th
+                    className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => {
+                      setSortField('الحالة')
+                      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+                    }}
+                  >
                     <span className="flex items-center gap-1">
                       الحالة
                       <ArrowUpDown className="h-3 w-3" />
                     </span>
                   </th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-                      onClick={() => { setSortField('التاريخ'); setSortDir(d => d === 'asc' ? 'desc' : 'asc') }}>
+                  <th
+                    className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => {
+                      setSortField('التاريخ')
+                      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+                    }}
+                  >
                     <span className="flex items-center gap-1">
                       التاريخ
                       <ArrowUpDown className="h-3 w-3" />
@@ -426,11 +489,15 @@ function OrdersPage() {
                           {order.order_id}
                         </Link>
                         {isDup && (
-                          <Badge className="mr-1 text-[9px] bg-[var(--status-processing)] text-white border-transparent">مكرر</Badge>
+                          <Badge className="mr-1 text-[9px] bg-[var(--status-processing)] text-white border-transparent">
+                            مكرر
+                          </Badge>
                         )}
                       </td>
                       <td className="p-3 font-medium text-sm">{order['الاسم']}</td>
-                      <td className="p-3 font-mono text-xs" dir="ltr">{order['الهاتف']}</td>
+                      <td className="p-3 font-mono text-xs" dir="ltr">
+                        {order['الهاتف']}
+                      </td>
                       <td className="p-3 text-xs">{order['الولاية']}</td>
                       <td className="p-3 text-xs max-w-[150px] truncate">{order['المنتج']}</td>
                       <td className="p-3 font-mono text-xs">
@@ -439,7 +506,9 @@ function OrdersPage() {
                       <td className="p-3">
                         <StatusBadge status={order['الحالة']} />
                       </td>
-                      <td className="p-3 text-xs text-muted-foreground">{formatDate(order['التاريخ'])}</td>
+                      <td className="p-3 text-xs text-muted-foreground">
+                        {formatDate(order['التاريخ'])}
+                      </td>
                     </tr>
                   )
                 })}
@@ -452,8 +521,12 @@ function OrdersPage() {
       {/* Footer */}
       <FadeIn delay={0.2}>
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{filteredOrders.length} طلب من {orders.length}</span>
-          {data?.fromCache && <span>بيانات مؤقتة — آخر تحديث: {new Date().toLocaleTimeString('ar-DZ')}</span>}
+          <span>
+            {filteredOrders.length} طلب من {orders.length}
+          </span>
+          {data?.fromCache && (
+            <span>بيانات مؤقتة — آخر تحديث: {new Date().toLocaleTimeString('ar-DZ')}</span>
+          )}
         </div>
       </FadeIn>
     </StaggerContainer>

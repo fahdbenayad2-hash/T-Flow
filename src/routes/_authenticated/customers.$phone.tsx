@@ -3,13 +3,7 @@ import { useMemo } from 'react'
 import { useOrders } from '~/lib/queries'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
-import {
-  ArrowRight,
-  Phone,
-  ShoppingCart,
-  Ban,
-  MapPin,
-} from 'lucide-react'
+import { ArrowRight, Phone, ShoppingCart, Ban, MapPin } from 'lucide-react'
 import { formatCurrency } from '~/lib/utils'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
 import { ErrorState } from '~/components/empty-state'
@@ -27,7 +21,7 @@ function CustomerDetailPage() {
   const orders = data?.orders || []
   const customerOrders = useMemo(
     () => orders.filter((o) => String(o['الهاتف']) === phone),
-    [orders, phone]
+    [orders, phone],
   )
 
   if (isLoading) {
@@ -56,7 +50,7 @@ function CustomerDetailPage() {
   const firstOrder = customerOrders[0]
   const totalSpent = customerOrders.reduce(
     (sum, o) => sum + (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1),
-    0
+    0,
   )
   const cancelledCount = customerOrders.filter((o) => o['الحالة'] === 'ملغي').length
   const noAnswerCount = customerOrders.filter((o) => o['الحالة'] === 'ما جاوبش').length
@@ -71,7 +65,9 @@ function CustomerDetailPage() {
           </Button>
           <div>
             <h2 className="text-lg font-semibold">{firstOrder['الاسم']}</h2>
-            <p className="text-sm text-muted-foreground font-mono" dir="ltr">{phone}</p>
+            <p className="text-sm text-muted-foreground font-mono" dir="ltr">
+              {phone}
+            </p>
           </div>
         </div>
       </FadeIn>
@@ -104,7 +100,9 @@ function CustomerDetailPage() {
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs text-muted-foreground">تم التسليم</span>
               </div>
-              <p className="text-2xl font-bold font-mono text-[var(--status-delivered)]">{deliveredCount}</p>
+              <p className="text-2xl font-bold font-mono text-[var(--status-delivered)]">
+                {deliveredCount}
+              </p>
             </CardContent>
           </Card>
         </StaggerItem>
@@ -165,11 +163,17 @@ function CustomerDetailPage() {
                         </Link>
                         <StatusBadge status={order['الحالة']} />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">{order['المنتج']} — {order['اللون']}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {order['المنتج']} — {order['اللون']}
+                      </p>
                     </div>
                     <div className="text-left">
-                      <p className="font-mono text-sm">{formatCurrency(Number(order['السعر']) || 0)}</p>
-                      <p className="text-xs text-muted-foreground">{order['التاريخ'].slice(0, 12)}</p>
+                      <p className="font-mono text-sm">
+                        {formatCurrency(Number(order['السعر']) || 0)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {order['التاريخ'].slice(0, 12)}
+                      </p>
                     </div>
                   </div>
                 )

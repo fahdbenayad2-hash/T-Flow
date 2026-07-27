@@ -7,10 +7,30 @@ const stats = [
 ]
 
 const recentOrders = [
-  { client: 'أحمد بن علي', product: 'تيشيرت رياضي, L', status: 'مؤكد', color: 'var(--status-confirmed)' },
-  { client: 'سارة محمود', product: 'فستان كلاسيكي, M', status: 'مشحون', color: 'var(--status-shipped)' },
-  { client: 'خالد ناصر', product: 'حذاء رياضي, 42', status: 'تم التسليم', color: 'var(--status-delivered)' },
-  { client: 'مريم عبد الله', product: 'تيشيرت رياضي, S', status: 'قيد المعالجة', color: 'var(--status-processing)' },
+  {
+    client: 'أحمد بن علي',
+    product: 'تيشيرت رياضي, L',
+    status: 'مؤكد',
+    color: 'var(--status-confirmed)',
+  },
+  {
+    client: 'سارة محمود',
+    product: 'فستان كلاسيكي, M',
+    status: 'مشحون',
+    color: 'var(--status-shipped)',
+  },
+  {
+    client: 'خالد ناصر',
+    product: 'حذاء رياضي, 42',
+    status: 'تم التسليم',
+    color: 'var(--status-delivered)',
+  },
+  {
+    client: 'مريم عبد الله',
+    product: 'تيشيرت رياضي, S',
+    status: 'قيد المعالجة',
+    color: 'var(--status-processing)',
+  },
 ]
 
 const bars = [
@@ -93,9 +113,14 @@ export function DashboardPreview() {
                 {bars.map((b) => (
                   <div key={b.label} className="lp-bar-col">
                     <div className="lp-bar-track">
-                      <div className="lp-bar-fill" style={{ height: `${b.pct}%`, background: b.color }} />
+                      <div
+                        className="lp-bar-fill"
+                        style={{ height: `${b.pct}%`, background: b.color }}
+                      />
                     </div>
-                    <small style={{ fontSize: '.65rem', color: 'var(--color-muted-foreground)' }}>{b.label}</small>
+                    <small style={{ fontSize: '.65rem', color: 'var(--color-muted-foreground)' }}>
+                      {b.label}
+                    </small>
                   </div>
                 ))}
               </div>

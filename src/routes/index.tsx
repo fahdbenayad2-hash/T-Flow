@@ -5,7 +5,9 @@ import { LandingPage } from '~/components/landing/landing-page'
 export const Route = createFileRoute('/')({
   beforeLoad: async () => {
     if (typeof window !== 'undefined') {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       if (session) {
         throw redirect({ to: '/dashboard' })
       }
@@ -15,7 +17,8 @@ export const Route = createFileRoute('/')({
     meta: [
       {
         name: 'description',
-        content: 'T-Flow — منصة عربية لإدارة طلبات الدفع عند الاستلام. لوحة تحكم، طلبات، عملاء، مركز اتصال، توصيل، تقارير، وصلاحيات حسب الدور. مصممة لبائعي الجزائر.',
+        content:
+          'T-Flow — منصة عربية لإدارة طلبات الدفع عند الاستلام. لوحة تحكم، طلبات، عملاء، مركز اتصال، توصيل، تقارير، وصلاحيات حسب الدور. مصممة لبائعي الجزائر.',
       },
     ],
   }),

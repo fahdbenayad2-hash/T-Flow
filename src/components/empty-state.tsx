@@ -72,13 +72,7 @@ export function SearchEmptyState({ query }: { query: string }) {
   )
 }
 
-export function ErrorState({
-  message,
-  onRetry,
-}: {
-  message?: string
-  onRetry?: () => void
-}) {
+export function ErrorState({ message, onRetry }: { message?: string; onRetry?: () => void }) {
   return (
     <motion.div
       className="flex flex-col items-center justify-center py-16 px-4 text-center"

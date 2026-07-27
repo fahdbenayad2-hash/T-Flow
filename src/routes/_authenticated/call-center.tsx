@@ -9,13 +9,7 @@ import { Separator } from '~/components/ui/separator'
 import { Skeleton } from '~/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import { motion } from 'framer-motion'
-import {
-  Phone,
-  PhoneOff,
-  Clock,
-  CheckCircle,
-  MessageSquare,
-} from 'lucide-react'
+import { Phone, PhoneOff, Clock, CheckCircle, MessageSquare } from 'lucide-react'
 import { formatCurrency } from '~/lib/utils'
 import type { Order } from '~/lib/types'
 import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
@@ -65,7 +59,7 @@ function CallCenterPage() {
 
   const queueOrders = useMemo(
     () => orders.filter((o) => ['قيد المعالجة', 'جاري التجهيز'].includes(o['الحالة'])),
-    [orders]
+    [orders],
   )
 
   const todayStats = useMemo(() => {
@@ -99,9 +93,11 @@ function CallCenterPage() {
       return
     }
     toast.success(
-      state.outcome === 'answered' ? 'تم تسجيل الرد' :
-      state.outcome === 'no_answer' ? 'تم تسجيل عدم الرد' :
-      'تم التأجيل'
+      state.outcome === 'answered'
+        ? 'تم تسجيل الرد'
+        : state.outcome === 'no_answer'
+          ? 'تم تسجيل عدم الرد'
+          : 'تم التأجيل',
     )
     setCallStates((prev) => {
       const next = { ...prev }
@@ -141,7 +137,9 @@ function CallCenterPage() {
                 <CheckCircle className="h-4 w-4 text-[var(--status-delivered)]" />
                 <span className="text-xs text-muted-foreground">ردّ اليوم</span>
               </div>
-              <p className="text-2xl font-bold font-mono text-[var(--status-delivered)]">{todayStats.answered}</p>
+              <p className="text-2xl font-bold font-mono text-[var(--status-delivered)]">
+                {todayStats.answered}
+              </p>
             </CardContent>
             <div className="h-[3px] bg-[var(--status-delivered)]" />
           </Card>
@@ -151,7 +149,9 @@ function CallCenterPage() {
                 <PhoneOff className="h-4 w-4 text-[var(--status-no-answer)]" />
                 <span className="text-xs text-muted-foreground">ما ردّش</span>
               </div>
-              <p className="text-2xl font-bold font-mono text-[var(--status-no-answer)]">{todayStats.noAnswer}</p>
+              <p className="text-2xl font-bold font-mono text-[var(--status-no-answer)]">
+                {todayStats.noAnswer}
+              </p>
             </CardContent>
             <div className="h-[3px] bg-[var(--status-no-answer)]" />
           </Card>
@@ -161,7 +161,9 @@ function CallCenterPage() {
                 <Clock className="h-4 w-4 text-[var(--status-processing)]" />
                 <span className="text-xs text-muted-foreground">مؤجّل</span>
               </div>
-              <p className="text-2xl font-bold font-mono text-[var(--status-processing)]">{todayStats.postponed}</p>
+              <p className="text-2xl font-bold font-mono text-[var(--status-processing)]">
+                {todayStats.postponed}
+              </p>
             </CardContent>
             <div className="h-[3px] bg-[var(--status-processing)]" />
           </Card>
@@ -171,12 +173,8 @@ function CallCenterPage() {
       <FadeIn delay={0.1}>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="queue">
-              الطابور ({queueOrders.length})
-            </TabsTrigger>
-            <TabsTrigger value="stats">
-              الإحصائيات
-            </TabsTrigger>
+            <TabsTrigger value="queue">الطابور ({queueOrders.length})</TabsTrigger>
+            <TabsTrigger value="stats">الإحصائيات</TabsTrigger>
           </TabsList>
 
           <TabsContent value="queue" className="space-y-3 mt-4">
@@ -188,13 +186,17 @@ function CallCenterPage() {
                   const state = callStates[order.order_id]
                   return (
                     <StaggerItem key={order._row}>
-                      <Card className={`transition-all duration-200 ${state?.outcome ? 'border-primary/30 shadow-md' : 'hover:shadow-sm'}`}>
+                      <Card
+                        className={`transition-all duration-200 ${state?.outcome ? 'border-primary/30 shadow-md' : 'hover:shadow-sm'}`}
+                      >
                         <CardContent className="p-4">
                           <div className="flex flex-col md:flex-row md:items-start gap-4">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 <h3 className="font-semibold">{order['الاسم']}</h3>
-                                <Badge variant="outline" className="text-[10px]">{order['الحالة']}</Badge>
+                                <Badge variant="outline" className="text-[10px]">
+                                  {order['الحالة']}
+                                </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground mb-1">
                                 {order['المنتج']} — {order['اللون']} — {order['المقاس']}
@@ -203,7 +205,9 @@ function CallCenterPage() {
                                 <Phone className="inline h-3 w-3 ml-1" />
                                 {order['الهاتف']}
                               </p>
-                              <p className="font-mono text-sm mt-1">{formatCurrency(Number(order['السعر']) || 0)}</p>
+                              <p className="font-mono text-sm mt-1">
+                                {formatCurrency(Number(order['السعر']) || 0)}
+                              </p>
                               {order['الملاحظات'] && (
                                 <p className="text-xs text-muted-foreground mt-1">
                                   <MessageSquare className="inline h-3 w-3 ml-1" />
@@ -218,7 +222,9 @@ function CallCenterPage() {
                                   size="sm"
                                   variant={state?.outcome === 'answered' ? 'default' : 'outline'}
                                   className="flex-1"
-                                  onClick={() => updateCallState(order.order_id, 'outcome', 'answered')}
+                                  onClick={() =>
+                                    updateCallState(order.order_id, 'outcome', 'answered')
+                                  }
                                 >
                                   <CheckCircle className="h-3.5 w-3.5 ml-1" />
                                   ردّ
@@ -227,7 +233,9 @@ function CallCenterPage() {
                                   size="sm"
                                   variant={state?.outcome === 'no_answer' ? 'default' : 'outline'}
                                   className="flex-1"
-                                  onClick={() => updateCallState(order.order_id, 'outcome', 'no_answer')}
+                                  onClick={() =>
+                                    updateCallState(order.order_id, 'outcome', 'no_answer')
+                                  }
                                 >
                                   <PhoneOff className="h-3.5 w-3.5 ml-1" />
                                   ما ردّش
@@ -236,7 +244,9 @@ function CallCenterPage() {
                                   size="sm"
                                   variant={state?.outcome === 'postponed' ? 'default' : 'outline'}
                                   className="flex-1"
-                                  onClick={() => updateCallState(order.order_id, 'outcome', 'postponed')}
+                                  onClick={() =>
+                                    updateCallState(order.order_id, 'outcome', 'postponed')
+                                  }
                                 >
                                   <Clock className="h-3.5 w-3.5 ml-1" />
                                   مؤجّل
@@ -246,7 +256,9 @@ function CallCenterPage() {
                               <Input
                                 placeholder="ملاحظة..."
                                 value={state?.note || ''}
-                                onChange={(e) => updateCallState(order.order_id, 'note', e.target.value)}
+                                onChange={(e) =>
+                                  updateCallState(order.order_id, 'note', e.target.value)
+                                }
                               />
 
                               {state?.outcome === 'postponed' && (
@@ -254,12 +266,24 @@ function CallCenterPage() {
                                   <Input
                                     type="date"
                                     value={state.followUpDate || ''}
-                                    onChange={(e) => updateCallState(order.order_id, 'followUpDate', e.target.value)}
+                                    onChange={(e) =>
+                                      updateCallState(
+                                        order.order_id,
+                                        'followUpDate',
+                                        e.target.value,
+                                      )
+                                    }
                                   />
                                   <Input
                                     type="time"
                                     value={state.followUpTime || ''}
-                                    onChange={(e) => updateCallState(order.order_id, 'followUpTime', e.target.value)}
+                                    onChange={(e) =>
+                                      updateCallState(
+                                        order.order_id,
+                                        'followUpTime',
+                                        e.target.value,
+                                      )
+                                    }
                                   />
                                 </div>
                               )}
@@ -300,21 +324,30 @@ function CallCenterPage() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">نسبة الرد</span>
                       <span className="font-mono font-bold text-[var(--status-delivered)]">
-                        {todayStats.total > 0 ? Math.round((todayStats.answered / todayStats.total) * 100) : 0}%
+                        {todayStats.total > 0
+                          ? Math.round((todayStats.answered / todayStats.total) * 100)
+                          : 0}
+                        %
                       </span>
                     </div>
                     <Separator />
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">نسبة عدم الرد</span>
                       <span className="font-mono font-bold text-[var(--status-no-answer)]">
-                        {todayStats.total > 0 ? Math.round((todayStats.noAnswer / todayStats.total) * 100) : 0}%
+                        {todayStats.total > 0
+                          ? Math.round((todayStats.noAnswer / todayStats.total) * 100)
+                          : 0}
+                        %
                       </span>
                     </div>
                     <Separator />
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">نسبة التأجيل</span>
                       <span className="font-mono font-bold text-[var(--status-processing)]">
-                        {todayStats.total > 0 ? Math.round((todayStats.postponed / todayStats.total) * 100) : 0}%
+                        {todayStats.total > 0
+                          ? Math.round((todayStats.postponed / todayStats.total) * 100)
+                          : 0}
+                        %
                       </span>
                     </div>
                   </CardContent>
@@ -342,7 +375,8 @@ function CallCenterPage() {
                       <span className="font-mono font-bold">
                         {orders.length > 0
                           ? Math.round(((orders.length - queueOrders.length) / orders.length) * 100)
-                          : 0}%
+                          : 0}
+                        %
                       </span>
                     </div>
                   </CardContent>

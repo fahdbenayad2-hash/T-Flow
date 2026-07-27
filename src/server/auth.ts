@@ -1,7 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
+import { DEMO_MODE_SERVER as DEMO_MODE } from '~/config'
 import type { AppRole } from '~/lib/types'
-
-const DEMO_MODE = !process.env.APP_SUPABASE_URL || process.env.APP_SUPABASE_URL === 'https://your-project-ref.supabase.co'
 
 export const fetchUser = createServerFn({ method: 'GET' }).handler(async () => {
   if (DEMO_MODE) {
@@ -32,10 +31,7 @@ export const fetchUserRoles = createServerFn({ method: 'GET' })
     const { getSupabaseServerClient } = await import('~/utils/supabase-server')
     const supabase = getSupabaseServerClient()
 
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
+    const { data, error } = await supabase.from('user_roles').select('role').eq('user_id', userId)
 
     if (error) {
       console.error('Failed to fetch roles:', error)

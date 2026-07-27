@@ -1,12 +1,13 @@
 import { queryOptions, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getOrders, updateOrder, getAuditLog, invalidateOrdersCache } from '~/server/orders'
+import { ORDER_CACHE_TTL_S, ORDER_GC_TIME_MS } from '~/config'
 import type { Order, AuditEntry } from './types'
 
 export const ordersQueryOptions = queryOptions({
   queryKey: ['orders'],
   queryFn: () => getOrders(),
-  staleTime: 45_000,
-  gcTime: 5 * 60_000,
+  staleTime: ORDER_CACHE_TTL_S * 1000,
+  gcTime: ORDER_GC_TIME_MS,
   refetchOnWindowFocus: false,
 })
 
@@ -17,7 +18,11 @@ export function useOrders() {
 export function useUpdateOrder() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (data: { row: number; updates: Record<string, unknown>; lastModified?: string }) => {
+    mutationFn: async (data: {
+      row: number
+      updates: Record<string, unknown>
+      lastModified?: string
+    }) => {
       const result = await updateOrder({ data })
       if (!result.ok) {
         throw new Error(result.error.message)

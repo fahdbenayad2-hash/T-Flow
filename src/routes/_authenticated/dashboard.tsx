@@ -6,8 +6,17 @@ import { Button } from '~/components/ui/button'
 import { AnimatedCounter } from '~/components/ui/animated-counter'
 import { Skeleton } from '~/components/ui/skeleton'
 import {
-  RefreshCw, ShoppingCart, CheckCircle, Truck, Clock, TrendingUp,
-  AlertTriangle, Package, ArrowLeft, Activity, Radio,
+  RefreshCw,
+  ShoppingCart,
+  CheckCircle,
+  Truck,
+  Clock,
+  TrendingUp,
+  AlertTriangle,
+  Package,
+  ArrowLeft,
+  Activity,
+  Radio,
 } from 'lucide-react'
 import { STATUS_MAP, formatCurrency } from '~/lib/utils'
 import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
@@ -39,8 +48,16 @@ function DashboardSkeleton() {
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card><CardContent className="p-6"><Skeleton className="h-56 w-full" /></CardContent></Card>
-        <Card><CardContent className="p-6"><Skeleton className="h-56 w-full" /></CardContent></Card>
+        <Card>
+          <CardContent className="p-6">
+            <Skeleton className="h-56 w-full" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <Skeleton className="h-56 w-full" />
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
@@ -64,36 +81,34 @@ function DashboardPage() {
   const orders = data?.orders || []
 
   const confirmedOrders = orders.filter((o) =>
-    ['تم التسليم', 'مشحون', 'مؤكد'].includes(o['الحالة'])
+    ['تم التسليم', 'مشحون', 'مؤكد'].includes(o['الحالة']),
   )
   const deliveredOrders = orders.filter((o) => o['الحالة'] === 'تم التسليم')
-  const pendingOrders = orders.filter((o) =>
-    ['قيد المعالجة', 'جاري التجهيز'].includes(o['الحالة'])
-  )
+  const pendingOrders = orders.filter((o) => ['قيد المعالجة', 'جاري التجهيز'].includes(o['الحالة']))
   const cancelledOrders = orders.filter((o) => o['الحالة'] === 'ملغي')
   const noAnswerOrders = orders.filter((o) => o['الحالة'] === 'ما جاوبش')
 
-  const confirmRate = orders.length > 0
-    ? Math.round((confirmedOrders.length / orders.length) * 100)
-    : 0
-  const deliveryRate = orders.length > 0
-    ? Math.round((deliveredOrders.length / orders.length) * 100)
-    : 0
+  const confirmRate =
+    orders.length > 0 ? Math.round((confirmedOrders.length / orders.length) * 100) : 0
+  const deliveryRate =
+    orders.length > 0 ? Math.round((deliveredOrders.length / orders.length) * 100) : 0
 
   const totalRevenue = orders
     .filter((o) => o['الحالة'] === 'تم التسليم')
     .reduce((sum, o) => sum + (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1), 0)
 
-  const avgOrderValue = deliveredOrders.length > 0
-    ? Math.round(totalRevenue / deliveredOrders.length)
-    : 0
+  const avgOrderValue =
+    deliveredOrders.length > 0 ? Math.round(totalRevenue / deliveredOrders.length) : 0
 
-  const statusCounts = orders.reduce((acc, o) => {
-    const status = o['الحالة']
-    if (!acc[status]) acc[status] = 0
-    acc[status]++
-    return acc
-  }, {} as Record<string, number>)
+  const statusCounts = orders.reduce(
+    (acc, o) => {
+      const status = o['الحالة']
+      if (!acc[status]) acc[status] = 0
+      acc[status]++
+      return acc
+    },
+    {} as Record<string, number>,
+  )
 
   const kpis = [
     {
@@ -153,7 +168,8 @@ function DashboardPage() {
       label: 'ملغية',
       value: cancelledOrders.length,
       icon: AlertTriangle,
-      accent: cancelledOrders.length > 0 ? 'bg-[var(--status-cancelled)]' : 'bg-muted-foreground/30',
+      accent:
+        cancelledOrders.length > 0 ? 'bg-[var(--status-cancelled)]' : 'bg-muted-foreground/30',
     },
   ]
 
@@ -172,12 +188,8 @@ function DashboardPage() {
           <div className="absolute inset-0 brand-speedlines pointer-events-none opacity-40" />
           <div className="relative flex items-center justify-between">
             <div className="space-y-1">
-              <h2 className="text-lg md:text-xl font-bold">
-                مرحباً بعودتك
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                إليك نظرة عامة على نشاط اليوم
-              </p>
+              <h2 className="text-lg md:text-xl font-bold">مرحباً بعودتك</h2>
+              <p className="text-sm text-muted-foreground">إليك نظرة عامة على نشاط اليوم</p>
             </div>
             <div className="flex items-center gap-3">
               <Badge className="text-xs bg-primary/15 text-primary border-primary/20 gap-1.5">
@@ -199,11 +211,15 @@ function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {kpis.map((kpi, i) => (
           <StaggerItem key={kpi.label}>
-            <Card className={`overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${kpi.alert ? 'ring-1 ring-destructive/30' : ''}`}>
+            <Card
+              className={`overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${kpi.alert ? 'ring-1 ring-destructive/30' : ''}`}
+            >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">
                   <span className="text-xs text-muted-foreground font-medium">{kpi.label}</span>
-                  <div className={`h-8 w-8 rounded-lg ${kpi.accent}/10 flex items-center justify-center`}>
+                  <div
+                    className={`h-8 w-8 rounded-lg ${kpi.accent}/10 flex items-center justify-center`}
+                  >
                     <kpi.icon className={`h-4 w-4 ${kpi.accent.replace('bg-', 'text-')}`} />
                   </div>
                 </div>
@@ -253,7 +269,8 @@ function DashboardPage() {
                   .sort(([, a], [, b]) => b - a)
                   .map(([status, count]) => {
                     const statusInfo = STATUS_MAP[status]
-                    const percentage = orders.length > 0 ? Math.round((count / orders.length) * 100) : 0
+                    const percentage =
+                      orders.length > 0 ? Math.round((count / orders.length) * 100) : 0
                     return (
                       <div key={status} className="flex items-center gap-3">
                         <StatusBadge
@@ -297,30 +314,35 @@ function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-0">
-                {orders.slice(-6).reverse().map((order) => (
-                  <Link
-                    key={order._row}
-                    to="/orders/$row"
-                    params={{ row: String(order._row) }}
-                    className="flex items-center justify-between py-2.5 -mx-2 px-2 rounded-lg table-row-hover"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary font-mono shrink-0">
-                        {String(order._row)}
+                {orders
+                  .slice(-6)
+                  .reverse()
+                  .map((order) => (
+                    <Link
+                      key={order._row}
+                      to="/orders/$row"
+                      params={{ row: String(order._row) }}
+                      className="flex items-center justify-between py-2.5 -mx-2 px-2 rounded-lg table-row-hover"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary font-mono shrink-0">
+                          {String(order._row)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{order['الاسم']}</p>
+                          <p className="text-xs text-muted-foreground truncate max-w-[180px]">
+                            {order['المنتج']}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{order['الاسم']}</p>
-                        <p className="text-xs text-muted-foreground truncate max-w-[180px]">{order['المنتج']}</p>
+                      <div className="text-left flex flex-col items-end gap-1 shrink-0">
+                        <StatusBadge status={order['الحالة']} />
+                        <p className="text-[10px] font-mono text-muted-foreground" dir="ltr">
+                          {order['الهاتف']}
+                        </p>
                       </div>
-                    </div>
-                    <div className="text-left flex flex-col items-end gap-1 shrink-0">
-                      <StatusBadge status={order['الحالة']} />
-                      <p className="text-[10px] font-mono text-muted-foreground" dir="ltr">
-                        {order['الهاتف']}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  ))}
                 {orders.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-8">لا توجد طلبات</p>
                 )}

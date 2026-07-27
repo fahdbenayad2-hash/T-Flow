@@ -49,7 +49,11 @@ export function AppLoader() {
         <div className="glow" />
         <img className="logo" src="/logo.png" alt="" />
         <div className="speed-burst">
-          <span /><span /><span /><span /><span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
         </div>
       </div>
 

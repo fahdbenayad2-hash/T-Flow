@@ -26,7 +26,8 @@ export function AnimatedCounter({
       return
     }
 
-    const numValue = typeof value === 'number' ? value : parseInt(String(value).replace(/[^0-9]/g, ''), 10)
+    const numValue =
+      typeof value === 'number' ? value : parseInt(String(value).replace(/[^0-9]/g, ''), 10)
     if (isNaN(numValue)) {
       setDisplay(typeof value === 'number' ? String(value) : value)
       return
@@ -49,7 +50,9 @@ export function AnimatedCounter({
 
   return (
     <span ref={ref} className={cn('font-mono tabular-nums', className)}>
-      {prefix}{display}{suffix}
+      {prefix}
+      {display}
+      {suffix}
     </span>
   )
 }

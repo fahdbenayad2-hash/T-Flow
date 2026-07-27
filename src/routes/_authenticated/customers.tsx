@@ -6,11 +6,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Badge } from '~/components/ui/badge'
 import { Skeleton } from '~/components/ui/skeleton'
-import {
-  Search,
-  Users,
-  ShoppingCart,
-} from 'lucide-react'
+import { Search, Users, ShoppingCart } from 'lucide-react'
 import type { Order, Customer } from '~/lib/types'
 import { formatCurrency } from '~/lib/utils'
 import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
@@ -62,13 +58,21 @@ function CustomersSkeleton() {
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[...Array(3)].map((_, i) => (
-          <Card key={i}><CardContent className="p-4"><Skeleton className="h-16 skeleton-shimmer rounded-lg" /></CardContent></Card>
+          <Card key={i}>
+            <CardContent className="p-4">
+              <Skeleton className="h-16 skeleton-shimmer rounded-lg" />
+            </CardContent>
+          </Card>
         ))}
       </div>
       <Skeleton className="h-10 skeleton-shimmer rounded-lg" />
       <div className="space-y-2">
         {[...Array(6)].map((_, i) => (
-          <Skeleton key={i} className="h-14 skeleton-shimmer rounded-lg" style={{ animationDelay: `${i * 50}ms` }} />
+          <Skeleton
+            key={i}
+            className="h-14 skeleton-shimmer rounded-lg"
+            style={{ animationDelay: `${i * 50}ms` }}
+          />
         ))}
       </div>
     </div>
@@ -85,11 +89,7 @@ function CustomersPage() {
   const filteredCustomers = useMemo(() => {
     if (!search) return customers
     const q = search.toLowerCase()
-    return customers.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.phone.includes(q)
-    )
+    return customers.filter((c) => c.name.toLowerCase().includes(q) || c.phone.includes(q))
   }, [customers, search])
 
   const totalRevenue = customers.reduce((sum, c) => sum + c.totalSpent, 0)
@@ -177,14 +177,30 @@ function CustomersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">الاسم</th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">الهاتف</th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">عدد الطلبات</th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">إجمالي الإنفاق</th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">إلغاء</th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">ما جاوبش</th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">آخر طلب</th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">الملف</th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
+                    الاسم
+                  </th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
+                    الهاتف
+                  </th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
+                    عدد الطلبات
+                  </th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
+                    إجمالي الإنفاق
+                  </th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
+                    إلغاء
+                  </th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
+                    ما جاوبش
+                  </th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
+                    آخر طلب
+                  </th>
+                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
+                    الملف
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -195,24 +211,32 @@ function CustomersPage() {
                     style={{ animationDelay: `${i * 20}ms` }}
                   >
                     <td className="p-3 font-medium">{customer.name}</td>
-                    <td className="p-3 font-mono text-xs" dir="ltr">{customer.phone}</td>
+                    <td className="p-3 font-mono text-xs" dir="ltr">
+                      {customer.phone}
+                    </td>
                     <td className="p-3 font-mono text-center">{customer.totalOrders}</td>
                     <td className="p-3 font-mono text-xs">{formatCurrency(customer.totalSpent)}</td>
                     <td className="p-3 text-center">
                       {customer.cancelledCount > 0 ? (
-                        <Badge variant="destructive" className="text-[10px]">{customer.cancelledCount}</Badge>
+                        <Badge variant="destructive" className="text-[10px]">
+                          {customer.cancelledCount}
+                        </Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </td>
                     <td className="p-3 text-center">
                       {customer.noAnswerCount > 0 ? (
-                        <Badge className="text-[10px] bg-[var(--status-no-answer)] text-white">{customer.noAnswerCount}</Badge>
+                        <Badge className="text-[10px] bg-[var(--status-no-answer)] text-white">
+                          {customer.noAnswerCount}
+                        </Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </td>
-                    <td className="p-3 text-xs text-muted-foreground">{customer.lastOrderDate.slice(0, 12)}</td>
+                    <td className="p-3 text-xs text-muted-foreground">
+                      {customer.lastOrderDate.slice(0, 12)}
+                    </td>
                     <td className="p-3">
                       <Link
                         to="/customers/$phone"

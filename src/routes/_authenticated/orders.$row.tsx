@@ -15,9 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
-import {
-  ArrowRight, RefreshCw, Save, Clock, User, MapPin, Package,
-} from 'lucide-react'
+import { ArrowRight, RefreshCw, Save, Clock, User, MapPin, Package } from 'lucide-react'
 import { STATUS_OPTIONS, formatCurrency } from '~/lib/utils'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
 import { ErrorState } from '~/components/empty-state'
@@ -46,10 +44,22 @@ function OrderDetailPage() {
       <div className="space-y-4">
         <Skeleton className="h-10 w-48 rounded-lg" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card><CardContent className="p-5"><Skeleton className="h-48 w-full" /></CardContent></Card>
-          <Card><CardContent className="p-5"><Skeleton className="h-48 w-full" /></CardContent></Card>
+          <Card>
+            <CardContent className="p-5">
+              <Skeleton className="h-48 w-full" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-5">
+              <Skeleton className="h-48 w-full" />
+            </CardContent>
+          </Card>
         </div>
-        <Card><CardContent className="p-5"><Skeleton className="h-32 w-full" /></CardContent></Card>
+        <Card>
+          <CardContent className="p-5">
+            <Skeleton className="h-32 w-full" />
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -92,7 +102,12 @@ function OrderDetailPage() {
       {/* Header */}
       <FadeIn>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.navigate({ to: '/orders' })} className="h-8 w-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.navigate({ to: '/orders' })}
+            className="h-8 w-8"
+          >
             <ArrowRight className="h-4 w-4" />
           </Button>
           <div className="flex-1">
@@ -125,7 +140,10 @@ function OrderDetailPage() {
                   {i > 0 && <Separator />}
                   <div className="flex justify-between py-2.5">
                     <span className="text-xs text-muted-foreground">{item.label}</span>
-                    <span className={`text-sm font-medium ${item.mono ? 'font-mono text-xs' : ''}`} dir={item.dir}>
+                    <span
+                      className={`text-sm font-medium ${item.mono ? 'font-mono text-xs' : ''}`}
+                      dir={item.dir}
+                    >
                       {item.value || '-'}
                     </span>
                   </div>
@@ -151,7 +169,8 @@ function OrderDetailPage() {
                 {
                   label: 'السعر',
                   value: formatCurrency(Number(order['السعر']) || 0),
-                  mono: true, bold: true,
+                  mono: true,
+                  bold: true,
                 },
                 { label: 'الكمية', value: order['الكمية'] || '1', mono: true },
                 { label: 'التوصيل', value: order['نوع التوصيل'] },
@@ -161,7 +180,9 @@ function OrderDetailPage() {
                   {i > 0 && <Separator />}
                   <div className="flex justify-between py-2.5">
                     <span className="text-xs text-muted-foreground">{item.label}</span>
-                    <span className={`text-sm ${item.mono ? 'font-mono text-xs' : ''} ${item.bold ? 'font-bold' : 'font-medium'}`}>
+                    <span
+                      className={`text-sm ${item.mono ? 'font-mono text-xs' : ''} ${item.bold ? 'font-bold' : 'font-medium'}`}
+                    >
                       {item.value || '-'}
                     </span>
                   </div>
@@ -188,7 +209,9 @@ function OrderDetailPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -229,7 +252,10 @@ function OrderDetailPage() {
             <CardContent>
               <div className="space-y-0">
                 {auditLogs.map((log: any, i: number) => (
-                  <div key={log.id} className="relative flex items-start gap-3 py-2.5 border-b last:border-0">
+                  <div
+                    key={log.id}
+                    className="relative flex items-start gap-3 py-2.5 border-b last:border-0"
+                  >
                     <div className="relative mt-1">
                       <div className="h-2 w-2 rounded-full bg-primary" />
                       {i < auditLogs.length - 1 && (

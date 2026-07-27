@@ -8,16 +8,17 @@ import { PageTransition } from '~/components/page-transition'
 import { RoleProvider } from '~/hooks/useRole'
 import { navItems } from '~/components/sidebar'
 
-const allNavRoutes = [
-  ...navItems,
-  { to: '/users', label: 'إدارة المستخدمين' },
-].sort((a, b) => b.to.length - a.to.length)
+const allNavRoutes = [...navItems, { to: '/users', label: 'إدارة المستخدمين' }].sort(
+  (a, b) => b.to.length - a.to.length,
+)
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ location }) => {
     if (typeof window === 'undefined') return { user: null }
 
-    const { data: { session } } = await supabase.auth.getSession()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
 
     if (!session) {
       throw redirect({ to: '/auth' })

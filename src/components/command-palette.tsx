@@ -2,8 +2,18 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useRole, getRoleLabel } from '~/hooks/useRole'
 import {
-  LayoutDashboard, ShoppingCart, Users, Phone, Package,
-  DollarSign, Truck, BarChart3, Settings, Shield, Search, X,
+  LayoutDashboard,
+  ShoppingCart,
+  Users,
+  Phone,
+  Package,
+  DollarSign,
+  Truck,
+  BarChart3,
+  Settings,
+  Shield,
+  Search,
+  X,
 } from 'lucide-react'
 import { cn } from '~/lib/utils'
 import type { AppRole } from '~/lib/types'
@@ -21,11 +31,26 @@ const commands: CommandItem[] = [
   { label: 'العملاء', icon: <Users className="h-4 w-4" />, to: '/customers' },
   { label: 'مركز المكالمات', icon: <Phone className="h-4 w-4" />, to: '/call-center' },
   { label: 'المنتجات', icon: <Package className="h-4 w-4" />, to: '/products', roles: ['admin'] },
-  { label: 'الإيرادات', icon: <DollarSign className="h-4 w-4" />, to: '/earnings', roles: ['admin'] },
-  { label: 'التوصيل', icon: <Truck className="h-4 w-4" />, to: '/delivery', roles: ['admin', 'shipping_manager'] },
+  {
+    label: 'الإيرادات',
+    icon: <DollarSign className="h-4 w-4" />,
+    to: '/earnings',
+    roles: ['admin'],
+  },
+  {
+    label: 'التوصيل',
+    icon: <Truck className="h-4 w-4" />,
+    to: '/delivery',
+    roles: ['admin', 'shipping_manager'],
+  },
   { label: 'التقارير', icon: <BarChart3 className="h-4 w-4" />, to: '/reports', roles: ['admin'] },
   { label: 'الإعدادات', icon: <Settings className="h-4 w-4" />, to: '/settings', roles: ['admin'] },
-  { label: 'إدارة المستخدمين', icon: <Shield className="h-4 w-4" />, to: '/users', roles: ['admin'] },
+  {
+    label: 'إدارة المستخدمين',
+    icon: <Shield className="h-4 w-4" />,
+    to: '/users',
+    roles: ['admin'],
+  },
 ]
 
 export function CommandPalette() {
@@ -46,11 +71,14 @@ export function CommandPalette() {
     setActiveIndex(0)
   }, [query])
 
-  const runCommand = useCallback((cmd: CommandItem) => {
-    setOpen(false)
-    setQuery('')
-    navigate({ to: cmd.to as '/' })
-  }, [navigate])
+  const runCommand = useCallback(
+    (cmd: CommandItem) => {
+      setOpen(false)
+      setQuery('')
+      navigate({ to: cmd.to as '/' })
+    },
+    [navigate],
+  )
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -92,7 +120,10 @@ export function CommandPalette() {
     <div className="fixed inset-0 z-[9999]" dir="rtl">
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={() => { setOpen(false); setQuery('') }}
+        onClick={() => {
+          setOpen(false)
+          setQuery('')
+        }}
       />
       <div className="flex items-start justify-center pt-[20vh]">
         <div className="relative w-full max-w-md mx-4 bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
@@ -108,7 +139,12 @@ export function CommandPalette() {
             <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground bg-muted rounded border border-border">
               ESC
             </kbd>
-            <button onClick={() => { setOpen(false); setQuery('') }}>
+            <button
+              onClick={() => {
+                setOpen(false)
+                setQuery('')
+              }}
+            >
               <X className="h-4 w-4 text-muted-foreground" />
             </button>
           </div>
@@ -127,7 +163,7 @@ export function CommandPalette() {
                   'w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
                   i === activeIndex
                     ? 'bg-primary/10 text-primary'
-                    : 'text-foreground hover:bg-muted'
+                    : 'text-foreground hover:bg-muted',
                 )}
               >
                 <span className="shrink-0">{cmd.icon}</span>
@@ -138,11 +174,17 @@ export function CommandPalette() {
           </div>
 
           <div className="px-4 py-2 border-t border-border flex items-center gap-2 text-[10px] text-muted-foreground">
-            <kbd className="inline-flex items-center px-1 py-0.5 bg-muted rounded border border-border font-mono">↑↓</kbd>
+            <kbd className="inline-flex items-center px-1 py-0.5 bg-muted rounded border border-border font-mono">
+              ↑↓
+            </kbd>
             <span>تنقل</span>
-            <kbd className="inline-flex items-center px-1 py-0.5 bg-muted rounded border border-border font-mono">↵</kbd>
+            <kbd className="inline-flex items-center px-1 py-0.5 bg-muted rounded border border-border font-mono">
+              ↵
+            </kbd>
             <span>فتح</span>
-            <kbd className="inline-flex items-center px-1 py-0.5 bg-muted rounded border border-border font-mono">ESC</kbd>
+            <kbd className="inline-flex items-center px-1 py-0.5 bg-muted rounded border border-border font-mono">
+              ESC
+            </kbd>
             <span>إغلاق</span>
           </div>
         </div>

@@ -39,40 +39,72 @@ export function PageLoader() {
 
     tl.set(root, { display: 'flex' })
 
-    tl.to(root.querySelector('.lp-mark-main'), {
-      keyframes: [
-        { x: '170%', scale: 0.88, opacity: 0, duration: 0 },
-        { opacity: 1, duration: 0.15 },
-        { x: '-4%', scale: 1.07, opacity: 1, duration: 0.7, ease: 'power2.out' },
-        { x: '2%', scale: 0.98, duration: 0.12 },
-        { x: 0, scale: 1, duration: 0.1 },
-      ],
-    }, 0.25)
-
-    root.querySelectorAll('.lp-ghost').forEach((g, i) => {
-      tl.to(g, {
+    tl.to(
+      root.querySelector('.lp-mark-main'),
+      {
         keyframes: [
           { x: '170%', scale: 0.88, opacity: 0, duration: 0 },
-          { opacity: 0.4, duration: 0.12 },
-          { x: 0, scale: 1, opacity: 0, duration: 0.8, ease: 'power2.out' },
+          { opacity: 1, duration: 0.15 },
+          { x: '-4%', scale: 1.07, opacity: 1, duration: 0.7, ease: 'power2.out' },
+          { x: '2%', scale: 0.98, duration: 0.12 },
+          { x: 0, scale: 1, duration: 0.1 },
         ],
-      }, 0.30 + i * 0.04)
+      },
+      0.25,
+    )
+
+    root.querySelectorAll('.lp-ghost').forEach((g, i) => {
+      tl.to(
+        g,
+        {
+          keyframes: [
+            { x: '170%', scale: 0.88, opacity: 0, duration: 0 },
+            { opacity: 0.4, duration: 0.12 },
+            { x: 0, scale: 1, opacity: 0, duration: 0.8, ease: 'power2.out' },
+          ],
+        },
+        0.3 + i * 0.04,
+      )
     })
 
-    tl.to(root.querySelector('.lp-impact-ring'), {
-      keyframes: [
-        { width: 40, height: 40, margin: '-20px 0 0 -20px', opacity: 0.65, duration: 0 },
-        { width: 240, height: 240, margin: '-120px 0 0 -120px', opacity: 0, duration: 0.8, ease: 'power2.out' },
-      ],
-    }, 1.05)
+    tl.to(
+      root.querySelector('.lp-impact-ring'),
+      {
+        keyframes: [
+          { width: 40, height: 40, margin: '-20px 0 0 -20px', opacity: 0.65, duration: 0 },
+          {
+            width: 240,
+            height: 240,
+            margin: '-120px 0 0 -120px',
+            opacity: 0,
+            duration: 0.8,
+            ease: 'power2.out',
+          },
+        ],
+      },
+      1.05,
+    )
 
-    tl.to(root.querySelector('.lp-word-el'), {
-      opacity: 1, y: 0, duration: 0.6, ease: 'power2.out',
-    }, 1.2)
+    tl.to(
+      root.querySelector('.lp-word-el'),
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        ease: 'power2.out',
+      },
+      1.2,
+    )
 
-    tl.to(root.querySelector('.lp-tag-el'), {
-      opacity: 1, duration: 0.5, ease: 'power2.out',
-    }, 1.55)
+    tl.to(
+      root.querySelector('.lp-tag-el'),
+      {
+        opacity: 1,
+        duration: 0.5,
+        ease: 'power2.out',
+      },
+      1.55,
+    )
 
     if (skip) {
       setTimeout(() => skip.classList.add('show'), 900)
@@ -116,11 +148,23 @@ export function PageLoader() {
 
       <div className="lp-entrance">
         <div className="lp-mark-layer">
-          <div className="lp-mark-el lp-ghost lp-g3" style={{ backgroundImage: 'url(/loader/mark.png)' }} />
-          <div className="lp-mark-el lp-ghost lp-g2" style={{ backgroundImage: 'url(/loader/mark.png)' }} />
-          <div className="lp-mark-el lp-ghost lp-g1" style={{ backgroundImage: 'url(/loader/mark.png)' }} />
+          <div
+            className="lp-mark-el lp-ghost lp-g3"
+            style={{ backgroundImage: 'url(/loader/mark.png)' }}
+          />
+          <div
+            className="lp-mark-el lp-ghost lp-g2"
+            style={{ backgroundImage: 'url(/loader/mark.png)' }}
+          />
+          <div
+            className="lp-mark-el lp-ghost lp-g1"
+            style={{ backgroundImage: 'url(/loader/mark.png)' }}
+          />
           <div className="lp-impact-ring" />
-          <div className="lp-mark-el lp-mark-main" style={{ backgroundImage: 'url(/loader/mark.png)' }} />
+          <div
+            className="lp-mark-el lp-mark-main"
+            style={{ backgroundImage: 'url(/loader/mark.png)' }}
+          />
         </div>
         <div className="lp-word-el" style={{ backgroundImage: 'url(/loader/word.png)' }} />
         <div className="lp-tag-el" style={{ backgroundImage: 'url(/loader/tag.png)' }} />

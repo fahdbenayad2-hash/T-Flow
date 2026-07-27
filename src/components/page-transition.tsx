@@ -24,12 +24,7 @@ const pageVariants = {
 
 export function PageTransition({ children }: PageTransitionProps) {
   return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-    >
+    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
       {children}
     </motion.div>
   )
@@ -55,7 +50,13 @@ const staggerItem = {
   },
 }
 
-export function StaggerContainer({ children, className }: { children: ReactNode; className?: string }) {
+export function StaggerContainer({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
   return (
     <motion.div
       variants={staggerContainer}
@@ -76,7 +77,15 @@ export function StaggerItem({ children, className }: { children: ReactNode; clas
   )
 }
 
-export function FadeIn({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+export function FadeIn({
+  children,
+  className,
+  delay = 0,
+}: {
+  children: ReactNode
+  className?: string
+  delay?: number
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
