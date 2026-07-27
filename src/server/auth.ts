@@ -1,5 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
-import { DEMO_MODE_SERVER as DEMO_MODE } from '~/config'
+import {
+  getSupabaseAdminClient,
+  getSupabaseAnonClient,
+  getSupabaseSessionClient,
+} from '~/utils/supabase-server'
+import { DEMO_MODE_SERVER as DEMO_MODE, AUTH_TOKEN_COOKIE } from '~/config'
+import { getCookie } from '@tanstack/react-start/server'
 import type { AppRole } from '~/lib/types'
 
 export const fetchUser = createServerFn({ method: 'GET' }).handler(async () => {
@@ -7,30 +13,25 @@ export const fetchUser = createServerFn({ method: 'GET' }).handler(async () => {
     return { id: 'demo-admin-id', email: 'fahdbenayad2@gmail.com' }
   }
 
-  const { getSupabaseServerClient } = await import('~/utils/supabase-server')
-  const supabase = getSupabaseServerClient()
-  const { data, error } = await supabase.auth.getUser()
+  const token = getCookie(AUTH_TOKEN_COOKIE)
+  if (!token) return null
 
-  if (error || !data.user) {
+  try {
+    const supabase = getSupabaseSessionClient(token)
+    const { data, error } = await supabase.auth.getUser()
+    if (error || !data.user) return null
+    return { id: data.user.id, email: data.user.email || '' }
+  } catch {
     return null
-  }
-
-  return {
-    id: data.user.id,
-    email: data.user.email || '',
   }
 })
 
 export const fetchUserRoles = createServerFn({ method: 'GET' })
   .validator((userId: string) => userId)
   .handler(async ({ data: userId }) => {
-    if (DEMO_MODE) {
-      return ['admin'] as AppRole[]
-    }
+    if (DEMO_MODE) return ['admin'] as AppRole[]
 
-    const { getSupabaseServerClient } = await import('~/utils/supabase-server')
-    const supabase = getSupabaseServerClient()
-
+    const supabase = getSupabaseAdminClient()
     const { data, error } = await supabase.from('user_roles').select('role').eq('user_id', userId)
 
     if (error) {
@@ -51,9 +52,7 @@ export const signIn = createServerFn({ method: 'POST' })
       }
     }
 
-    const { getSupabaseServerClient } = await import('~/utils/supabase-server')
-    const supabase = getSupabaseServerClient()
-
+    const supabase = getSupabaseAnonClient()
     const { data: authData, error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
@@ -71,3 +70,23 @@ export const signIn = createServerFn({ method: 'POST' })
       session: authData.session,
     }
   })
+
+/** Require the current user to have admin role. Throws redirect to /auth if not. */
+export async function requireAdmin() {
+  if (DEMO_MODE) return 'demo-admin-id'
+
+  const token = getCookie(AUTH_TOKEN_COOKIE)
+  if (!token) throw new Error('UNAUTHORIZED')
+
+  const supabase = getSupabaseSessionClient(token)
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data.user) throw new Error('UNAUTHORIZED')
+
+  const admin = getSupabaseAdminClient()
+  const { data: roles } = await admin.from('user_roles').select('role').eq('user_id', data.user.id)
+
+  const userRoles = (roles || []).map((r) => r.role) as AppRole[]
+  if (!userRoles.includes('admin')) throw new Error('FORBIDDEN')
+
+  return data.user.id
+}

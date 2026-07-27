@@ -22,6 +22,7 @@ export function useUpdateOrder() {
       row: number
       updates: Record<string, unknown>
       lastModified?: string
+      order_id?: string
     }) => {
       const result = await updateOrder({ data })
       if (!result.ok) {
@@ -47,7 +48,9 @@ export function useAuditLog(orderId: string) {
 export function useBulkUpdateOrders() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (items: Array<{ row: number; updates: Record<string, unknown> }>) => {
+    mutationFn: async (
+      items: Array<{ row: number; updates: Record<string, unknown>; order_id?: string }>,
+    ) => {
       const results: Array<{ row: number; success: boolean; error?: string }> = []
 
       for (let i = 0; i < items.length; i++) {

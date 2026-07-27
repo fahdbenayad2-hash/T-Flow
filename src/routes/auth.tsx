@@ -7,10 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { supabase } from '~/utils/supabase-client'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { AUTH_TOKEN_COOKIE } from '~/config'
 
 export const Route = createFileRoute('/auth')({
   component: AuthPage,
 })
+
+function setAuthCookie(accessToken: string, expiresIn: number) {
+  const maxAge = Math.max(expiresIn, 60 * 60 * 24 * 7)
+  document.cookie = `${AUTH_TOKEN_COOKIE}=${accessToken}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`
+}
 
 function AuthPage() {
   const navigate = useNavigate()
@@ -33,6 +39,7 @@ function AuthPage() {
       }
 
       if (data.session) {
+        setAuthCookie(data.session.access_token, data.session.expires_in)
         toast.success('تم تسجيل الدخول بنجاح')
         navigate({ to: '/dashboard' })
       }

@@ -17,3 +17,9 @@ export const ORDER_CACHE_TTL_S = 45
 
 /** Cache GC time in milliseconds for React Query */
 export const ORDER_GC_TIME_MS = 5 * 60 * 1000
+
+/** Cookie name for storing the user's access token (for SSR auth checks) */
+export const AUTH_TOKEN_COOKIE = 'tf-at'
+
+/** Apps Script shared secret — sent as X-TFlow-Secret header */
+export const APPS_SCRIPT_SECRET = process.env.APPS_SCRIPT_SECRET || ''

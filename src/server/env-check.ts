@@ -11,6 +11,8 @@ const REQUIRED_SERVER_VARS = [
   'APPS_SCRIPT_URL',
 ] as const
 
+const RECOMMENDED_SERVER_VARS = ['APPS_SCRIPT_SECRET'] as const
+
 const REQUIRED_CLIENT_VARS = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'] as const
 
 function isPlaceholder(value: string): boolean {
@@ -50,6 +52,12 @@ export function validateEnv() {
       console.warn(
         `[T-Flow] Environment warnings (dev mode — falling back to demo):\n${errors.map((e) => `  - ${e}`).join('\n')}`,
       )
+    }
+  }
+
+  for (const key of RECOMMENDED_SERVER_VARS) {
+    if (!process.env[key]) {
+      console.warn(`[T-Flow] Warning: ${key} is not set. Apps Script secret auth will be disabled.`)
     }
   }
 }

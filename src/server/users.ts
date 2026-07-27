@@ -1,5 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { DEMO_MODE_SERVER as DEMO_MODE } from '~/config'
+import { getSupabaseAdminClient } from '~/utils/supabase-server'
+import { requireAdmin } from './auth'
 import type { AppRole } from '~/lib/types'
 
 export const listUsers = createServerFn({ method: 'GET' }).handler(async () => {
@@ -15,9 +17,9 @@ export const listUsers = createServerFn({ method: 'GET' }).handler(async () => {
     ]
   }
 
-  const { getSupabaseServerClient } = await import('~/utils/supabase-server')
-  const supabase = getSupabaseServerClient()
+  await requireAdmin()
 
+  const supabase = getSupabaseAdminClient()
   const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
   if (authError) {
     console.error('Failed to list auth users:', authError)
@@ -49,9 +51,9 @@ export const createUser = createServerFn({ method: 'POST' })
       return { ok: true as const, data: { success: true, userId: 'demo-new-user' } }
     }
 
-    const { getSupabaseServerClient } = await import('~/utils/supabase-server')
-    const supabase = getSupabaseServerClient()
+    await requireAdmin()
 
+    const supabase = getSupabaseAdminClient()
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -82,9 +84,9 @@ export const addUserRole = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     if (DEMO_MODE) return { ok: true as const, data: { success: true } }
 
-    const { getSupabaseServerClient } = await import('~/utils/supabase-server')
-    const supabase = getSupabaseServerClient()
+    await requireAdmin()
 
+    const supabase = getSupabaseAdminClient()
     const { error } = await supabase
       .from('user_roles')
       .upsert({ user_id: data.userId, role: data.role }, { onConflict: 'user_id,role' })
@@ -103,9 +105,9 @@ export const removeUserRole = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     if (DEMO_MODE) return { ok: true as const, data: { success: true } }
 
-    const { getSupabaseServerClient } = await import('~/utils/supabase-server')
-    const supabase = getSupabaseServerClient()
+    await requireAdmin()
 
+    const supabase = getSupabaseAdminClient()
     const { error } = await supabase
       .from('user_roles')
       .delete()
@@ -126,9 +128,9 @@ export const deleteUser = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     if (DEMO_MODE) return { ok: true as const, data: { success: true } }
 
-    const { getSupabaseServerClient } = await import('~/utils/supabase-server')
-    const supabase = getSupabaseServerClient()
+    await requireAdmin()
 
+    const supabase = getSupabaseAdminClient()
     const { error } = await supabase.auth.admin.deleteUser(data.userId)
     if (error) {
       return {

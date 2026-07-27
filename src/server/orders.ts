@@ -1,9 +1,16 @@
 import { createServerFn } from '@tanstack/react-start'
-import { DEMO_MODE_SERVER as DEMO_MODE, ORDER_CACHE_TTL_S } from '~/config'
+import { DEMO_MODE_SERVER as DEMO_MODE, ORDER_CACHE_TTL_S, APPS_SCRIPT_SECRET } from '~/config'
+import { getSupabaseAdminClient } from '~/utils/supabase-server'
 import type { Order } from '~/lib/types'
 import { generateOrderId } from '~/lib/utils'
 
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL!
+
+function scriptHeaders(): Record<string, string> {
+  const h: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (APPS_SCRIPT_SECRET) h['X-TFlow-Secret'] = APPS_SCRIPT_SECRET
+  return h
+}
 
 let cache: { data: Order[]; fetchedAt: number } | null = null
 const CACHE_TTL = ORDER_CACHE_TTL_S * 1000
@@ -16,7 +23,7 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
   try {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: scriptHeaders(),
     })
 
     if (!res.ok) {
@@ -58,13 +65,18 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
 
 export const updateOrder = createServerFn({ method: 'POST' })
   .validator(
-    (data: { row: number; updates: Record<string, unknown>; lastModified?: string }) => data,
+    (data: {
+      row: number
+      updates: Record<string, unknown>
+      lastModified?: string
+      order_id?: string
+    }) => data,
   )
   .handler(async ({ data }) => {
     try {
       const response = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: scriptHeaders(),
         body: JSON.stringify({
           _row: data.row,
           updates: data.updates,
@@ -107,13 +119,14 @@ export const updateOrder = createServerFn({ method: 'POST' })
 
     if (!DEMO_MODE) {
       try {
-        const { getSupabaseServerClient } = await import('~/utils/supabase-server')
-        const supabase = getSupabaseServerClient()
-        const orderId = generateOrderId(
-          data.updates['الهاتف'] || '',
-          data.updates['التاريخ'] || '',
-          data.updates['المنتج'] || '',
-        )
+        const supabase = getSupabaseAdminClient()
+        const orderId =
+          data.order_id ||
+          generateOrderId(
+            String(data.updates['الهاتف'] || ''),
+            String(data.updates['التاريخ'] || ''),
+            String(data.updates['المنتج'] || ''),
+          )
         await supabase.from('audit_log').insert({
           order_id: orderId,
           action: 'update_order',
@@ -133,13 +146,9 @@ export const updateOrder = createServerFn({ method: 'POST' })
 export const getAuditLog = createServerFn({ method: 'GET' })
   .validator((data: { orderId: string }) => data)
   .handler(async ({ data }) => {
-    if (DEMO_MODE) {
-      return []
-    }
+    if (DEMO_MODE) return []
 
-    const { getSupabaseServerClient } = await import('~/utils/supabase-server')
-    const supabase = getSupabaseServerClient()
-
+    const supabase = getSupabaseAdminClient()
     const { data: logs, error } = await supabase
       .from('audit_log')
       .select('*')
