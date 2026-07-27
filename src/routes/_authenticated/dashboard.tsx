@@ -85,7 +85,9 @@ function DashboardPage() {
     [STATUS.DELIVERED, STATUS.SHIPPED, STATUS.CONFIRMED].includes(o.status as any),
   )
   const deliveredOrders = orders.filter((o) => o.status === STATUS.DELIVERED)
-  const pendingOrders = orders.filter((o) => [STATUS.PROCESSING, STATUS.PREPARING].includes(o.status as any))
+  const pendingOrders = orders.filter((o) =>
+    [STATUS.PROCESSING, STATUS.PREPARING].includes(o.status as any),
+  )
   const cancelledOrders = orders.filter((o) => o.status === STATUS.CANCELLED)
   const noAnswerOrders = orders.filter((o) => o.status === STATUS.NO_ANSWER)
 

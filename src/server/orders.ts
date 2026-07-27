@@ -33,9 +33,7 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
 
     const json = await res.json()
 
-    const raw: Array<Record<string, unknown>> = Array.isArray(json)
-      ? json
-      : json.orders || []
+    const raw: Array<Record<string, unknown>> = Array.isArray(json) ? json : json.orders || []
 
     if (!Array.isArray(json) && !json.orders) {
       throw new Error('Unexpected Apps Script response format')

@@ -172,9 +172,7 @@ function CustomerDetailPage() {
                       <p className="font-mono text-sm">
                         {formatCurrency(Number(order.price) || 0)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {order.date.slice(0, 12)}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{order.date.slice(0, 12)}</p>
                     </div>
                   </div>
                 )

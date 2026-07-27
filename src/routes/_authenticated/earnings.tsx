@@ -51,7 +51,9 @@ function EarningsPage() {
   const stats = useMemo(() => {
     const delivered = orders.filter((o) => o.status === STATUS.DELIVERED)
     const cancelled = orders.filter((o) => o.status === STATUS.CANCELLED)
-    const pending = orders.filter((o) => ([STATUS.PROCESSING, STATUS.PREPARING] as string[]).includes(o.status))
+    const pending = orders.filter((o) =>
+      ([STATUS.PROCESSING, STATUS.PREPARING] as string[]).includes(o.status),
+    )
 
     const totalRevenue = delivered.reduce(
       (sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1),

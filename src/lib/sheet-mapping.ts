@@ -161,10 +161,7 @@ export function toExportRow(order: Order) {
 // Display helpers
 // ---------------------------------------------------------------------------
 
-export const STATUS_MAP: Record<
-  string,
-  { label: string; color: string; cssVar: string }
-> = {
+export const STATUS_MAP: Record<string, { label: string; color: string; cssVar: string }> = {
   [STATUS.PREPARING]: {
     label: STATUS.PREPARING,
     color: 'bg-[var(--status-processing)]',

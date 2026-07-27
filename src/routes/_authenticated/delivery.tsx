@@ -85,7 +85,8 @@ function DeliveryPage() {
         existing.delivered++
         existing.revenue += (Number(o.price) || 0) * (Number(o.quantity) || 1)
       } else if (o.status === STATUS.CANCELLED) existing.cancelled++
-      else if (([STATUS.PROCESSING, STATUS.PREPARING] as string[]).includes(o.status)) existing.pending++
+      else if (([STATUS.PROCESSING, STATUS.PREPARING] as string[]).includes(o.status))
+        existing.pending++
       byWilaya.set(wilaya, existing)
     }
 
