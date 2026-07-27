@@ -15,7 +15,8 @@ export const Route = createFileRoute('/auth')({
 
 function setAuthCookie(accessToken: string, expiresIn: number) {
   const maxAge = Math.max(expiresIn, 60 * 60 * 24 * 7)
-  document.cookie = `${AUTH_TOKEN_COOKIE}=${accessToken}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie = `${AUTH_TOKEN_COOKIE}=${accessToken}; path=/; max-age=${maxAge}; SameSite=Lax${secure}`
 }
 
 function AuthPage() {
