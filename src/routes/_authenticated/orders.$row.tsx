@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from '~/components/ui/select'
 import { ArrowRight, RefreshCw, Save, Clock, User, MapPin, Package } from 'lucide-react'
-import { STATUS_OPTIONS, formatCurrency } from '~/lib/utils'
+import { formatCurrency } from '~/lib/utils'
+import { ALL_STATUSES } from '~/lib/sheet-mapping'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
 import { ErrorState } from '~/components/empty-state'
 import toast from 'react-hot-toast'
@@ -75,8 +76,8 @@ function OrderDetailPage() {
 
   const handleSave = async () => {
     const updates: Record<string, unknown> = {}
-    if (editStatus && editStatus !== order['الحالة']) updates['الحالة'] = editStatus
-    if (editNotes && editNotes !== order['الملاحظات']) updates['الملاحظات'] = editNotes
+    if (editStatus && editStatus !== order.status) updates.status = editStatus
+    if (editNotes && editNotes !== order.notes) updates.notes = editNotes
 
     if (Object.keys(updates).length === 0) {
       toast('لا توجد تغييرات', { icon: 'ℹ️' })
@@ -87,7 +88,7 @@ function OrderDetailPage() {
       await updateMutation.mutateAsync({
         row: order._row,
         updates,
-        lastModified: order['التاريخ'],
+        lastModified: order.date,
       })
       toast.success('تم تحديث الطلب بنجاح')
       setEditStatus('')
@@ -114,7 +115,7 @@ function OrderDetailPage() {
             <h2 className="text-base font-semibold">تفاصيل الطلب</h2>
             <p className="text-xs text-muted-foreground font-mono">{order.order_id}</p>
           </div>
-          <StatusBadge status={order['الحالة']} className="text-xs" />
+          <StatusBadge status={order.status} className="text-xs" />
         </div>
       </FadeIn>
 
@@ -130,11 +131,11 @@ function OrderDetailPage() {
             </CardHeader>
             <CardContent className="space-y-0">
               {[
-                { label: 'الاسم', value: order['الاسم'] },
-                { label: 'الهاتف', value: order['الهاتف'], dir: 'ltr' as const, mono: true },
-                { label: 'الولاية', value: order['الولاية'] },
-                { label: 'البلدية', value: order['البلدية'] },
-                { label: 'العنوان', value: order['العنوان'] },
+                { label: 'الاسم', value: order.customerName },
+                { label: 'الهاتف', value: order.phone, dir: 'ltr' as const, mono: true },
+                { label: 'الولاية', value: order.wilaya },
+                { label: 'البلدية', value: order.baladiya },
+                { label: 'العنوان', value: order.address },
               ].map((item, i) => (
                 <div key={i}>
                   {i > 0 && <Separator />}
@@ -163,18 +164,18 @@ function OrderDetailPage() {
             </CardHeader>
             <CardContent className="space-y-0">
               {[
-                { label: 'المنتج', value: order['المنتج'] },
-                { label: 'اللون', value: order['اللون'] },
-                { label: 'المقاس', value: order['المقاس'] },
+                { label: 'المنتج', value: order.product },
+                { label: 'اللون', value: order.color },
+                { label: 'المقاس', value: order.size },
                 {
                   label: 'السعر',
-                  value: formatCurrency(Number(order['السعر']) || 0),
+                  value: formatCurrency(Number(order.price) || 0),
                   mono: true,
                   bold: true,
                 },
-                { label: 'الكمية', value: order['الكمية'] || '1', mono: true },
-                { label: 'التوصيل', value: order['نوع التوصيل'] },
-                { label: 'التاريخ', value: order['التاريخ'] },
+                { label: 'الكمية', value: order.quantity || '1', mono: true },
+                { label: 'التوصيل', value: order.deliveryType },
+                { label: 'التاريخ', value: order.date },
               ].map((item, i) => (
                 <div key={i}>
                   {i > 0 && <Separator />}
@@ -203,12 +204,12 @@ function OrderDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs">الحالة</Label>
-                <Select value={editStatus || order['الحالة']} onValueChange={setEditStatus}>
+                <Select value={editStatus || order.status} onValueChange={setEditStatus}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {STATUS_OPTIONS.map((s) => (
+                    {ALL_STATUSES.map((s) => (
                       <SelectItem key={s} value={s}>
                         {s}
                       </SelectItem>
@@ -219,7 +220,7 @@ function OrderDetailPage() {
               <div className="space-y-2">
                 <Label className="text-xs">الملاحظات</Label>
                 <Input
-                  value={editNotes || order['الملاحظات']}
+                  value={editNotes || order.notes}
                   onChange={(e) => setEditNotes(e.target.value)}
                   placeholder="أضف ملاحظة..."
                 />

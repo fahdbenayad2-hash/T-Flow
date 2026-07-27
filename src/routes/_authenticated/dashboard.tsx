@@ -18,7 +18,8 @@ import {
   Activity,
   Radio,
 } from 'lucide-react'
-import { STATUS_MAP, formatCurrency } from '~/lib/utils'
+import { STATUS_MAP, STATUS } from '~/lib/sheet-mapping'
+import { formatCurrency } from '~/lib/utils'
 import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
 import { ErrorState } from '~/components/empty-state'
 import { useRole, getRoleLabel } from '~/hooks/useRole'
@@ -81,12 +82,12 @@ function DashboardPage() {
   const orders = data?.orders || []
 
   const confirmedOrders = orders.filter((o) =>
-    ['تم التسليم', 'مشحون', 'مؤكد'].includes(o['الحالة']),
+    [STATUS.DELIVERED, STATUS.SHIPPED, STATUS.CONFIRMED].includes(o.status as any),
   )
-  const deliveredOrders = orders.filter((o) => o['الحالة'] === 'تم التسليم')
-  const pendingOrders = orders.filter((o) => ['قيد المعالجة', 'جاري التجهيز'].includes(o['الحالة']))
-  const cancelledOrders = orders.filter((o) => o['الحالة'] === 'ملغي')
-  const noAnswerOrders = orders.filter((o) => o['الحالة'] === 'ما جاوبش')
+  const deliveredOrders = orders.filter((o) => o.status === STATUS.DELIVERED)
+  const pendingOrders = orders.filter((o) => [STATUS.PROCESSING, STATUS.PREPARING].includes(o.status as any))
+  const cancelledOrders = orders.filter((o) => o.status === STATUS.CANCELLED)
+  const noAnswerOrders = orders.filter((o) => o.status === STATUS.NO_ANSWER)
 
   const confirmRate =
     orders.length > 0 ? Math.round((confirmedOrders.length / orders.length) * 100) : 0
@@ -94,15 +95,15 @@ function DashboardPage() {
     orders.length > 0 ? Math.round((deliveredOrders.length / orders.length) * 100) : 0
 
   const totalRevenue = orders
-    .filter((o) => o['الحالة'] === 'تم التسليم')
-    .reduce((sum, o) => sum + (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1), 0)
+    .filter((o) => o.status === STATUS.DELIVERED)
+    .reduce((sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1), 0)
 
   const avgOrderValue =
     deliveredOrders.length > 0 ? Math.round(totalRevenue / deliveredOrders.length) : 0
 
   const statusCounts = orders.reduce(
     (acc, o) => {
-      const status = o['الحالة']
+      const status = o.status
       if (!acc[status]) acc[status] = 0
       acc[status]++
       return acc
@@ -268,7 +269,7 @@ function DashboardPage() {
                 {Object.entries(statusCounts)
                   .sort(([, a], [, b]) => b - a)
                   .map(([status, count]) => {
-                    const statusInfo = STATUS_MAP[status]
+                    const statusInfo = STATUS_MAP[status as keyof typeof STATUS_MAP]
                     const percentage =
                       orders.length > 0 ? Math.round((count / orders.length) * 100) : 0
                     return (
@@ -280,7 +281,7 @@ function DashboardPage() {
                         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                           <motion.div
                             className="h-full rounded-full"
-                            style={{ backgroundColor: `var(${statusInfo?.var})` }}
+                            style={{ backgroundColor: `var(${statusInfo?.cssVar})` }}
                             initial={{ width: 0 }}
                             animate={{ width: `${percentage}%` }}
                             transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1], delay: 0.3 }}
@@ -329,16 +330,16 @@ function DashboardPage() {
                           {String(order._row)}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{order['الاسم']}</p>
+                          <p className="text-sm font-medium truncate">{order.customerName}</p>
                           <p className="text-xs text-muted-foreground truncate max-w-[180px]">
-                            {order['المنتج']}
+                            {order.product}
                           </p>
                         </div>
                       </div>
                       <div className="text-left flex flex-col items-end gap-1 shrink-0">
-                        <StatusBadge status={order['الحالة']} />
+                        <StatusBadge status={order.status} />
                         <p className="text-[10px] font-mono text-muted-foreground" dir="ltr">
-                          {order['الهاتف']}
+                          {order.phone}
                         </p>
                       </div>
                     </Link>

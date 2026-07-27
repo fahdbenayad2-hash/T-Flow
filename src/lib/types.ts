@@ -1,20 +1,22 @@
+import type { OrderStatus } from './sheet-mapping'
+
 export interface Order {
   _row: number
   order_id: string
-  الاسم: string
-  الهاتف: number | string
-  الولاية: string | number
-  البلدية: string
-  العنوان: string
-  الملاحظات: string
-  المنتج: string
-  اللون: string
-  المقاس: string
-  السعر: number | string
-  الكمية: number | string
-  'نوع التوصيل': string
-  التاريخ: string
-  الحالة: string
+  customerName: string
+  phone: number | string
+  wilaya: string | number
+  baladiya: string
+  address: string
+  notes: string
+  product: string
+  color: string
+  size: string
+  price: number | string
+  quantity: number | string
+  deliveryType: string
+  date: string
+  status: OrderStatus | string
 }
 
 export interface Customer {

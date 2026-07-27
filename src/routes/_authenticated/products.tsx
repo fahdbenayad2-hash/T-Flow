@@ -9,7 +9,8 @@ import { Input } from '~/components/ui/input'
 import { Badge } from '~/components/ui/badge'
 import { Separator } from '~/components/ui/separator'
 import { Search, Package, TrendingUp, ShoppingCart, DollarSign, BarChart3 } from 'lucide-react'
-import { STATUS_MAP, formatCurrency } from '~/lib/utils'
+import { formatCurrency } from '~/lib/utils'
+import { STATUS } from '~/lib/sheet-mapping'
 import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
 import { ErrorState, EmptyState } from '~/components/empty-state'
 import { RoleGuard } from '~/components/role-guard'
@@ -34,7 +35,7 @@ function aggregateProducts(orders: any[]): ProductStats[] {
   const map = new Map<string, ProductStats>()
 
   for (const order of orders) {
-    const name = order['المنتج']
+    const name = order.product
     if (!name) continue
 
     if (!map.has(name)) {
@@ -53,14 +54,14 @@ function aggregateProducts(orders: any[]): ProductStats[] {
 
     const p = map.get(name)!
     p.totalOrders++
-    p.totalRevenue += (Number(order['السعر']) || 0) * (Number(order['الكمية']) || 1)
+    p.totalRevenue += (Number(order.price) || 0) * (Number(order.quantity) || 1)
 
-    if (order['الحالة'] === 'تم التسليم') p.deliveredOrders++
-    else if (order['الحالة'] === 'ملغي') p.cancelledOrders++
-    else if (['قيد المعالجة', 'جاري التجهيز'].includes(order['الحالة'])) p.pendingOrders++
+    if (order.status === STATUS.DELIVERED) p.deliveredOrders++
+    else if (order.status === STATUS.CANCELLED) p.cancelledOrders++
+    else if ([STATUS.PROCESSING, STATUS.PREPARING].includes(order.status)) p.pendingOrders++
 
-    if (order['اللون']) p.colors.add(order['اللون'])
-    if (order['المقاس']) p.sizes.add(order['المقاس'])
+    if (order.color) p.colors.add(order.color)
+    if (order.size) p.sizes.add(order.size)
   }
 
   return Array.from(map.values())

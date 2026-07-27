@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Separator } from '~/components/ui/separator'
 import { Truck, Package, MapPin, CheckCircle, Clock, AlertTriangle } from 'lucide-react'
-import { STATUS_MAP, formatCurrency } from '~/lib/utils'
+import { STATUS } from '~/lib/sheet-mapping'
+import { formatCurrency } from '~/lib/utils'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
 import { ErrorState, EmptyState } from '~/components/empty-state'
 import { RoleGuard } from '~/components/role-guard'
@@ -63,15 +64,15 @@ function DeliveryPage() {
     let cancelled = 0
 
     for (const o of orders) {
-      const type = o['نوع التوصيل'] || ''
+      const type = o.deliveryType || ''
       if (type.includes('دوميسيل') || type.toLowerCase().includes('home')) homeDelivery++
       else if (type.includes('ستوب') || type.toLowerCase().includes('stop')) stopDesk++
 
-      if (o['الحالة'] === 'تم التسليم') delivered++
-      else if (o['الحالة'] === 'ملغي') cancelled++
-      else if (['قيد المعالجة', 'جاري التجهيز'].includes(o['الحالة'])) pending++
+      if (o.status === STATUS.DELIVERED) delivered++
+      else if (o.status === STATUS.CANCELLED) cancelled++
+      else if (([STATUS.PROCESSING, STATUS.PREPARING] as string[]).includes(o.status)) pending++
 
-      const wilaya = String(o['الولاية']) || 'غير معروف'
+      const wilaya = String(o.wilaya) || 'غير معروف'
       const existing = byWilaya.get(wilaya) || {
         total: 0,
         delivered: 0,
@@ -80,11 +81,11 @@ function DeliveryPage() {
         revenue: 0,
       }
       existing.total++
-      if (o['الحالة'] === 'تم التسليم') {
+      if (o.status === STATUS.DELIVERED) {
         existing.delivered++
-        existing.revenue += (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1)
-      } else if (o['الحالة'] === 'ملغي') existing.cancelled++
-      else if (['قيد المعالجة', 'جاري التجهيز'].includes(o['الحالة'])) existing.pending++
+        existing.revenue += (Number(o.price) || 0) * (Number(o.quantity) || 1)
+      } else if (o.status === STATUS.CANCELLED) existing.cancelled++
+      else if (([STATUS.PROCESSING, STATUS.PREPARING] as string[]).includes(o.status)) existing.pending++
       byWilaya.set(wilaya, existing)
     }
 

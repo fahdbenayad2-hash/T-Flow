@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from '~/components/ui/select'
 import { Search, Download, X, AlertCircle, ArrowUpDown, Filter, ShoppingCart } from 'lucide-react'
-import { STATUS_OPTIONS, formatCurrency, formatDate } from '~/lib/utils'
+import { formatCurrency, formatDate } from '~/lib/utils'
+import { ALL_STATUSES, toExportRow } from '~/lib/sheet-mapping'
 import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
 import { ErrorState, OrdersEmptyState } from '~/components/empty-state'
 import toast from 'react-hot-toast'
@@ -68,25 +69,25 @@ function OrdersPage() {
   const [productFilter, setProductFilter] = useState('all')
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [bulkStatus, setBulkStatus] = useState('')
-  const [sortField, setSortField] = useState<'_row' | 'التاريخ' | 'الحالة'>('_row')
+  const [sortField, setSortField] = useState<'_row' | 'date' | 'status'>('_row')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   const orders = data?.orders || []
 
   const wilayas = useMemo(() => {
-    const set = new Set(orders.map((o) => String(o['الولاية'])).filter(Boolean))
+    const set = new Set(orders.map((o) => String(o.wilaya)).filter(Boolean))
     return Array.from(set).sort()
   }, [orders])
 
   const products = useMemo(() => {
-    const set = new Set(orders.map((o) => o['المنتج']).filter(Boolean))
+    const set = new Set(orders.map((o) => o.product).filter(Boolean))
     return Array.from(set).sort()
   }, [orders])
 
   const duplicates = useMemo(() => {
     const phoneMap = new Map<string, Set<number>>()
     orders.forEach((o) => {
-      const phone = String(o['الهاتف'])
+      const phone = String(o.phone)
       if (!phone) return
       if (!phoneMap.has(phone)) phoneMap.set(phone, new Set())
       phoneMap.get(phone)!.add(o._row)
@@ -104,17 +105,17 @@ function OrdersPage() {
     if (search) {
       const q = search.toLowerCase()
       result = result.filter(
-        (o) => String(o['الاسم']).toLowerCase().includes(q) || String(o['الهاتف']).includes(q),
+        (o) => String(o.customerName).toLowerCase().includes(q) || String(o.phone).includes(q),
       )
     }
     if (statusFilter !== 'all') {
-      result = result.filter((o) => o['الحالة'] === statusFilter)
+      result = result.filter((o) => o.status === statusFilter)
     }
     if (wilayaFilter !== 'all') {
-      result = result.filter((o) => String(o['الولاية']) === wilayaFilter)
+      result = result.filter((o) => String(o.wilaya) === wilayaFilter)
     }
     if (productFilter !== 'all') {
-      result = result.filter((o) => o['المنتج'] === productFilter)
+      result = result.filter((o) => o.product === productFilter)
     }
 
     result.sort((a, b) => {
@@ -123,12 +124,12 @@ function OrdersPage() {
       if (sortField === '_row') {
         aVal = a._row
         bVal = b._row
-      } else if (sortField === 'التاريخ') {
-        aVal = a['التاريخ']
-        bVal = b['التاريخ']
-      } else if (sortField === 'الحالة') {
-        aVal = a['الحالة']
-        bVal = b['الحالة']
+      } else if (sortField === 'date') {
+        aVal = a.date
+        bVal = b.date
+      } else if (sortField === 'status') {
+        aVal = a.status
+        bVal = b.status
       }
       if (sortDir === 'asc') return aVal > bVal ? 1 : -1
       return aVal < bVal ? 1 : -1
@@ -161,7 +162,7 @@ function OrdersPage() {
     }
     const items = Array.from(selectedRows).map((row) => ({
       row,
-      updates: { الحالة: bulkStatus },
+      updates: { status: bulkStatus },
     }))
     toast.loading(`جاري تحديث ${items.length} طلب...`, { id: 'bulk' })
     const results = await bulkMutation.mutateAsync(items)
@@ -181,18 +182,7 @@ function OrdersPage() {
     const exportData = filteredOrders.map((o) => ({
       'رقم الصف': o._row,
       'رقم الطلب': o.order_id,
-      الاسم: o['الاسم'],
-      الهاتف: o['الهاتف'],
-      الولاية: o['الولاية'],
-      البلدية: o['البلدية'],
-      المنتج: o['المنتج'],
-      اللون: o['اللون'],
-      المقاس: o['المقاس'],
-      السعر: o['السعر'],
-      الكمية: o['الكمية'],
-      'نوع التوصيل': o['نوع التوصيل'],
-      التاريخ: o['التاريخ'],
-      الحالة: o['الحالة'],
+      ...toExportRow(o),
     }))
     const ws = XLSX.utils.json_to_sheet(exportData)
     const wb = XLSX.utils.book_new()
@@ -242,7 +232,7 @@ function OrdersPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">كل الحالات</SelectItem>
-                {STATUS_OPTIONS.map((s) => (
+                {ALL_STATUSES.map((s) => (
                   <SelectItem key={s} value={s}>
                     {s}
                   </SelectItem>
@@ -316,7 +306,7 @@ function OrdersPage() {
                     <SelectValue placeholder="تغيير الحالة" />
                   </SelectTrigger>
                   <SelectContent>
-                    {STATUS_OPTIONS.map((s) => (
+                    {ALL_STATUSES.map((s) => (
                       <SelectItem key={s} value={s}>
                         {s}
                       </SelectItem>
@@ -438,7 +428,7 @@ function OrdersPage() {
                   <th
                     className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                     onClick={() => {
-                      setSortField('الحالة')
+                      setSortField('status')
                       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
                     }}
                   >
@@ -450,7 +440,7 @@ function OrdersPage() {
                   <th
                     className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                     onClick={() => {
-                      setSortField('التاريخ')
+                      setSortField('date')
                       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
                     }}
                   >
@@ -494,20 +484,20 @@ function OrdersPage() {
                           </Badge>
                         )}
                       </td>
-                      <td className="p-3 font-medium text-sm">{order['الاسم']}</td>
+                      <td className="p-3 font-medium text-sm">{order.customerName}</td>
                       <td className="p-3 font-mono text-xs" dir="ltr">
-                        {order['الهاتف']}
+                        {order.phone}
                       </td>
-                      <td className="p-3 text-xs">{order['الولاية']}</td>
-                      <td className="p-3 text-xs max-w-[150px] truncate">{order['المنتج']}</td>
+                      <td className="p-3 text-xs">{order.wilaya}</td>
+                      <td className="p-3 text-xs max-w-[150px] truncate">{order.product}</td>
                       <td className="p-3 font-mono text-xs">
-                        {order['السعر'] ? formatCurrency(Number(order['السعر'])) : '-'}
+                        {order.price ? formatCurrency(Number(order.price)) : '-'}
                       </td>
                       <td className="p-3">
-                        <StatusBadge status={order['الحالة']} />
+                        <StatusBadge status={order.status} />
                       </td>
                       <td className="p-3 text-xs text-muted-foreground">
-                        {formatDate(order['التاريخ'])}
+                        {formatDate(order.date)}
                       </td>
                     </tr>
                   )

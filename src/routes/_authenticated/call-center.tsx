@@ -10,6 +10,7 @@ import { Skeleton } from '~/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import { motion } from 'framer-motion'
 import { Phone, PhoneOff, Clock, CheckCircle, MessageSquare } from 'lucide-react'
+import { STATUS } from '~/lib/sheet-mapping'
 import { formatCurrency } from '~/lib/utils'
 import type { Order } from '~/lib/types'
 import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
@@ -58,7 +59,7 @@ function CallCenterPage() {
   const orders = data?.orders || []
 
   const queueOrders = useMemo(
-    () => orders.filter((o) => ['قيد المعالجة', 'جاري التجهيز'].includes(o['الحالة'])),
+    () => orders.filter((o) => [STATUS.PROCESSING, STATUS.PREPARING].includes(o.status as any)),
     [orders],
   )
 
@@ -193,25 +194,25 @@ function CallCenterPage() {
                           <div className="flex flex-col md:flex-row md:items-start gap-4">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold">{order['الاسم']}</h3>
+                                <h3 className="font-semibold">{order.customerName}</h3>
                                 <Badge variant="outline" className="text-[10px]">
-                                  {order['الحالة']}
+                                  {order.status}
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground mb-1">
-                                {order['المنتج']} — {order['اللون']} — {order['المقاس']}
+                                {order.product} — {order.color} — {order.size}
                               </p>
                               <p className="font-mono text-xs" dir="ltr">
                                 <Phone className="inline h-3 w-3 ml-1" />
-                                {order['الهاتف']}
+                                {order.phone}
                               </p>
                               <p className="font-mono text-sm mt-1">
-                                {formatCurrency(Number(order['السعر']) || 0)}
+                                {formatCurrency(Number(order.price) || 0)}
                               </p>
-                              {order['الملاحظات'] && (
+                              {order.notes && (
                                 <p className="text-xs text-muted-foreground mt-1">
                                   <MessageSquare className="inline h-3 w-3 ml-1" />
-                                  {order['الملاحظات']}
+                                  {order.notes}
                                 </p>
                               )}
                             </div>

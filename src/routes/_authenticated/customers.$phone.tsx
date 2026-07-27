@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
 import { ArrowRight, Phone, ShoppingCart, Ban, MapPin } from 'lucide-react'
 import { formatCurrency } from '~/lib/utils'
+import { STATUS } from '~/lib/sheet-mapping'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
 import { ErrorState } from '~/components/empty-state'
 import { StatusBadge } from '~/components/status-badge'
@@ -20,7 +21,7 @@ function CustomerDetailPage() {
 
   const orders = data?.orders || []
   const customerOrders = useMemo(
-    () => orders.filter((o) => String(o['الهاتف']) === phone),
+    () => orders.filter((o) => String(o.phone) === phone),
     [orders, phone],
   )
 
@@ -49,12 +50,12 @@ function CustomerDetailPage() {
 
   const firstOrder = customerOrders[0]
   const totalSpent = customerOrders.reduce(
-    (sum, o) => sum + (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1),
+    (sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1),
     0,
   )
-  const cancelledCount = customerOrders.filter((o) => o['الحالة'] === 'ملغي').length
-  const noAnswerCount = customerOrders.filter((o) => o['الحالة'] === 'ما جاوبش').length
-  const deliveredCount = customerOrders.filter((o) => o['الحالة'] === 'تم التسليم').length
+  const cancelledCount = customerOrders.filter((o) => o.status === STATUS.CANCELLED).length
+  const noAnswerCount = customerOrders.filter((o) => o.status === STATUS.NO_ANSWER).length
+  const deliveredCount = customerOrders.filter((o) => o.status === STATUS.DELIVERED).length
 
   return (
     <StaggerContainer className="space-y-4">
@@ -64,7 +65,7 @@ function CustomerDetailPage() {
             <ArrowRight className="h-5 w-5" />
           </Button>
           <div>
-            <h2 className="text-lg font-semibold">{firstOrder['الاسم']}</h2>
+            <h2 className="text-lg font-semibold">{firstOrder.customerName}</h2>
             <p className="text-sm text-muted-foreground font-mono" dir="ltr">
               {phone}
             </p>
@@ -133,7 +134,7 @@ function CustomerDetailPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm">
-              {firstOrder['الولاية']} — {firstOrder['البلدية']} — {firstOrder['العنوان']}
+              {firstOrder.wilaya} — {firstOrder.baladiya} — {firstOrder.address}
             </p>
           </CardContent>
         </Card>
@@ -161,18 +162,18 @@ function CustomerDetailPage() {
                         >
                           {order.order_id}
                         </Link>
-                        <StatusBadge status={order['الحالة']} />
+                        <StatusBadge status={order.status} />
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {order['المنتج']} — {order['اللون']}
+                        {order.product} — {order.color}
                       </p>
                     </div>
                     <div className="text-left">
                       <p className="font-mono text-sm">
-                        {formatCurrency(Number(order['السعر']) || 0)}
+                        {formatCurrency(Number(order.price) || 0)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {order['التاريخ'].slice(0, 12)}
+                        {order.date.slice(0, 12)}
                       </p>
                     </div>
                   </div>

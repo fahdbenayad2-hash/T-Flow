@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { useOrders } from '~/lib/queries'
 import { supabase } from '~/utils/supabase-client'
+import { STATUS } from '~/lib/sheet-mapping'
 import type { Notification } from '~/lib/types'
 
 function isPendingOver48h(dateStr: string): boolean {
@@ -73,30 +74,30 @@ export function useNotifications() {
         const orders = data.orders
 
         for (const order of orders) {
-          if (order['الحالة'] === 'قيد المعالجة' && isPendingOver48h(order['التاريخ'])) {
+          if (order.status === STATUS.PROCESSING && isPendingOver48h(order.date)) {
             notifications.push({
               type: 'pending_order',
-              message: `طلب معلق +48 ساعة: ${order['الاسم']}`,
+              message: `طلب معلق +48 ساعة: ${order.customerName}`,
               orderId: order.order_id,
-              createdAt: order['التاريخ'],
+              createdAt: order.date,
             })
           }
         }
 
         const phoneMap = new Map<string, typeof orders>()
         for (const order of orders) {
-          const phone = String(order['الهاتف'])
+          const phone = String(order.phone)
           if (!phoneMap.has(phone)) phoneMap.set(phone, [])
           phoneMap.get(phone)!.push(order)
         }
 
         for (const [, phoneOrders] of phoneMap) {
           if (phoneOrders.length > 1) {
-            const dates = phoneOrders.map((o) => o['التاريخ']).filter(Boolean)
+            const dates = phoneOrders.map((o) => o.date).filter(Boolean)
             if (dates.length >= 2) {
               notifications.push({
                 type: 'duplicate_order',
-                message: `طلب مكرر: ${phoneOrders[0]['الاسم']} (${phoneOrders.length} طلبات)`,
+                message: `طلب مكرر: ${phoneOrders[0].customerName} (${phoneOrders.length} طلبات)`,
                 orderId: phoneOrders[0].order_id,
               })
             }

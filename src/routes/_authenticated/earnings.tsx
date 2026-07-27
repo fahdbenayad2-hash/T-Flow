@@ -15,7 +15,8 @@ import {
   Package,
   BarChart3,
 } from 'lucide-react'
-import { STATUS_MAP, formatCurrency } from '~/lib/utils'
+import { STATUS } from '~/lib/sheet-mapping'
+import { formatCurrency } from '~/lib/utils'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
 import { ErrorState, EmptyState } from '~/components/empty-state'
 import { RoleGuard } from '~/components/role-guard'
@@ -48,20 +49,20 @@ function EarningsPage() {
   const orders = data?.orders || []
 
   const stats = useMemo(() => {
-    const delivered = orders.filter((o) => o['الحالة'] === 'تم التسليم')
-    const cancelled = orders.filter((o) => o['الحالة'] === 'ملغي')
-    const pending = orders.filter((o) => ['قيد المعالجة', 'جاري التجهيز'].includes(o['الحالة']))
+    const delivered = orders.filter((o) => o.status === STATUS.DELIVERED)
+    const cancelled = orders.filter((o) => o.status === STATUS.CANCELLED)
+    const pending = orders.filter((o) => ([STATUS.PROCESSING, STATUS.PREPARING] as string[]).includes(o.status))
 
     const totalRevenue = delivered.reduce(
-      (sum, o) => sum + (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1),
+      (sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1),
       0,
     )
     const totalPotentialRevenue = orders.reduce(
-      (sum, o) => sum + (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1),
+      (sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1),
       0,
     )
     const lostRevenue = cancelled.reduce(
-      (sum, o) => sum + (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1),
+      (sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1),
       0,
     )
     const avgOrderValue = delivered.length > 0 ? Math.round(totalRevenue / delivered.length) : 0
@@ -70,9 +71,9 @@ function EarningsPage() {
     // Group by date
     const byDate = new Map<string, { revenue: number; orders: number }>()
     for (const o of delivered) {
-      const date = o['التاريخ']?.slice(0, 10) || 'غير معروف'
+      const date = o.date?.slice(0, 10) || 'غير معروف'
       const existing = byDate.get(date) || { revenue: 0, orders: 0 }
-      existing.revenue += (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1)
+      existing.revenue += (Number(o.price) || 0) * (Number(o.quantity) || 1)
       existing.orders++
       byDate.set(date, existing)
     }
@@ -80,9 +81,9 @@ function EarningsPage() {
     // Group by product
     const byProduct = new Map<string, { revenue: number; orders: number }>()
     for (const o of delivered) {
-      const product = o['المنتج'] || 'غير معروف'
+      const product = o.product || 'غير معروف'
       const existing = byProduct.get(product) || { revenue: 0, orders: 0 }
-      existing.revenue += (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1)
+      existing.revenue += (Number(o.price) || 0) * (Number(o.quantity) || 1)
       existing.orders++
       byProduct.set(product, existing)
     }
@@ -90,9 +91,9 @@ function EarningsPage() {
     // Group by wilaya
     const byWilaya = new Map<string, { revenue: number; orders: number }>()
     for (const o of delivered) {
-      const wilaya = String(o['الولاية']) || 'غير معروف'
+      const wilaya = String(o.wilaya) || 'غير معروف'
       const existing = byWilaya.get(wilaya) || { revenue: 0, orders: 0 }
-      existing.revenue += (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1)
+      existing.revenue += (Number(o.price) || 0) * (Number(o.quantity) || 1)
       existing.orders++
       byWilaya.set(wilaya, existing)
     }

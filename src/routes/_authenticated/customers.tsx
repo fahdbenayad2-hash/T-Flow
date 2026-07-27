@@ -9,6 +9,7 @@ import { Skeleton } from '~/components/ui/skeleton'
 import { Search, Users, ShoppingCart } from 'lucide-react'
 import type { Order, Customer } from '~/lib/types'
 import { formatCurrency } from '~/lib/utils'
+import { STATUS } from '~/lib/sheet-mapping'
 import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
 import { ErrorState, CustomersEmptyState } from '~/components/empty-state'
 
@@ -20,19 +21,19 @@ function aggregateCustomers(orders: Order[]): Customer[] {
   const map = new Map<string, Customer>()
 
   for (const order of orders) {
-    const phone = String(order['الهاتف'])
+    const phone = String(order.phone)
     if (!phone) continue
 
     if (!map.has(phone)) {
       map.set(phone, {
         phone,
-        name: order['الاسم'],
+        name: order.customerName,
         orders: [],
         totalOrders: 0,
         totalSpent: 0,
         cancelledCount: 0,
         noAnswerCount: 0,
-        lastOrderDate: order['التاريخ'],
+        lastOrderDate: order.date,
         isBlacklisted: false,
       })
     }
@@ -40,13 +41,13 @@ function aggregateCustomers(orders: Order[]): Customer[] {
     const customer = map.get(phone)!
     customer.orders.push(order)
     customer.totalOrders++
-    customer.totalSpent += (Number(order['السعر']) || 0) * (Number(order['الكمية']) || 1)
+    customer.totalSpent += (Number(order.price) || 0) * (Number(order.quantity) || 1)
 
-    if (order['الحالة'] === 'ملغي') customer.cancelledCount++
-    if (order['الحالة'] === 'ما جاوبش') customer.noAnswerCount++
+    if (order.status === STATUS.CANCELLED) customer.cancelledCount++
+    if (order.status === STATUS.NO_ANSWER) customer.noAnswerCount++
 
-    if (order['التاريخ'] > customer.lastOrderDate) {
-      customer.lastOrderDate = order['التاريخ']
+    if (order.date > customer.lastOrderDate) {
+      customer.lastOrderDate = order.date
     }
   }
 

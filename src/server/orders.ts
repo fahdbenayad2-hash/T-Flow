@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { DEMO_MODE_SERVER as DEMO_MODE, ORDER_CACHE_TTL_S, APPS_SCRIPT_SECRET } from '~/config'
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
+import { mapRawRowToOrder, toSheetUpdates } from '~/lib/sheet-mapping'
 import type { Order } from '~/lib/types'
 import { generateOrderId } from '~/lib/utils'
 
@@ -32,24 +33,13 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
 
     const raw: Array<Record<string, unknown>> = await res.json()
 
-    const orders: Order[] = raw.map((row) => ({
-      _row: row._row as number,
-      order_id: generateOrderId(row['الهاتف'], row['التاريخ'] as string, row['المنتج'] as string),
-      الاسم: (row['الاسم'] as string) || '',
-      الهاتف: row['الهاتف'] || '',
-      الولاية: row['الولاية'] || '',
-      البلدية: (row['البلدية'] as string) || '',
-      العنوان: (row['العنوان'] as string) || '',
-      الملاحظات: (row['الملاحظات'] as string) || '',
-      المنتج: (row['المنتج'] as string) || '',
-      اللون: (row['اللون'] as string) || '',
-      المقاس: (row['المقاس'] as string) || '',
-      السعر: row['السعر'] || '',
-      الكمية: row['الكمية'] || '',
-      'نوع التوصيل': (row['نوع التوصيل'] as string) || '',
-      التاريخ: (row['التاريخ'] as string) || '',
-      الحالة: (row['الحالة'] as string) || 'قيد المعالجة',
-    }))
+    const orders: Order[] = raw.map((row) => {
+      const mapped = mapRawRowToOrder(row)
+      return {
+        ...mapped,
+        order_id: generateOrderId(mapped.phone, mapped.date, mapped.product),
+      }
+    })
 
     cache = { data: orders, fetchedAt: Date.now() }
 
@@ -73,13 +63,15 @@ export const updateOrder = createServerFn({ method: 'POST' })
     }) => data,
   )
   .handler(async ({ data }) => {
+    const sheetUpdates = toSheetUpdates(data.updates)
+
     try {
       const response = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         headers: scriptHeaders(),
         body: JSON.stringify({
           _row: data.row,
-          updates: data.updates,
+          updates: sheetUpdates,
         }),
       })
 
@@ -123,15 +115,15 @@ export const updateOrder = createServerFn({ method: 'POST' })
         const orderId =
           data.order_id ||
           generateOrderId(
-            String(data.updates['الهاتف'] || ''),
-            String(data.updates['التاريخ'] || ''),
-            String(data.updates['المنتج'] || ''),
+            String(data.updates.phone || ''),
+            String(data.updates.date || ''),
+            String(data.updates.product || ''),
           )
         await supabase.from('audit_log').insert({
           order_id: orderId,
           action: 'update_order',
           old_value: data.lastModified ? { lastModified: data.lastModified } : null,
-          new_value: data.updates,
+          new_value: sheetUpdates,
         })
       } catch (e) {
         console.warn('Audit log failed (non-critical):', e)

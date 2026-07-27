@@ -1,5 +1,6 @@
 import { Badge } from '~/components/ui/badge'
-import { STATUS_MAP, cn } from '~/lib/utils'
+import { STATUS_MAP } from '~/lib/sheet-mapping'
+import { cn } from '~/lib/utils'
 
 interface StatusBadgeProps {
   status: string
@@ -7,12 +8,12 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const statusInfo = STATUS_MAP[status]
+  const statusInfo = STATUS_MAP[status as keyof typeof STATUS_MAP]
   return (
     <Badge
       className={cn('text-[10px]', className)}
       style={{
-        backgroundColor: `var(${statusInfo?.var || '--status-processing'})`,
+        backgroundColor: `var(${statusInfo?.cssVar || '--status-processing'})`,
         color: 'var(--color-primary-foreground)',
       }}
     >

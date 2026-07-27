@@ -15,7 +15,8 @@ import {
   Phone,
   DollarSign,
 } from 'lucide-react'
-import { STATUS_MAP, formatCurrency } from '~/lib/utils'
+import { formatCurrency } from '~/lib/utils'
+import { STATUS, toExportRow } from '~/lib/sheet-mapping'
 import { FadeIn, StaggerContainer } from '~/components/page-transition'
 import { ErrorState, EmptyState } from '~/components/empty-state'
 import { Skeleton } from '~/components/ui/skeleton'
@@ -48,29 +49,29 @@ function ReportsPage() {
   const analytics = useMemo(() => {
     // Performance metrics
     const totalOrders = orders.length
-    const delivered = orders.filter((o) => o['الحالة'] === 'تم التسليم')
-    const cancelled = orders.filter((o) => o['الحالة'] === 'ملغي')
-    const noAnswer = orders.filter((o) => o['الحالة'] === 'ما جاوبش')
-    const pending = orders.filter((o) => ['قيد المعالجة', 'جاري التجهيز'].includes(o['الحالة']))
+    const delivered = orders.filter((o) => o.status === STATUS.DELIVERED)
+    const cancelled = orders.filter((o) => o.status === STATUS.CANCELLED)
+    const noAnswer = orders.filter((o) => o.status === STATUS.NO_ANSWER)
+    const pending = orders.filter((o) => ([STATUS.PROCESSING, STATUS.PREPARING] as string[]).includes(o.status))
 
     const totalRevenue = delivered.reduce(
-      (sum, o) => sum + (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1),
+      (sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1),
       0,
     )
     const lostRevenue = cancelled.reduce(
-      (sum, o) => sum + (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1),
+      (sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1),
       0,
     )
 
     // Top customers by orders
     const customerMap = new Map<string, { name: string; orders: number; revenue: number }>()
     for (const o of orders) {
-      const phone = String(o['الهاتف'])
+      const phone = String(o.phone)
       if (!phone) continue
-      const existing = customerMap.get(phone) || { name: o['الاسم'], orders: 0, revenue: 0 }
+      const existing = customerMap.get(phone) || { name: o.customerName, orders: 0, revenue: 0 }
       existing.orders++
-      if (o['الحالة'] === 'تم التسليم')
-        existing.revenue += (Number(o['السعر']) || 0) * (Number(o['الكمية']) || 1)
+      if (o.status === STATUS.DELIVERED)
+        existing.revenue += (Number(o.price) || 0) * (Number(o.quantity) || 1)
       customerMap.set(phone, existing)
     }
     const topCustomers = Array.from(customerMap.values())
@@ -80,12 +81,12 @@ function ReportsPage() {
     // Time analysis
     const hourMap = new Map<number, number>()
     for (const o of orders) {
-      const hour = new Date(o['التاريخ']).getHours()
+      const hour = new Date(o.date).getHours()
       hourMap.set(hour, (hourMap.get(hour) || 0) + 1)
     }
 
     // Repeat customer rate
-    const uniquePhones = new Set(orders.map((o) => String(o['الهاتف'])).filter(Boolean))
+    const uniquePhones = new Set(orders.map((o) => String(o.phone)).filter(Boolean))
     const repeatCustomers = Array.from(customerMap.values()).filter((c) => c.orders > 1).length
     const repeatRate =
       uniquePhones.size > 0 ? Math.round((repeatCustomers / uniquePhones.size) * 100) : 0
@@ -115,17 +116,7 @@ function ReportsPage() {
   const handleExportFullReport = () => {
     const reportData = orders.map((o) => ({
       'رقم الطلب': o.order_id,
-      الاسم: o['الاسم'],
-      الهاتف: o['الهاتف'],
-      الولاية: o['الولاية'],
-      المنتج: o['المنتج'],
-      اللون: o['اللون'],
-      المقاس: o['المقاس'],
-      السعر: o['السعر'],
-      الكمية: o['الكمية'],
-      التاريخ: o['التاريخ'],
-      الحالة: o['الحالة'],
-      'نوع التوصيل': o['نوع التوصيل'],
+      ...toExportRow(o),
     }))
     const ws = XLSX.utils.json_to_sheet(reportData)
     const wb = XLSX.utils.book_new()

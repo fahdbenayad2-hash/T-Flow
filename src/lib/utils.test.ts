@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { generateOrderId, formatCurrency, STATUS_MAP, STATUS_OPTIONS } from './utils'
+import { generateOrderId, formatCurrency } from './utils'
+import { STATUS_MAP, ALL_STATUSES } from './sheet-mapping'
 
 describe('generateOrderId', () => {
   it('produces deterministic IDs for same input', () => {
@@ -75,7 +76,7 @@ describe('STATUS_MAP', () => {
     for (const [status, info] of Object.entries(STATUS_MAP)) {
       expect(info.label, `label missing for ${status}`).toBeTruthy()
       expect(info.color, `color missing for ${status}`).toMatch(/^bg-/)
-      expect(info.var, `var missing for ${status}`).toMatch(/^--status-/)
+      expect(info.cssVar, `var missing for ${status}`).toMatch(/^--status-/)
     }
   })
 
@@ -95,12 +96,12 @@ describe('STATUS_MAP', () => {
   })
 })
 
-describe('STATUS_OPTIONS', () => {
+describe('ALL_STATUSES', () => {
   it('is derived from STATUS_MAP keys', () => {
-    expect(STATUS_OPTIONS).toEqual(Object.keys(STATUS_MAP))
+    expect(ALL_STATUSES).toEqual(Object.keys(STATUS_MAP))
   })
 
   it('has the same length as STATUS_MAP', () => {
-    expect(STATUS_OPTIONS).toHaveLength(Object.keys(STATUS_MAP).length)
+    expect(ALL_STATUSES).toHaveLength(Object.keys(STATUS_MAP).length)
   })
 })
