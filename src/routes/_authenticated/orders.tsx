@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { useOrders, useBulkUpdateOrders } from '~/lib/queries'
 import { Card, CardContent } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
@@ -23,6 +23,7 @@ import { ErrorState, OrdersEmptyState } from '~/components/empty-state'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 import { motion } from 'framer-motion'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { StatusBadge } from '~/components/status-badge'
 
 export const Route = createFileRoute('/_authenticated/orders')({
@@ -194,6 +195,15 @@ function OrdersPage() {
     }
     toast.success('تم التصدير بنجاح')
   }
+
+  const parentRef = useRef<HTMLDivElement>(null)
+
+  const virtualizer = useVirtualizer({
+    count: filteredOrders.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 48,
+    overscan: 10,
+  })
 
   if (isLoading) return <OrdersSkeleton />
 
@@ -383,94 +393,97 @@ function OrdersPage() {
         </FadeIn>
       ) : (
         <FadeIn delay={0.15}>
-          <div className="overflow-x-auto rounded-xl border bg-card">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-surface-1/50">
-                  {canBulkEdit && (
-                    <th className="p-3 w-10">
-                      <Checkbox
-                        checked={
-                          selectedRows.size === filteredOrders.length && filteredOrders.length > 0
-                        }
-                        onCheckedChange={toggleAll}
-                      />
-                    </th>
-                  )}
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">#</th>
-                  <th
-                    className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-                    onClick={() => {
-                      setSortField('_row')
-                      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-                    }}
-                  >
-                    <span className="flex items-center gap-1">
-                      الطلب
-                      <ArrowUpDown className="h-3 w-3" />
-                    </span>
-                  </th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
-                    الاسم
-                  </th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
-                    الهاتف
-                  </th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
-                    الولاية
-                  </th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
-                    المنتج
-                  </th>
-                  <th className="p-3 text-right font-medium text-xs text-muted-foreground">
-                    السعر
-                  </th>
-                  <th
-                    className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-                    onClick={() => {
-                      setSortField('status')
-                      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-                    }}
-                  >
-                    <span className="flex items-center gap-1">
-                      الحالة
-                      <ArrowUpDown className="h-3 w-3" />
-                    </span>
-                  </th>
-                  <th
-                    className="p-3 text-right font-medium text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-                    onClick={() => {
-                      setSortField('date')
-                      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-                    }}
-                  >
-                    <span className="flex items-center gap-1">
-                      التاريخ
-                      <ArrowUpDown className="h-3 w-3" />
-                    </span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredOrders.map((order) => {
+          <div className="rounded-xl border bg-card">
+            {/* Sticky header row */}
+            <div className="flex items-center border-b bg-surface-1/50 text-xs text-muted-foreground font-medium sticky top-0 z-10">
+              {canBulkEdit && (
+                <div className="p-3 w-10 shrink-0">
+                  <Checkbox
+                    checked={
+                      selectedRows.size === filteredOrders.length && filteredOrders.length > 0
+                    }
+                    onCheckedChange={toggleAll}
+                  />
+                </div>
+              )}
+              <div className="p-3 w-12 shrink-0">#</div>
+              <div
+                className="p-3 w-28 shrink-0 cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => {
+                  setSortField('_row')
+                  setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+                }}
+              >
+                <span className="flex items-center gap-1">
+                  الطلب
+                  <ArrowUpDown className="h-3 w-3" />
+                </span>
+              </div>
+              <div className="p-3 flex-1 min-w-0">الاسم</div>
+              <div className="p-3 w-28 shrink-0">الهاتف</div>
+              <div className="p-3 w-24 shrink-0">الولاية</div>
+              <div className="p-3 w-32 shrink-0">المنتج</div>
+              <div className="p-3 w-24 shrink-0">السعر</div>
+              <div
+                className="p-3 w-24 shrink-0 cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => {
+                  setSortField('status')
+                  setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+                }}
+              >
+                <span className="flex items-center gap-1">
+                  الحالة
+                  <ArrowUpDown className="h-3 w-3" />
+                </span>
+              </div>
+              <div
+                className="p-3 w-24 shrink-0 cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => {
+                  setSortField('date')
+                  setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+                }}
+              >
+                <span className="flex items-center gap-1">
+                  التاريخ
+                  <ArrowUpDown className="h-3 w-3" />
+                </span>
+              </div>
+            </div>
+
+            {/* Virtualized body */}
+            <div ref={parentRef} className="overflow-auto max-h-[calc(100vh-22rem)]">
+              <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+                {virtualizer.getVirtualItems().map((virtualRow) => {
+                  const order = filteredOrders[virtualRow.index]
                   const isDup = duplicates.has(order._row)
                   return (
-                    <tr
+                    <div
                       key={order._row}
-                      className={`border-b last:border-0 table-row-hover cursor-pointer ${
+                      data-index={virtualRow.index}
+                      ref={virtualizer.measureElement}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                      className={`flex items-center border-b last:border-0 table-row-hover cursor-pointer text-sm ${
                         isDup ? 'bg-[var(--status-processing)]/5' : ''
                       }`}
                     >
                       {canBulkEdit && (
-                        <td className="p-3">
+                        <div className="p-3 w-10 shrink-0 flex items-center">
                           <Checkbox
                             checked={selectedRows.has(order._row)}
                             onCheckedChange={() => toggleRow(order._row)}
                           />
-                        </td>
+                        </div>
                       )}
-                      <td className="p-3 font-mono text-xs text-muted-foreground">{order._row}</td>
-                      <td className="p-3">
+                      <div className="p-3 w-12 shrink-0 font-mono text-xs text-muted-foreground">
+                        {order._row}
+                      </div>
+                      <div className="p-3 w-28 shrink-0">
                         <Link
                           to="/orders/$row"
                           params={{ row: String(order._row) }}
@@ -483,27 +496,29 @@ function OrdersPage() {
                             مكرر
                           </Badge>
                         )}
-                      </td>
-                      <td className="p-3 font-medium text-sm">{order.customerName}</td>
-                      <td className="p-3 font-mono text-xs" dir="ltr">
+                      </div>
+                      <div className="p-3 flex-1 min-w-0 font-medium text-sm truncate">
+                        {order.customerName}
+                      </div>
+                      <div className="p-3 w-28 shrink-0 font-mono text-xs" dir="ltr">
                         {order.phone}
-                      </td>
-                      <td className="p-3 text-xs">{order.wilaya}</td>
-                      <td className="p-3 text-xs max-w-[150px] truncate">{order.product}</td>
-                      <td className="p-3 font-mono text-xs">
+                      </div>
+                      <div className="p-3 w-24 shrink-0 text-xs">{order.wilaya}</div>
+                      <div className="p-3 w-32 shrink-0 text-xs truncate">{order.product}</div>
+                      <div className="p-3 w-24 shrink-0 font-mono text-xs">
                         {order.price ? formatCurrency(Number(order.price)) : '-'}
-                      </td>
-                      <td className="p-3">
+                      </div>
+                      <div className="p-3 w-24 shrink-0">
                         <StatusBadge status={order.status} />
-                      </td>
-                      <td className="p-3 text-xs text-muted-foreground">
+                      </div>
+                      <div className="p-3 w-24 shrink-0 text-xs text-muted-foreground">
                         {formatDate(order.date)}
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   )
                 })}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
         </FadeIn>
       )}
