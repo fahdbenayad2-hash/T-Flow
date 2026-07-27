@@ -1102,7 +1102,7 @@ body.lp-loading {
   font-size: 1rem;
 }
 .lp-btn-cta:hover {
-  background: #c81f2a;
+  background: var(--color-crimson-600);
 }
 .lp-btn-cta.pulse {
   animation: lpCtaPulse 2.6s ease-in-out infinite;

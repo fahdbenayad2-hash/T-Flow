@@ -53,13 +53,13 @@ export function HowItWorks() {
           <defs>
             <linearGradient id="lp-grad" x1="0" x2="1">
               <stop offset="0" stopColor="#7D1622" />
-              <stop offset="1" stopColor="#E72734" />
+              <stop offset="1" stopColor="#E31E24" />
             </linearGradient>
           </defs>
-          <circle cx="40" cy="30" r="5" fill="#0E1113" stroke="#E72734" strokeWidth="2" />
-          <circle cx="450" cy="30" r="5" fill="#0E1113" stroke="#E72734" strokeWidth="2" />
-          <circle cx="860" cy="30" r="5" fill="#0E1113" stroke="#E72734" strokeWidth="2" />
-          <circle id="lp-race-dot" cx="40" cy="30" r="7" fill="#E72734" />
+          <circle cx="40" cy="30" r="5" fill="#0E1113" stroke="#E31E24" strokeWidth="2" />
+          <circle cx="450" cy="30" r="5" fill="#0E1113" stroke="#E31E24" strokeWidth="2" />
+          <circle cx="860" cy="30" r="5" fill="#0E1113" stroke="#E31E24" strokeWidth="2" />
+          <circle id="lp-race-dot" cx="40" cy="30" r="7" fill="#E31E24" />
         </svg>
 
         <div className="lp-stops">

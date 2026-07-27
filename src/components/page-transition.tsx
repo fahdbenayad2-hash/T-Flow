@@ -1,53 +1,25 @@
 import { motion } from 'framer-motion'
 import type { ReactNode } from 'react'
+import {
+  pageTransition,
+  staggerContainer,
+  staggerItem,
+  fadeIn as fadeInConfig,
+  scaleIn,
+  EASE,
+  DURATION,
+} from '~/lib/motion'
 
 interface PageTransitionProps {
   children: ReactNode
 }
 
-const pageVariants = {
-  initial: { opacity: 0, y: 12 },
-  animate: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.3,
-      ease: [0.25, 0.1, 0.25, 1] as const,
-    },
-  },
-  exit: {
-    opacity: 0,
-    y: -8,
-    transition: { duration: 0.15 },
-  },
-}
-
 export function PageTransition({ children }: PageTransitionProps) {
   return (
-    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
+    <motion.div variants={pageTransition} initial="initial" animate="animate" exit="exit">
       {children}
     </motion.div>
   )
-}
-
-const staggerContainer = {
-  animate: {
-    transition: {
-      staggerChildren: 0.06,
-    },
-  },
-}
-
-const staggerItem = {
-  initial: { opacity: 0, y: 16 },
-  animate: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.35,
-      ease: [0.25, 0.1, 0.25, 1] as const,
-    },
-  },
 }
 
 export function StaggerContainer({
@@ -88,9 +60,9 @@ export function FadeIn({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: [0.25, 0.1, 0.25, 1] as const }}
+      initial={fadeInConfig(delay).initial}
+      animate={fadeInConfig(delay).animate}
+      transition={fadeInConfig(delay).transition}
       className={className}
     >
       {children}
@@ -101,12 +73,14 @@ export function FadeIn({
 export function ScaleIn({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] as const }}
+      initial={scaleIn.initial}
+      animate={scaleIn.animate}
+      transition={scaleIn.transition}
       className={className}
     >
       {children}
     </motion.div>
   )
 }
+
+export { EASE, DURATION }

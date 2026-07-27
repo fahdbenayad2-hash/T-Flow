@@ -81,7 +81,7 @@ export function LandingPage() {
   // theme toggle — it's a marketing surface, not a themed app view. Do not wire
   // this to the theme context.
   return (
-    <div style={{ background: '#0E1113', minHeight: '100vh', color: '#fff' }}>
+    <div style={{ background: 'var(--color-ink)', minHeight: '100vh', color: '#fff' }}>
       <RaceBar />
       <div id="lp-grain" />
       <PageLoader />
