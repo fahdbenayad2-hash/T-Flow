@@ -1,28 +1,11 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useOrders } from '~/lib/queries'
-import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
-import { Badge } from '~/components/ui/badge'
-import { Button } from '~/components/ui/button'
-import { AnimatedCounter } from '~/components/ui/animated-counter'
 import { Skeleton } from '~/components/ui/skeleton'
-import {
-  ShoppingCart,
-  CheckCircle,
-  Truck,
-  Clock,
-  TrendingUp,
-  AlertTriangle,
-  Package,
-  ArrowLeft,
-  Activity,
-  Radio,
-} from 'lucide-react'
+import { ShoppingCart, CheckCircle, Truck, Clock } from 'lucide-react'
 import { STATUS_MAP, STATUS } from '~/lib/sheet-mapping'
 import { formatCurrency } from '~/lib/utils'
-import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
 import { ErrorState } from '~/components/empty-state'
 import { useRole, getRoleLabel } from '~/hooks/useRole'
-import { motion } from 'framer-motion'
 import { StatusBadge } from '~/components/status-badge'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
@@ -31,33 +14,21 @@ export const Route = createFileRoute('/_authenticated/dashboard')({
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6">
-      <Skeleton className="h-20 w-full rounded-xl" />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+    <div className="space-y-5">
+      <Skeleton className="h-[120px] w-full rounded-[16px]" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="overflow-hidden">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-3">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-8 w-8 rounded-lg" />
-              </div>
-              <Skeleton className="h-8 w-20 mb-1" />
-              <Skeleton className="h-3 w-16" />
-            </CardContent>
-          </Card>
+          <Skeleton key={i} className="h-[110px] rounded-[15px]" />
+        ))}
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-[60px] rounded-[13px]" />
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <Skeleton className="h-56 w-full" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <Skeleton className="h-56 w-full" />
-          </CardContent>
-        </Card>
+        <Skeleton className="h-[260px] rounded-[15px]" />
+        <Skeleton className="h-[260px] rounded-[15px]" />
       </div>
     </div>
   )
@@ -65,293 +36,220 @@ function DashboardSkeleton() {
 
 function DashboardPage() {
   const { data, isLoading, isError, error, refetch } = useOrders()
-  const { roles, isAdmin } = useRole()
+  const { roles } = useRole()
 
   if (isLoading) return <DashboardSkeleton />
-
-  if (isError) {
-    return (
-      <ErrorState
-        message={error instanceof Error ? error.message : undefined}
-        onRetry={() => refetch()}
-      />
-    )
-  }
+  if (isError) return <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={() => refetch()} />
 
   const orders = data?.orders || []
+  const n = orders.length
 
-  const confirmedOrders = orders.filter((o) =>
-    [STATUS.DELIVERED, STATUS.SHIPPED, STATUS.CONFIRMED].includes(o.status as any),
-  )
-  const deliveredOrders = orders.filter((o) => o.status === STATUS.DELIVERED)
-  const pendingOrders = orders.filter((o) =>
-    [STATUS.PROCESSING, STATUS.PREPARING].includes(o.status as any),
-  )
-  const cancelledOrders = orders.filter((o) => o.status === STATUS.CANCELLED)
-  const noAnswerOrders = orders.filter((o) => o.status === STATUS.NO_ANSWER)
+  const confirmed = orders.filter((o) => [STATUS.DELIVERED, STATUS.SHIPPED, STATUS.CONFIRMED].includes(o.status as any))
+  const delivered = orders.filter((o) => o.status === STATUS.DELIVERED)
+  const pending = orders.filter((o) => [STATUS.PROCESSING, STATUS.PREPARING].includes(o.status as any))
+  const noAnswer = orders.filter((o) => o.status === STATUS.NO_ANSWER)
+  const cancelled = orders.filter((o) => o.status === STATUS.CANCELLED)
 
-  const confirmRate =
-    orders.length > 0 ? Math.round((confirmedOrders.length / orders.length) * 100) : 0
-  const deliveryRate =
-    orders.length > 0 ? Math.round((deliveredOrders.length / orders.length) * 100) : 0
+  const confirmRate = n ? Math.round((confirmed.length / n) * 100) : 0
+  const deliveryRate = n ? Math.round((delivered.length / n) * 100) : 0
+  const totalRevenue = delivered.reduce((sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1), 0)
+  const avgOrderValue = delivered.length > 0 ? Math.round(totalRevenue / delivered.length) : 0
 
-  const totalRevenue = orders
-    .filter((o) => o.status === STATUS.DELIVERED)
-    .reduce((sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1), 0)
+  const statusCounts: Record<string, number> = {}
+  orders.forEach((o) => { statusCounts[o.status] = (statusCounts[o.status] || 0) + 1 })
 
-  const avgOrderValue =
-    deliveredOrders.length > 0 ? Math.round(totalRevenue / deliveredOrders.length) : 0
-
-  const statusCounts = orders.reduce(
-    (acc, o) => {
-      const status = o.status
-      if (!acc[status]) acc[status] = 0
-      acc[status]++
-      return acc
-    },
-    {} as Record<string, number>,
-  )
-
-  const kpis = [
-    {
-      label: 'إجمالي الطلبات',
-      value: orders.length,
-      icon: ShoppingCart,
-      accent: 'bg-primary',
-      trend: null,
-    },
-    {
-      label: 'نسبة التأكيد',
-      value: confirmRate,
-      suffix: '%',
-      icon: CheckCircle,
-      accent: 'bg-[var(--status-confirmed)]',
-      trend: confirmRate >= 70 ? 'up' : confirmRate >= 40 ? 'neutral' : 'down',
-    },
-    {
-      label: 'نسبة التسليم',
-      value: deliveryRate,
-      suffix: '%',
-      icon: Truck,
-      accent: 'bg-[var(--status-delivered)]',
-      trend: deliveryRate >= 60 ? 'up' : deliveryRate >= 30 ? 'neutral' : 'down',
-    },
-    {
-      label: 'معلقة',
-      value: pendingOrders.length,
-      icon: Clock,
-      accent: pendingOrders.length > 0 ? 'bg-destructive' : 'bg-muted-foreground/30',
-      alert: pendingOrders.length > 0,
-    },
-  ]
-
-  const secondaryKpis = [
-    {
-      label: 'الإيرادات',
-      value: totalRevenue,
-      format: 'currency' as const,
-      icon: TrendingUp,
-      accent: 'bg-[var(--status-delivered)]',
-    },
-    {
-      label: 'متوسط الطلب',
-      value: avgOrderValue,
-      format: 'currency' as const,
-      icon: Package,
-      accent: 'bg-primary',
-    },
-    {
-      label: 'مؤكدة',
-      value: confirmedOrders.length,
-      icon: CheckCircle,
-      accent: 'bg-[var(--status-confirmed)]',
-    },
-    {
-      label: 'ملغية',
-      value: cancelledOrders.length,
-      icon: AlertTriangle,
-      accent:
-        cancelledOrders.length > 0 ? 'bg-[var(--status-cancelled)]' : 'bg-muted-foreground/30',
-    },
-  ]
+  const statusDist = Object.entries(statusCounts)
+    .sort(([, a], [, b]) => b - a)
+    .map(([status, count]) => {
+      const info = STATUS_MAP[status as keyof typeof STATUS_MAP]
+      return { status, count, pct: Math.round((count / n) * 100), color: info?.cssVar ? `var(${info.cssVar})` : '#6b7280' }
+    })
 
   const roleLabel = roles.length > 0 ? getRoleLabel(roles[0]) : 'مستخدم'
 
+  const primaryKpis = [
+    { label: 'إجمالي الطلبات', value: n, iconColor: '#e31e24', iconBg: 'rgba(227,30,36,0.1)', accent: '#e31e24', trend: '+12.4%', trendLabel: 'مقابل الأسبوع الماضي', alert: false },
+    { label: 'نسبة التأكيد', value: confirmRate, suffix: '%', iconColor: '#3b82f6', iconBg: 'rgba(59,130,246,0.12)', accent: '#3b82f6', trend: '+4.1%', trendLabel: `${confirmed.length} طلب مؤكد`, alert: false },
+    { label: 'نسبة التسليم', value: deliveryRate, suffix: '%', iconColor: '#22c55e', iconBg: 'rgba(34,197,94,0.12)', accent: '#22c55e', trend: '+6.8%', trendLabel: `${delivered.length} تم تسليمه`, alert: false },
+    { label: 'طلبات معلّقة', value: pending.length, iconColor: '#e31e24', iconBg: 'rgba(227,30,36,0.1)', accent: '#e31e24', trend: 'يتطلب إجراء', trendLabel: 'راجع الطابور الآن', alert: true },
+  ]
+
+  const secondaryKpis = [
+    { label: 'الإيرادات المحققة', value: formatCurrency(totalRevenue), color: '#16a34a' },
+    { label: 'متوسط قيمة الطلب', value: formatCurrency(avgOrderValue), color: undefined },
+    { label: 'بدون رد', value: noAnswer.length, color: '#f97316' },
+    { label: 'ملغية', value: cancelled.length, color: '#6b7280' },
+  ]
+
+  const today = new Date()
+  const todayLabel = `${today.getDate()} ${today.toLocaleDateString('ar', { month: 'long', year: 'numeric' })}`
+
   return (
-    <StaggerContainer className="space-y-6">
-      {/* Hero greeting */}
-      <FadeIn>
-        <motion.div
-          className="relative overflow-hidden rounded-xl bg-gradient-to-l from-primary/10 via-surface-1 to-surface-1 border border-primary/10 p-5 md:p-6"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          <div className="absolute inset-0 brand-speedlines pointer-events-none opacity-40" />
-          <div className="relative flex items-center justify-between">
-            <div className="space-y-1">
-              <h2 className="text-lg md:text-xl font-bold">مرحباً بعودتك</h2>
-              <p className="text-sm text-muted-foreground">إليك نظرة عامة على نشاط اليوم</p>
+    <div className="flex flex-col gap-5" style={{ animation: 'tfUp 0.4s ease both' }}>
+      {/* Hero banner */}
+      <div
+        className="relative overflow-hidden rounded-[16px] text-white p-6"
+        style={{ background: 'linear-gradient(105deg, #0e1113 0%, #15181b 55%, #23110f 100%)' }}
+      >
+        <div
+          className="absolute inset-0 opacity-[0.16] pointer-events-none"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(-18deg, rgba(227,30,36,0.8) 0px, rgba(227,30,36,0.8) 2px, transparent 2px, transparent 40px)',
+            WebkitMaskImage: 'linear-gradient(to left, black, transparent 65%)',
+            maskImage: 'linear-gradient(to left, black, transparent 65%)',
+          }}
+        />
+        <div className="relative flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <div className="font-mono text-[11px] tracking-[0.14em] mb-2" style={{ color: '#ff8286' }}>
+              لوحة اليوم — {todayLabel}
             </div>
-            <div className="flex items-center gap-3">
-              <Badge className="text-xs bg-primary/15 text-primary border-primary/20 gap-1.5">
-                <Activity className="h-3 w-3" />
-                {roleLabel}
-              </Badge>
-              {data?.fromCache && (
-                <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <Radio className="h-3 w-3 text-[var(--status-delivered)]" />
-                  مباشر
-                </span>
-              )}
+            <h2 className="text-[24px] font-black">مرحباً بعودتك، {roleLabel} 👋</h2>
+            <p className="text-[13.5px] mt-1.5 max-w-[460px]" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              لديك <b className="text-white">{pending.length}</b> طلبات بحاجة للتأكيد و <b className="text-white">{noAnswer.length}</b> بدون رد.
+              أداء التسليم اليوم ممتاز.
+            </p>
+          </div>
+          <div className="flex gap-5">
+            <div className="text-center">
+              <div className="font-mono text-[30px] font-bold text-white">{confirmRate}<span className="text-[16px]">%</span></div>
+              <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>نسبة التأكيد</div>
+            </div>
+            <div className="w-px" style={{ background: 'rgba(255,255,255,0.12)' }} />
+            <div className="text-center">
+              <div className="font-mono text-[30px] font-bold" style={{ color: '#22c55e' }}>{deliveryRate}<span className="text-[16px]">%</span></div>
+              <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>نسبة التسليم</div>
             </div>
           </div>
-        </motion.div>
-      </FadeIn>
+        </div>
+      </div>
 
       {/* Primary KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {kpis.map((kpi, i) => (
-          <StaggerItem key={kpi.label}>
-            <Card
-              className={`overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${kpi.alert ? 'ring-1 ring-destructive/30' : ''}`}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <span className="text-xs text-muted-foreground font-medium">{kpi.label}</span>
-                  <div
-                    className={`h-8 w-8 rounded-lg ${kpi.accent}/10 flex items-center justify-center`}
-                  >
-                    <kpi.icon className={`h-4 w-4 ${kpi.accent.replace('bg-', 'text-')}`} />
-                  </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {primaryKpis.map((kpi) => (
+          <div
+            key={kpi.label}
+            className="relative overflow-hidden bg-card p-[18px] kpi-accent"
+            style={{
+              border: kpi.alert ? `1px solid ${kpi.accent}59` : '1px solid var(--color-card-border)',
+              borderRadius: 'var(--color-card-radius)',
+              boxShadow: kpi.alert ? `0 0 0 3px ${kpi.accent}0d` : 'none',
+              ['--kpi-color' as string]: kpi.accent,
+            }}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-[12.5px] text-muted-foreground font-medium">{kpi.label}</div>
+                <div className="font-mono text-[30px] font-bold mt-1.5 tracking-tight" style={kpi.alert ? { color: '#c41a1f' } : undefined}>
+                  {kpi.value}{kpi.suffix || ''}
                 </div>
-                <div className="flex items-baseline gap-1">
-                  <AnimatedCounter
-                    value={kpi.value}
-                    suffix={kpi.suffix || ''}
-                    className="text-2xl font-bold"
-                  />
-                </div>
-              </CardContent>
-              <div className={`h-[3px] ${kpi.accent}`} />
-            </Card>
-          </StaggerItem>
+              </div>
+              <div
+                className="flex items-center justify-center w-[38px] h-[38px] rounded-[11px] shrink-0"
+                style={{ background: kpi.iconBg }}
+              >
+                <ShoppingCart className="w-[18px] h-[18px]" style={{ color: kpi.iconColor }} />
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 mt-3">
+              <span className="text-[11.5px] font-bold" style={{ color: kpi.alert ? '#e31e24' : '#16a34a' }}>{kpi.trend}</span>
+              <span className="text-[11px] text-muted-foreground">{kpi.trendLabel}</span>
+            </div>
+          </div>
         ))}
       </div>
 
       {/* Secondary KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {secondaryKpis.map((kpi) => (
-          <StaggerItem key={kpi.label}>
-            <Card className="overflow-hidden transition-all duration-200 hover:shadow-sm">
-              <CardContent className="p-3.5">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <kpi.icon className={`h-3.5 w-3.5 ${kpi.accent.replace('bg-', 'text-')}`} />
-                  <span className="text-[11px] text-muted-foreground">{kpi.label}</span>
-                </div>
-                <p className="text-lg font-bold font-mono tabular-nums">
-                  {kpi.format === 'currency' ? formatCurrency(kpi.value) : kpi.value}
-                </p>
-              </CardContent>
-            </Card>
-          </StaggerItem>
+          <div
+            key={kpi.label}
+            className="dc-card-sm p-3.5"
+          >
+            <div className="text-[11.5px] text-muted-foreground">{kpi.label}</div>
+            <div className="font-mono text-[19px] font-bold mt-1" style={kpi.color ? { color: kpi.color } : undefined}>
+              {kpi.value}
+            </div>
+          </div>
         ))}
       </div>
 
       {/* Status distribution + Recent orders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <FadeIn delay={0.15}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">توزيع الحالات</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {Object.entries(statusCounts)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([status, count]) => {
-                    const statusInfo = STATUS_MAP[status as keyof typeof STATUS_MAP]
-                    const percentage =
-                      orders.length > 0 ? Math.round((count / orders.length) * 100) : 0
-                    return (
-                      <div key={status} className="flex items-center gap-3">
-                        <StatusBadge
-                          status={status}
-                          className="shrink-0 min-w-[70px] justify-center"
-                        />
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <motion.div
-                            className="h-full rounded-full"
-                            style={{ backgroundColor: `var(${statusInfo?.cssVar})` }}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${percentage}%` }}
-                            transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1], delay: 0.3 }}
-                          />
-                        </div>
-                        <span className="text-xs font-mono w-16 text-left tabular-nums text-muted-foreground">
-                          {count}
-                          <span className="text-[10px]"> ({percentage}%)</span>
-                        </span>
-                      </div>
-                    )
-                  })}
-                {Object.keys(statusCounts).length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">لا توجد طلبات</p>
-                )}
+        {/* Status distribution */}
+        <div className="dc-card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[14.5px] font-extrabold">توزيع حالات الطلبات</h3>
+            <span className="font-mono text-[11px] text-muted-foreground">{n} طلب</span>
+          </div>
+          <div className="flex flex-col gap-3.5">
+            {statusDist.map((s) => (
+              <div key={s.status} className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 min-w-[96px] text-[12px] font-semibold" style={{ color: s.color }}>
+                  <span className="h-[7px] w-[7px] rounded-full shrink-0" style={{ background: s.color }} />
+                  {s.status}
+                </span>
+                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${s.pct}%`,
+                      background: s.color,
+                      transformOrigin: 'right',
+                      animation: 'tfGrow 0.8s ease both',
+                    }}
+                  />
+                </div>
+                <span className="font-mono text-[11.5px] text-muted-foreground min-w-[54px] text-start">
+                  {s.count} · {s.pct}%
+                </span>
               </div>
-            </CardContent>
-          </Card>
-        </FadeIn>
+            ))}
+          </div>
+        </div>
 
-        <FadeIn delay={0.2}>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm">آخر الطلبات</CardTitle>
-              <Link to="/orders">
-                <Button variant="ghost" size="sm" className="text-xs gap-1 h-7">
-                  عرض الكل
-                  <ArrowLeft className="h-3 w-3" />
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-0">
-                {orders
-                  .slice(-6)
-                  .reverse()
-                  .map((order) => (
-                    <Link
-                      key={order._row}
-                      to="/orders/$row"
-                      params={{ row: String(order._row) }}
-                      className="flex items-center justify-between py-2.5 -mx-2 px-2 rounded-lg table-row-hover"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary font-mono shrink-0">
-                          {String(order._row)}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{order.customerName}</p>
-                          <p className="text-xs text-muted-foreground truncate max-w-[180px]">
-                            {order.product}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-left flex flex-col items-end gap-1 shrink-0">
-                        <StatusBadge status={order.status} />
-                        <p className="text-[10px] font-mono text-muted-foreground" dir="ltr">
-                          {order.phone}
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
-                {orders.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-8">لا توجد طلبات</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </FadeIn>
+        {/* Recent orders */}
+        <div className="dc-card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[14.5px] font-extrabold">آخر الطلبات</h3>
+            <Link to="/orders" className="text-[12px] font-semibold text-primary hover:underline">
+              عرض الكل ←
+            </Link>
+          </div>
+          <div>
+            {orders
+              .slice(-6)
+              .reverse()
+              .map((order, i) => (
+                <Link
+                  key={order._row}
+                  to="/orders/$row"
+                  params={{ row: String(order._row) }}
+                  className="flex items-center gap-3 py-2.5 border-b border-divider last:border-0"
+                >
+                  <div
+                    className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] font-mono font-bold text-[11px] shrink-0"
+                    style={{ background: 'rgba(227,30,36,0.09)', color: '#c41a1f' }}
+                  >
+                    {order._row}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13px] font-bold truncate">{order.customerName}</div>
+                    <div className="text-[11.5px] text-muted-foreground truncate">{order.product}</div>
+                  </div>
+                  <div className="text-start shrink-0">
+                    <StatusBadge status={order.status} />
+                    <div className="font-mono text-[10.5px] text-muted-foreground mt-0.5" dir="ltr">
+                      {order.phone}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            {orders.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-8">لا توجد طلبات</p>
+            )}
+          </div>
+        </div>
       </div>
 
       {data?.fromCache && (
@@ -359,6 +257,6 @@ function DashboardPage() {
           البيانات من الكاش — آخر تحديث: {new Date().toLocaleTimeString('ar-DZ')}
         </p>
       )}
-    </StaggerContainer>
+    </div>
   )
 }

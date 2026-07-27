@@ -1,10 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import { useOrders } from '~/lib/queries'
-import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
-import { Badge } from '~/components/ui/badge'
-import { Separator } from '~/components/ui/separator'
 import {
   BarChart3,
   TrendingUp,
@@ -17,9 +14,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency } from '~/lib/utils'
 import { STATUS, toExportRow } from '~/lib/sheet-mapping'
-import { FadeIn, StaggerContainer } from '~/components/page-transition'
 import { ErrorState, EmptyState } from '~/components/empty-state'
-import { Skeleton } from '~/components/ui/skeleton'
 import { RoleGuard } from '~/components/role-guard'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
@@ -30,14 +25,13 @@ export const Route = createFileRoute('/_authenticated/reports')({
 
 function ReportsSkeleton() {
   return (
-    <div className="space-y-4">
-      {[...Array(3)].map((_, i) => (
-        <Card key={i}>
-          <CardContent className="p-6">
-            <Skeleton className="skeleton-shimmer h-40 w-full rounded-lg" />
-          </CardContent>
-        </Card>
-      ))}
+    <div className="flex flex-col gap-5">
+      <div className="h-[130px] rounded-[15px] skeleton-shimmer" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="h-[240px] rounded-[15px] skeleton-shimmer" />
+        ))}
+      </div>
     </div>
   )
 }
@@ -47,7 +41,6 @@ function ReportsPage() {
   const orders = data?.orders || []
 
   const analytics = useMemo(() => {
-    // Performance metrics
     const totalOrders = orders.length
     const delivered = orders.filter((o) => o.status === STATUS.DELIVERED)
     const cancelled = orders.filter((o) => o.status === STATUS.CANCELLED)
@@ -65,7 +58,6 @@ function ReportsPage() {
       0,
     )
 
-    // Top customers by orders
     const customerMap = new Map<string, { name: string; orders: number; revenue: number }>()
     for (const o of orders) {
       const phone = String(o.phone)
@@ -80,23 +72,12 @@ function ReportsPage() {
       .sort((a, b) => b.orders - a.orders)
       .slice(0, 10)
 
-    // Time analysis
-    const hourMap = new Map<number, number>()
-    for (const o of orders) {
-      const hour = new Date(o.date).getHours()
-      hourMap.set(hour, (hourMap.get(hour) || 0) + 1)
-    }
-
-    // Repeat customer rate
     const uniquePhones = new Set(orders.map((o) => String(o.phone)).filter(Boolean))
     const repeatCustomers = Array.from(customerMap.values()).filter((c) => c.orders > 1).length
     const repeatRate =
       uniquePhones.size > 0 ? Math.round((repeatCustomers / uniquePhones.size) * 100) : 0
-
-    // No-answer analysis
     const noAnswerRate = totalOrders > 0 ? Math.round((noAnswer.length / totalOrders) * 100) : 0
 
-    // Average delivery time (approximate)
     return {
       totalOrders,
       deliveredCount: delivered.length,
@@ -143,184 +124,138 @@ function ReportsPage() {
       />
     )
 
+  const rateCards = [
+    { label: 'نسبة التحويل', value: `${analytics.conversionRate}%`, color: '#22c55e', bg: 'rgba(34,197,94,0.08)' },
+    { label: 'نسبة الإلغاء', value: `${analytics.cancelRate}%`, color: '#6b7280', bg: 'rgba(107,114,128,0.08)' },
+    { label: 'نسبة عدم الرد', value: `${analytics.noAnswerRate}%`, color: '#f97316', bg: 'rgba(249,115,22,0.08)' },
+    { label: 'نسبة الزبائن العائدين', value: `${analytics.repeatRate}%`, color: '#e31e24', bg: 'rgba(227,30,36,0.08)' },
+  ]
+
+  const financialItems = [
+    { label: 'الإيرادات الفعلية', value: formatCurrency(analytics.totalRevenue), color: '#22c55e' },
+    { label: 'الخسائر (ملغي)', value: formatCurrency(analytics.lostRevenue), color: '#6b7280' },
+    { label: 'متوسط قيمة الطلب', value: formatCurrency(analytics.avgOrderValue) },
+    { label: 'صافي الإيرادات المتوقع', value: formatCurrency(analytics.totalRevenue - analytics.lostRevenue), color: '#e31e24' },
+  ]
+
+  const problemItems = [
+    { label: 'طلبات ملغية', count: analytics.cancelledCount, color: '#6b7280', bg: 'rgba(107,114,128,0.08)', icon: AlertTriangle },
+    { label: 'لم يردّ', count: analytics.noAnswerCount, color: '#f97316', bg: 'rgba(249,115,22,0.08)', icon: Phone },
+    { label: 'معلّقة', count: analytics.pendingCount, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', icon: Clock },
+  ]
+
   return (
     <RoleGuard roles={['admin']}>
-      <StaggerContainer className="space-y-4">
-        <FadeIn>
-          <div className="flex items-center justify-end">
-            <Button variant="outline" size="sm" onClick={handleExportFullReport}>
-              <Download className="h-4 w-4 ml-1" />
-              تصدير التقرير
-            </Button>
-          </div>
-        </FadeIn>
+      <div className="flex flex-col gap-5" style={{ animation: 'tfUp 0.4s ease both' }}>
+        <div className="flex items-center justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportFullReport}
+            className="gap-1.5 h-10 rounded-[11px] border-border font-semibold"
+          >
+            <Download className="h-3.5 w-3.5" />
+            تصدير التقرير
+          </Button>
+        </div>
 
-        <FadeIn delay={0.1}>
-          <Card className="card-hover">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                مقاييس الأداء الرئيسية
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 rounded-xl bg-[var(--status-delivered)]/10 border border-[var(--status-delivered)]/10">
-                  <p className="text-xs text-muted-foreground mb-1">نسبة التحويل</p>
-                  <p className="text-2xl font-bold font-mono text-[var(--status-delivered)]">
-                    {analytics.conversionRate}%
-                  </p>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-[var(--status-cancelled)]/10 border border-[var(--status-cancelled)]/10">
-                  <p className="text-xs text-muted-foreground mb-1">نسبة الإلغاء</p>
-                  <p className="text-2xl font-bold font-mono text-[var(--status-cancelled)]">
-                    {analytics.cancelRate}%
-                  </p>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-[var(--status-no-answer)]/10 border border-[var(--status-no-answer)]/10">
-                  <p className="text-xs text-muted-foreground mb-1">نسبة عدم الرد</p>
-                  <p className="text-2xl font-bold font-mono text-[var(--status-no-answer)]">
-                    {analytics.noAnswerRate}%
-                  </p>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-primary/10 border border-primary/10">
-                  <p className="text-xs text-muted-foreground mb-1">نسبة الزبائن العائدين</p>
-                  <p className="text-2xl font-bold font-mono text-primary">
-                    {analytics.repeatRate}%
-                  </p>
-                </div>
+        <div className="dc-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-[14.5px] font-extrabold">مقاييس الأداء الرئيسية</h3>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {rateCards.map((card) => (
+              <div
+                key={card.label}
+                className="text-center p-4 rounded-[13px]"
+                style={{ background: card.bg }}
+              >
+                <p className="text-[11px] text-muted-foreground mb-1">{card.label}</p>
+                <p className="font-mono text-[22px] font-bold" style={{ color: card.color }}>{card.value}</p>
               </div>
-            </CardContent>
-          </Card>
-        </FadeIn>
-
-        <FadeIn delay={0.15}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  الملخص المالي
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">الإيرادات الفعلية</span>
-                  <span className="font-mono font-bold text-[var(--status-delivered)]">
-                    {formatCurrency(analytics.totalRevenue)}
-                  </span>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">الخسائر (ملغي)</span>
-                  <span className="font-mono font-bold text-[var(--status-cancelled)]">
-                    {formatCurrency(analytics.lostRevenue)}
-                  </span>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">متوسط قيمة الطلب</span>
-                  <span className="font-mono font-bold">
-                    {formatCurrency(analytics.avgOrderValue)}
-                  </span>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">صافي الإيرادات المتوقع</span>
-                  <span className="font-mono font-bold text-primary">
-                    {formatCurrency(analytics.totalRevenue - analytics.lostRevenue)}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+            ))}
           </div>
-        </FadeIn>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FadeIn delay={0.15}>
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  أفضل الزبائن (حسب الطلبات)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {analytics.topCustomers.slice(0, 8).map((c, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between py-2 border-b last:border-0"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-muted-foreground w-5">#{i + 1}</span>
-                      <span className="text-sm font-medium">{c.name}</span>
-                    </div>
-                    <div className="text-left">
-                      <Badge variant="outline" className="text-[10px]">
-                        {c.orders} طلب
-                      </Badge>
-                      {c.revenue > 0 && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
-                          {formatCurrency(c.revenue)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </FadeIn>
+          <div className="dc-card p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-[14.5px] font-extrabold">الملخص المالي</h3>
+            </div>
+            <div className="flex flex-col gap-3.5">
+              {financialItems.map((item) => (
+                <div key={item.label} className="flex justify-between items-center">
+                  <span className="text-[12.5px] text-muted-foreground">{item.label}</span>
+                  <span className="font-mono text-[13px] font-bold" style={item.color ? { color: item.color } : undefined}>
+                    {item.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-          <FadeIn delay={0.2}>
-            <Card className="card-hover">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  ملخص المشاكل
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--status-cancelled)]/10">
+          <div className="dc-card p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-[14.5px] font-extrabold">ملخص المشاكل</h3>
+            </div>
+            <div className="flex flex-col gap-3">
+              {problemItems.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between p-3 rounded-[11px]"
+                  style={{ background: item.bg }}
+                >
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-[var(--status-cancelled)]" />
-                    <span className="text-sm">طلبات ملغية</span>
+                    <item.icon className="h-4 w-4" style={{ color: item.color }} />
+                    <span className="text-[12.5px]">{item.label}</span>
                   </div>
-                  <span className="font-mono font-bold text-[var(--status-cancelled)]">
-                    {analytics.cancelledCount}
-                  </span>
+                  <span className="font-mono text-[13px] font-bold" style={{ color: item.color }}>{item.count}</span>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--status-no-answer)]/10">
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-[var(--status-no-answer)]" />
-                    <span className="text-sm">لم يردّ</span>
-                  </div>
-                  <span className="font-mono font-bold text-[var(--status-no-answer)]">
-                    {analytics.noAnswerCount}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--status-processing)]/10">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-[var(--status-processing)]" />
-                    <span className="text-sm">معلّقة</span>
-                  </div>
-                  <span className="font-mono font-bold text-[var(--status-processing)]">
-                    {analytics.pendingCount}
-                  </span>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">الزبائن الفريدون</span>
-                  <span className="font-mono font-bold">{analytics.uniqueCustomers}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">الزبائن العائدون</span>
-                  <span className="font-mono font-bold text-primary">{analytics.repeatRate}%</span>
-                </div>
-              </CardContent>
-            </Card>
-          </FadeIn>
+              ))}
+              <div className="h-px bg-[var(--color-divider)]" />
+              <div className="flex justify-between items-center">
+                <span className="text-[12.5px] text-muted-foreground">الزبائن الفريدون</span>
+                <span className="font-mono text-[13px] font-bold">{analytics.uniqueCustomers}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[12.5px] text-muted-foreground">الزبائن العائدون</span>
+                <span className="font-mono text-[13px] font-bold" style={{ color: '#e31e24' }}>{analytics.repeatRate}%</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </StaggerContainer>
+
+        <div className="dc-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-[14.5px] font-extrabold">أفضل الزبائن (حسب الطلبات)</h3>
+          </div>
+          <div className="flex flex-col">
+            {analytics.topCustomers.slice(0, 8).map((c, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between py-2.5 border-b border-divider last:border-0"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono text-muted-foreground w-5">#{i + 1}</span>
+                  <span className="text-[12.5px] font-semibold">{c.name}</span>
+                </div>
+                <div className="text-start">
+                  <span className="inline-flex items-center h-5 px-2 rounded-full border border-divider text-[10px] font-bold text-muted-foreground">
+                    {c.orders} طلب
+                  </span>
+                  {c.revenue > 0 && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">{formatCurrency(c.revenue)}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </RoleGuard>
   )
 }

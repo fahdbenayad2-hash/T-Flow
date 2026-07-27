@@ -2,13 +2,9 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listUsers, createUser, addUserRole, removeUserRole, deleteUser } from '~/server/users'
-import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
-import { Badge } from '~/components/ui/badge'
 import { Label } from '~/components/ui/label'
-import { Skeleton } from '~/components/ui/skeleton'
-import { Separator } from '~/components/ui/separator'
 import {
   Select,
   SelectContent,
@@ -16,8 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
-import { Shield, UserPlus, Trash2, RefreshCw, ShieldCheck, Users } from 'lucide-react'
-import { FadeIn, StaggerContainer } from '~/components/page-transition'
+import { UserPlus, Trash2, RefreshCw, ShieldCheck, Users } from 'lucide-react'
 import { RoleGuard } from '~/components/role-guard'
 import { getRoleLabel } from '~/hooks/useRole'
 import toast from 'react-hot-toast'
@@ -29,9 +24,9 @@ export const Route = createFileRoute('/_authenticated/users')({
 
 function UsersSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-3">
       {[...Array(4)].map((_, i) => (
-        <Skeleton key={i} className="h-20 skeleton-shimmer rounded-lg" />
+        <div key={i} className="h-20 rounded-[15px] skeleton-shimmer" />
       ))}
     </div>
   )
@@ -118,222 +113,222 @@ function UsersPage() {
     },
   })
 
+  const roleColors: Record<string, { bg: string; text: string }> = {
+    admin: { bg: '#22c55e', text: '#fff' },
+    confirmation_agent: { bg: '#f59e0b', text: '#fff' },
+    shipping_manager: { bg: '#8b5cf6', text: '#fff' },
+  }
+
+  const permissions = [
+    { role: 'مدير', color: '#22c55e', desc: 'وصول كامل — إدارة المستخدمين، الإعدادات، المنتجات، الإيرادات، التقارير، التوصيل، الطلبات، العملاء، مركز المكالمات' },
+    { role: 'وكيل تأكيد', color: '#f59e0b', desc: 'الطلبات، العملاء، مركز المكالمات، لوحة التحكم — تعديل حالات الطلبات، تحديث جماعي' },
+    { role: 'مدير شحن', color: '#8b5cf6', desc: 'الطلبات، التوصيل، لوحة التحكم — عرض الطلبات وتحديث حالات الشحن' },
+  ]
+
   return (
     <RoleGuard roles={['admin']}>
-      <StaggerContainer className="space-y-4">
-        <FadeIn>
-          <div className="flex items-center justify-end">
-            <Button onClick={() => setShowForm(!showForm)}>
-              <UserPlus className="h-4 w-4 ml-1" />
-              مستخدم جديد
-            </Button>
-          </div>
-        </FadeIn>
+      <div className="flex flex-col gap-5" style={{ animation: 'tfUp 0.4s ease both' }}>
+        <div className="flex items-center justify-end">
+          <Button
+            onClick={() => setShowForm(!showForm)}
+            className="h-10 rounded-[11px] font-semibold text-[13px]"
+          >
+            <UserPlus className="h-4 w-4 ml-1" />
+            مستخدم جديد
+          </Button>
+        </div>
 
         {showForm && (
-          <FadeIn delay={0.05}>
-            <Card className="card-hover border-primary/30">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  إنشاء مستخدم جديد
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>الاسم الكامل</Label>
-                    <Input
-                      placeholder="محمد أحمد"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>البريد الإلكتروني</Label>
-                    <Input
-                      type="email"
-                      placeholder="user@example.com"
-                      value={newEmail}
-                      onChange={(e) => setNewEmail(e.target.value)}
-                      dir="ltr"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>كلمة المرور</Label>
-                    <Input
-                      type="password"
-                      placeholder="6 أحرف على الأقل"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      dir="ltr"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>الدور</Label>
-                    <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">مدير</SelectItem>
-                        <SelectItem value="confirmation_agent">وكيل تأكيد</SelectItem>
-                        <SelectItem value="shipping_manager">مدير شحن</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+          <div className="dc-card p-5" style={{ borderColor: 'rgba(227,30,36,0.3)' }}>
+            <div className="flex items-center gap-2 mb-4">
+              <UserPlus className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-[14.5px] font-extrabold">إنشاء مستخدم جديد</h3>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[12px] font-medium text-muted-foreground">الاسم الكامل</Label>
+                  <Input
+                    placeholder="محمد أحمد"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="h-10 rounded-[11px] text-[13px]"
+                  />
                 </div>
-                <div className="flex items-center gap-2 justify-end">
-                  <Button variant="ghost" onClick={() => setShowForm(false)}>
-                    إلغاء
-                  </Button>
-                  <Button
-                    onClick={() => createUserMutation.mutate()}
-                    disabled={createUserMutation.isPending || !newEmail || !newPassword}
-                  >
-                    {createUserMutation.isPending ? (
-                      <RefreshCw className="h-4 w-4 ml-1 animate-spin" />
-                    ) : (
-                      <UserPlus className="h-4 w-4 ml-1" />
-                    )}
-                    إنشاء المستخدم
-                  </Button>
+                <div className="space-y-1.5">
+                  <Label className="text-[12px] font-medium text-muted-foreground">البريد الإلكتروني</Label>
+                  <Input
+                    type="email"
+                    placeholder="user@example.com"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    dir="ltr"
+                    className="h-10 rounded-[11px] text-[13px]"
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </FadeIn>
-        )}
-
-        <FadeIn delay={0.1}>
-          <Card className="card-hover">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                المستخدمون ({users.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <UsersSkeleton />
-              ) : users.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">لا يوجد مستخدمون</p>
-              ) : (
-                <div className="space-y-2">
-                  {users.map((user) => (
-                    <div
-                      key={user.id}
-                      className="flex flex-col md:flex-row md:items-center justify-between py-3 border-b last:border-0 table-row-hover -mx-2 px-2 rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm">{user.full_name || 'مستخدم'}</p>
-                          {user.email && (
-                            <span className="text-xs text-muted-foreground font-mono" dir="ltr">
-                              {user.email}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                          {user.roles.length > 0 ? (
-                            user.roles.map((role) => (
-                              <Badge key={role} className="text-[10px] text-white">
-                                {getRoleLabel(role)}
-                                <button
-                                  className="mr-1 hover:text-red-200"
-                                  onClick={() =>
-                                    removeRoleMutation.mutate({ userId: user.id, role })
-                                  }
-                                  title={`إزالة ${getRoleLabel(role)}`}
-                                >
-                                  ×
-                                </button>
-                              </Badge>
-                            ))
-                          ) : (
-                            <Badge variant="outline" className="text-[10px]">
-                              بدون دور
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 mt-2 md:mt-0">
-                        <Select
-                          value=""
-                          onValueChange={(v) => {
-                            if (v && !user.roles.includes(v as AppRole)) {
-                              addRoleMutation.mutate({ userId: user.id, role: v as AppRole })
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="w-[140px] h-8 text-xs">
-                            <SelectValue placeholder="إضافة دور" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(['admin', 'confirmation_agent', 'shipping_manager'] as AppRole[])
-                              .filter((r) => !user.roles.includes(r))
-                              .map((r) => (
-                                <SelectItem key={r} value={r} className="text-xs">
-                                  {getRoleLabel(r)}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                          onClick={() => {
-                            if (confirm(`هل أنت متأكد من حذف ${user.email || user.full_name}؟`)) {
-                              deleteUserMutation.mutate({ userId: user.id })
-                            }
-                          }}
-                          title="حذف المستخدم"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                <div className="space-y-1.5">
+                  <Label className="text-[12px] font-medium text-muted-foreground">كلمة المرور</Label>
+                  <Input
+                    type="password"
+                    placeholder="6 أحرف على الأقل"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    dir="ltr"
+                    className="h-10 rounded-[11px] text-[13px]"
+                  />
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </FadeIn>
-
-        <FadeIn delay={0.15}>
-          <Card className="card-hover">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" />
-                ملخص الأدوار والصلاحيات
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-[var(--status-delivered)]/5">
-                  <Badge className="text-[10px] text-white shrink-0">مدير</Badge>
-                  <div className="text-xs text-muted-foreground">
-                    وصول كامل — إدارة المستخدمين، الإعدادات، المنتجات، الإيرادات، التقارير، التوصيل،
-                    الطلبات، العملاء، مركز المكالمات
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-[var(--status-processing)]/5">
-                  <Badge className="text-[10px] text-white shrink-0">وكيل تأكيد</Badge>
-                  <div className="text-xs text-muted-foreground">
-                    الطلبات، العملاء، مركز المكالمات، لوحة التحكم — تعديل حالات الطلبات، تحديث جماعي
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-[var(--status-shipped)]/5">
-                  <Badge className="text-[10px] text-white shrink-0">مدير شحن</Badge>
-                  <div className="text-xs text-muted-foreground">
-                    الطلبات، التوصيل، لوحة التحكم — عرض الطلبات وتحديث حالات الشحن
-                  </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[12px] font-medium text-muted-foreground">الدور</Label>
+                  <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
+                    <SelectTrigger className="h-10 rounded-[11px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">مدير</SelectItem>
+                      <SelectItem value="confirmation_agent">وكيل تأكيد</SelectItem>
+                      <SelectItem value="shipping_manager">مدير شحن</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </FadeIn>
-      </StaggerContainer>
+              <div className="flex items-center gap-2 justify-end">
+                <Button variant="ghost" onClick={() => setShowForm(false)} className="text-[13px]">
+                  إلغاء
+                </Button>
+                <Button
+                  onClick={() => createUserMutation.mutate()}
+                  disabled={createUserMutation.isPending || !newEmail || !newPassword}
+                  className="h-9 rounded-[11px] font-bold text-[12px]"
+                >
+                  {createUserMutation.isPending ? (
+                    <RefreshCw className="h-4 w-4 ml-1 animate-spin" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 ml-1" />
+                  )}
+                  إنشاء المستخدم
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="dc-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-[14.5px] font-extrabold">المستخدمون ({users.length})</h3>
+          </div>
+          {isLoading ? (
+            <UsersSkeleton />
+          ) : users.length === 0 ? (
+            <p className="text-[13px] text-muted-foreground text-center py-8">لا يوجد مستخدمون</p>
+          ) : (
+            <div className="flex flex-col">
+              {users.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex flex-col md:flex-row md:items-center justify-between py-3 border-b border-divider last:border-0 table-row-hover"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-[13px]">{user.full_name || 'مستخدم'}</p>
+                      {user.email && (
+                        <span className="text-[11px] text-muted-foreground font-mono" dir="ltr">
+                          {user.email}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      {user.roles.length > 0 ? (
+                        user.roles.map((role) => {
+                          const colors = roleColors[role] || { bg: '#6b7280', text: '#fff' }
+                          return (
+                            <span
+                              key={role}
+                              className="inline-flex items-center h-5 px-2 rounded-full text-[10px] font-bold"
+                              style={{ background: colors.bg, color: colors.text }}
+                            >
+                              {getRoleLabel(role)}
+                              <button
+                                className="mr-1 hover:opacity-70"
+                                onClick={() => removeRoleMutation.mutate({ userId: user.id, role })}
+                                title={`إزالة ${getRoleLabel(role)}`}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          )
+                        })
+                      ) : (
+                        <span className="inline-flex items-center h-5 px-2 rounded-full border border-divider text-[10px] font-bold text-muted-foreground">
+                          بدون دور
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 md:mt-0">
+                    <Select
+                      value=""
+                      onValueChange={(v) => {
+                        if (v && !user.roles.includes(v as AppRole)) {
+                          addRoleMutation.mutate({ userId: user.id, role: v as AppRole })
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[140px] h-8 rounded-[11px] text-[11px]">
+                        <SelectValue placeholder="إضافة دور" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(['admin', 'confirmation_agent', 'shipping_manager'] as AppRole[])
+                          .filter((r) => !user.roles.includes(r))
+                          .map((r) => (
+                            <SelectItem key={r} value={r} className="text-[11px]">
+                              {getRoleLabel(r)}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <button
+                      className="flex items-center justify-center h-8 w-8 rounded-[9px] text-destructive hover:bg-destructive/10 transition-colors"
+                      onClick={() => {
+                        if (confirm(`هل أنت متأكد من حذف ${user.email || user.full_name}؟`)) {
+                          deleteUserMutation.mutate({ userId: user.id })
+                        }
+                      }}
+                      title="حذف المستخدم"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="dc-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-[14.5px] font-extrabold">ملخص الأدوار والصلاحيات</h3>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            {permissions.map((perm) => (
+              <div
+                key={perm.role}
+                className="flex items-start gap-3 p-3 rounded-[11px]"
+                style={{ background: `${perm.color}0a` }}
+              >
+                <span
+                  className="inline-flex items-center h-5 px-2 rounded-full text-[10px] font-bold shrink-0"
+                  style={{ background: perm.color, color: '#fff' }}
+                >
+                  {perm.role}
+                </span>
+                <div className="text-[11.5px] text-muted-foreground">{perm.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </RoleGuard>
   )
 }

@@ -11,6 +11,19 @@ import { cn } from '~/lib/utils'
 import { navItems } from '~/components/sidebar'
 import type { AppRole } from '~/lib/types'
 
+const pageMeta: Record<string, [string, string]> = {
+  '/dashboard': ['لوحة التحكم', 'نظرة عامة على أداء متجرك اليوم'],
+  '/orders': ['الطلبات', 'إدارة وتتبع جميع الطلبات'],
+  '/customers': ['العملاء', 'قاعدة بيانات الزبائن وسجل الشراء'],
+  '/call-center': ['مركز المكالمات', 'طابور التأكيد ونتائج المكالمات'],
+  '/products': ['المنتجات', 'أداء المنتجات والمخزون'],
+  '/earnings': ['الإيرادات', 'التحليل المالي حسب المنتج والولاية'],
+  '/delivery': ['التوصيل', 'توزيع الشحن حسب الولاية والنوع'],
+  '/reports': ['التقارير', 'ملخصات وتصدير البيانات'],
+  '/users': ['إدارة المستخدمين', 'الأدوار والصلاحيات'],
+  '/settings': ['الإعدادات', 'إعداد الاتصال والمزامنة'],
+}
+
 interface HeaderProps {
   title: string
 }
@@ -44,7 +57,7 @@ export function Header({ title }: HeaderProps) {
 
   const allItems = [
     ...visibleNavItems,
-    ...(isAdmin ? [{ to: '/users', label: 'إدارة المستخدمين', icon: Shield }] : []),
+    ...(isAdmin ? [{ to: '/users', label: 'إدارة المستخدمين', icon: Shield, group: 'system' as const, roles: ['admin'] as AppRole[] }] : []),
   ]
 
   const handleLogout = async () => {
@@ -53,11 +66,11 @@ export function Header({ title }: HeaderProps) {
     navigate({ to: '/' })
   }
 
-  const primaryRole = roles[0]
+  const [currentTitle, currentSubtitle] = pageMeta[location.pathname] || [title, '']
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-surface-0/80 backdrop-blur-xl px-4 md:px-6">
+      <header className="sticky top-0 z-40 flex items-center gap-[18px] h-[66px] px-5 md:px-7 border-b border-border" style={{ background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(14px)' }}>
         <Button
           variant="ghost"
           size="icon"
@@ -67,13 +80,32 @@ export function Header({ title }: HeaderProps) {
           {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </Button>
 
-        <div className="flex-1">
-          <h1 className="text-base font-semibold tracking-tight">{title}</h1>
+        <div className="min-w-0">
+          <h1 className="text-[18px] font-extrabold tracking-tight">{currentTitle}</h1>
+          <p className="text-[12.5px] text-muted-foreground mt-0.5">{currentSubtitle}</p>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <NotificationBell />
+        <div className="flex-1" />
+
+        {/* Search bar */}
+        <div className="relative hidden sm:block w-[260px] max-w-[32vw]">
+          <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">⌕</span>
+          <input
+            placeholder="بحث سريع…"
+            className="w-full h-[38px] border border-border rounded-[10px] bg-muted ps-9 pe-14 font-sans text-[13px] text-foreground outline-none focus:border-primary focus:bg-white transition-colors"
+          />
+          <span className="absolute end-2.5 top-1/2 -translate-y-1/2 font-mono text-[10px] text-muted-foreground border border-border rounded-md px-1.5 py-0.5">
+            ⌘K
+          </span>
         </div>
+
+        {/* Live indicator */}
+        <div className="hidden md:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full text-[12px] font-semibold" style={{ background: 'rgba(34,197,94,0.1)', color: '#16a34a' }}>
+          <span className="h-[7px] w-[7px] rounded-full" style={{ background: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.18)' }} />
+          مباشر
+        </div>
+
+        <NotificationBell />
       </header>
 
       {mobileMenuOpen && (
@@ -124,11 +156,11 @@ export function Header({ title }: HeaderProps) {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border space-y-1 bg-surface-1">
-          {primaryRole && (
+          {roles[0] && (
             <div className="px-3 py-1.5">
               <Badge className="text-[10px] text-white bg-primary border-transparent gap-1">
                 <Shield className="h-3 w-3" />
-                {getRoleLabel(primaryRole)}
+                {getRoleLabel(roles[0])}
               </Badge>
             </div>
           )}

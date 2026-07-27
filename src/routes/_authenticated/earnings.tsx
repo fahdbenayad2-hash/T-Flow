@@ -1,19 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { useOrders } from '~/lib/queries'
-import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
-import { Skeleton } from '~/components/ui/skeleton'
-import { motion } from 'framer-motion'
-import {
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  BarChart3,
-} from 'lucide-react'
+import { DollarSign } from 'lucide-react'
 import { STATUS } from '~/lib/sheet-mapping'
 import { formatCurrency } from '~/lib/utils'
-import { FadeIn, StaggerContainer } from '~/components/page-transition'
 import { ErrorState, EmptyState } from '~/components/empty-state'
 import { RoleGuard } from '~/components/role-guard'
 
@@ -23,24 +13,21 @@ export const Route = createFileRoute('/_authenticated/earnings')({
 
 function EarningsSkeleton() {
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="flex flex-col gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-4">
-              <Skeleton className="skeleton-shimmer rounded-lg h-16 w-full" />
-            </CardContent>
-          </Card>
+          <div key={i} className="h-[110px] rounded-[15px] skeleton-shimmer" />
         ))}
       </div>
-      <Skeleton className="skeleton-shimmer rounded-lg h-64 w-full" />
+      <div className="h-9 rounded-[11px] skeleton-shimmer" />
+      <div className="h-[300px] rounded-[15px] skeleton-shimmer" />
     </div>
   )
 }
 
 function EarningsPage() {
   const { data, isLoading, isError, error, refetch } = useOrders()
-  const [tab, setTab] = useState('overview')
+  const [tab, setTab] = useState<'product' | 'wilaya' | 'daily'>('product')
 
   const orders = data?.orders || []
 
@@ -64,9 +51,7 @@ function EarningsPage() {
       0,
     )
     const avgOrderValue = delivered.length > 0 ? Math.round(totalRevenue / delivered.length) : 0
-    const avgDeliveredPerDay = delivered.length > 0
 
-    // Group by date
     const byDate = new Map<string, { revenue: number; orders: number }>()
     for (const o of delivered) {
       const date = o.date?.slice(0, 10) || 'غير معروف'
@@ -76,7 +61,6 @@ function EarningsPage() {
       byDate.set(date, existing)
     }
 
-    // Group by product
     const byProduct = new Map<string, { revenue: number; orders: number }>()
     for (const o of delivered) {
       const product = o.product || 'غير معروف'
@@ -86,7 +70,6 @@ function EarningsPage() {
       byProduct.set(product, existing)
     }
 
-    // Group by wilaya
     const byWilaya = new Map<string, { revenue: number; orders: number }>()
     for (const o of delivered) {
       const wilaya = String(o.wilaya) || 'غير معروف'
@@ -131,214 +114,120 @@ function EarningsPage() {
     )
   }
 
+  const kpis = [
+    { label: 'الإيرادات الفعلية', value: formatCurrency(stats.totalRevenue), accent: '#22c55e' },
+    { label: 'الإيرادات المحتملة', value: formatCurrency(stats.totalPotentialRevenue), accent: '#e31e24' },
+    { label: 'الخسائر (ملغي)', value: formatCurrency(stats.lostRevenue), accent: '#6b7280' },
+    { label: 'متوسط الطلب', value: formatCurrency(stats.avgOrderValue), accent: '#f59e0b' },
+  ]
+
+  const summaryStats = [
+    { label: 'نسبة التحويل', value: `${stats.conversionRate}%` },
+    { label: 'طلبات مسلّمة', value: stats.deliveredCount, color: '#22c55e' },
+    { label: 'طلبات معلّقة', value: stats.pendingCount, color: '#f59e0b' },
+  ]
+
+  const tabs = [
+    { key: 'product' as const, label: 'حسب المنتج' },
+    { key: 'wilaya' as const, label: 'حسب الولاية' },
+    { key: 'daily' as const, label: 'حسب التاريخ' },
+  ]
+
+  const renderBarList = (entries: [string, { revenue: number; orders: number }][], maxRevenue: number, barColor: string) => (
+    <div className="flex flex-col gap-3.5">
+      {entries.map(([name, data]) => {
+        const percent = maxRevenue > 0 ? Math.round((data.revenue / maxRevenue) * 100) : 0
+        return (
+          <div key={name} className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[12.5px] font-medium">{name}</span>
+              <span className="font-mono text-[12px] font-bold">{formatCurrency(data.revenue)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-[7px] bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${percent}%`,
+                    background: barColor,
+                    transformOrigin: 'right',
+                    animation: 'tfGrow 0.8s ease both',
+                  }}
+                />
+              </div>
+              <span className="text-[11px] text-muted-foreground w-16 text-start shrink-0">{data.orders} طلب</span>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+
   return (
     <RoleGuard roles={['admin']}>
-      <StaggerContainer className="space-y-4">
-        <FadeIn>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            <Card className="overflow-hidden card-hover">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="h-4 w-4 text-[var(--status-delivered)]" />
-                  <span className="text-xs text-muted-foreground">الإيرادات الفعلية</span>
-                </div>
-                <p className="text-2xl font-bold font-mono text-[var(--status-delivered)]">
-                  {formatCurrency(stats.totalRevenue)}
-                </p>
-              </CardContent>
-              <div className="h-[3px] bg-status-delivered" />
-            </Card>
-            <Card className="overflow-hidden card-hover">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                  <span className="text-xs text-muted-foreground">الإيرادات المحتملة</span>
-                </div>
-                <p className="text-2xl font-bold font-mono">
-                  {formatCurrency(stats.totalPotentialRevenue)}
-                </p>
-              </CardContent>
-              <div className="h-[3px] bg-primary" />
-            </Card>
-            <Card className="overflow-hidden card-hover">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingDown className="h-4 w-4 text-[var(--status-cancelled)]" />
-                  <span className="text-xs text-muted-foreground">الخسائر (ملغي)</span>
-                </div>
-                <p className="text-2xl font-bold font-mono text-[var(--status-cancelled)]">
-                  {formatCurrency(stats.lostRevenue)}
-                </p>
-              </CardContent>
-              <div className="h-[3px] bg-status-cancelled" />
-            </Card>
-            <Card className="overflow-hidden card-hover">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <BarChart3 className="h-4 w-4 text-[var(--status-processing)]" />
-                  <span className="text-xs text-muted-foreground">متوسط الطلب</span>
-                </div>
-                <p className="text-2xl font-bold font-mono">
-                  {formatCurrency(stats.avgOrderValue)}
-                </p>
-              </CardContent>
-              <div className="h-[3px] bg-status-processing" />
-            </Card>
-          </div>
-        </FadeIn>
-
-        <FadeIn delay={0.1}>
-          <Card>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-xs text-muted-foreground">نسبة التحويل</p>
-                  <p className="text-xl font-bold font-mono">{stats.conversionRate}%</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">طلبات مسلّمة</p>
-                  <p className="text-xl font-bold font-mono text-[var(--status-delivered)]">
-                    {stats.deliveredCount}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">طلبات معلّقة</p>
-                  <p className="text-xl font-bold font-mono text-[var(--status-processing)]">
-                    {stats.pendingCount}
-                  </p>
-                </div>
+      <div className="flex flex-col gap-5" style={{ animation: 'tfUp 0.4s ease both' }}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {kpis.map((kpi) => (
+            <div
+              key={kpi.label}
+              className="relative overflow-hidden bg-card p-[18px] kpi-accent"
+              style={{
+                border: '1px solid var(--color-card-border)',
+                borderRadius: 'var(--color-card-radius)',
+                ['--kpi-color' as string]: kpi.accent,
+              }}
+            >
+              <div className="text-[12.5px] text-muted-foreground font-medium">{kpi.label}</div>
+              <div className="font-mono text-[22px] font-bold mt-1.5 tracking-tight" style={{ color: kpi.accent }}>
+                {kpi.value}
               </div>
-            </CardContent>
-          </Card>
-        </FadeIn>
+            </div>
+          ))}
+        </div>
 
-        <FadeIn delay={0.15}>
-          <Tabs value={tab} onValueChange={setTab} dir="rtl">
-            <TabsList>
-              <TabsTrigger value="overview">حسب المنتج</TabsTrigger>
-              <TabsTrigger value="wilaya">حسب الولاية</TabsTrigger>
-              <TabsTrigger value="daily">حسب التاريخ</TabsTrigger>
-            </TabsList>
+        <div className="dc-card-sm p-4">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            {summaryStats.map((item) => (
+              <div key={item.label}>
+                <p className="text-[11px] text-muted-foreground">{item.label}</p>
+                <p className="font-mono text-[18px] font-bold mt-1" style={item.color ? { color: item.color } : undefined}>
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
 
-            <TabsContent value="overview" className="mt-4">
-              <Card className="card-hover">
-                <CardHeader>
-                  <CardTitle className="text-base">الإيرادات حسب المنتج</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {stats.byProduct.map(([name, data]) => {
-                    const percent =
-                      stats.totalRevenue > 0
-                        ? Math.round((data.revenue / stats.totalRevenue) * 100)
-                        : 0
-                    return (
-                      <div key={name} className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{name}</span>
-                          <span className="font-mono text-sm">{formatCurrency(data.revenue)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                            <motion.div
-                              className="h-full bg-[var(--status-delivered)] rounded-full"
-                              style={{ width: `${percent}%` }}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${percent}%` }}
-                              transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1], delay: 0.3 }}
-                            />
-                          </div>
-                          <span className="text-xs text-muted-foreground w-16 text-left">
-                            {data.orders} طلب
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </CardContent>
-              </Card>
-            </TabsContent>
+        <div className="flex gap-2">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className="h-9 px-4 rounded-[11px] text-[12px] font-bold transition-all"
+              style={{
+                background: tab === t.key ? 'var(--color-foreground)' : 'var(--color-card)',
+                color: tab === t.key ? 'var(--color-background)' : 'var(--color-muted-foreground)',
+                border: '1px solid var(--color-card-border)',
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-            <TabsContent value="wilaya" className="mt-4">
-              <Card className="card-hover">
-                <CardHeader>
-                  <CardTitle className="text-base">الإيرادات حسب الولاية</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {stats.byWilaya.slice(0, 15).map(([name, data]) => {
-                    const percent =
-                      stats.totalRevenue > 0
-                        ? Math.round((data.revenue / stats.totalRevenue) * 100)
-                        : 0
-                    return (
-                      <div key={name} className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{name}</span>
-                          <span className="font-mono text-sm">{formatCurrency(data.revenue)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                            <motion.div
-                              className="h-full bg-primary rounded-full"
-                              style={{ width: `${percent}%` }}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${percent}%` }}
-                              transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1], delay: 0.3 }}
-                            />
-                          </div>
-                          <span className="text-xs text-muted-foreground w-16 text-left">
-                            {data.orders} طلب
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="daily" className="mt-4">
-              <Card className="card-hover">
-                <CardHeader>
-                  <CardTitle className="text-base">الإيرادات حسب التاريخ</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {stats.byDate.slice(0, 14).map(([date, data]) => {
-                    const maxRevenue =
-                      stats.byDate.length > 0
-                        ? Math.max(...stats.byDate.map(([, d]) => d.revenue))
-                        : 1
-                    const percent = Math.round((data.revenue / maxRevenue) * 100)
-                    return (
-                      <div key={date} className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-mono" dir="ltr">
-                            {date}
-                          </span>
-                          <span className="font-mono text-sm">{formatCurrency(data.revenue)}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                            <motion.div
-                              className="h-full bg-[var(--status-shipped)] rounded-full"
-                              style={{ width: `${percent}%` }}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${percent}%` }}
-                              transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1], delay: 0.3 }}
-                            />
-                          </div>
-                          <span className="text-xs text-muted-foreground w-16 text-left">
-                            {data.orders} طلب
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </FadeIn>
-      </StaggerContainer>
+        <div className="dc-card p-5">
+          <h3 className="text-[14.5px] font-extrabold mb-4">
+            {tab === 'product' ? 'الإيرادات حسب المنتج' : tab === 'wilaya' ? 'الإيرادات حسب الولاية' : 'الإيرادات حسب التاريخ'}
+          </h3>
+          {tab === 'product' && renderBarList(stats.byProduct, stats.totalRevenue, '#22c55e')}
+          {tab === 'wilaya' && renderBarList(stats.byWilaya.slice(0, 15), stats.totalRevenue, '#e31e24')}
+          {tab === 'daily' && renderBarList(
+            stats.byDate.slice(0, 14),
+            stats.byDate.length > 0 ? Math.max(...stats.byDate.map(([, d]) => d.revenue)) : 1,
+            '#8b5cf6',
+          )}
+        </div>
+      </div>
     </RoleGuard>
   )
 }

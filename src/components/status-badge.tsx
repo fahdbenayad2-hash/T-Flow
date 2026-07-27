@@ -1,6 +1,14 @@
-import { Badge } from '~/components/ui/badge'
 import { STATUS_MAP } from '~/lib/sheet-mapping'
-import { cn } from '~/lib/utils'
+
+const STATUS_COLORS: Record<string, string> = {
+  'جاري التجهيز': '#f59e0b',
+  'قيد المعالجة': '#f59e0b',
+  'مؤكد': '#3b82f6',
+  'مشحون': '#8b5cf6',
+  'تم التسليم': '#22c55e',
+  'ما جاوبش': '#f97316',
+  'ملغي': '#6b7280',
+}
 
 interface StatusBadgeProps {
   status: string
@@ -8,16 +16,18 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const statusInfo = STATUS_MAP[status as keyof typeof STATUS_MAP]
+  const color = STATUS_COLORS[status] || '#6b7280'
+
   return (
-    <Badge
-      className={cn('text-[10px]', className)}
+    <span
+      className={`inline-flex items-center gap-[5px] px-2 py-0.5 rounded-full text-[11px] font-semibold ${className || ''}`}
       style={{
-        backgroundColor: `var(${statusInfo?.cssVar || '--status-processing'})`,
-        color: 'var(--color-primary-foreground)',
+        backgroundColor: `${color}1f`,
+        color,
       }}
     >
+      <span className="h-[5px] w-[5px] rounded-full shrink-0" style={{ background: color }} />
       {status}
-    </Badge>
+    </span>
   )
 }

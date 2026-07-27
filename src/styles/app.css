@@ -12,11 +12,11 @@
   --color-ink: #0e1113;
   --color-paper: #fafafa;
 
-  /* Surface elevation (light mode) */
-  --surface-0: var(--color-paper);
+  /* Surface elevation (light mode) — matches DC mockup */
+  --surface-0: #eceded;
   --surface-1: #ffffff;
-  --surface-2: #f5f5f6;
-  --surface-3: #eeedef;
+  --surface-2: #f6f6f7;
+  --surface-3: #f0f0f1;
 
   --color-background: var(--surface-0);
   --color-foreground: var(--color-ink);
@@ -32,16 +32,21 @@
   --color-accent-foreground: var(--color-maroon);
   --color-destructive: var(--color-maroon);
   --color-destructive-foreground: #ffffff;
-  --color-border: #e5e5e7;
-  --color-input: #e5e5e7;
+  --color-border: #e7e7e9;
+  --color-input: #e3e3e5;
   --color-ring: var(--color-crimson);
-  --color-sidebar-background: var(--color-ink);
+  --color-card-border: #e7e7e9;
+  --color-card-radius: 15px;
+  --color-table-header: #f8f8f9;
+  --color-table-border: #ececee;
+  --color-divider: #f0f0f1;
+  --color-sidebar-background: #0a0c0d;
   --color-sidebar-foreground: #f2f2f3;
   --color-sidebar-primary: var(--color-crimson);
   --color-sidebar-primary-foreground: #ffffff;
-  --color-sidebar-accent: rgba(227, 30, 36, 0.14);
+  --color-sidebar-accent: rgba(227, 30, 36, 0.16);
   --color-sidebar-accent-foreground: #ffffff;
-  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+  --color-sidebar-border: rgba(255, 255, 255, 0.06);
   --color-sidebar-ring: var(--color-crimson);
   --radius: 0.75rem;
 
@@ -60,7 +65,7 @@
 }
 
 .dark {
-  /* Surface elevation (dark mode) */
+  /* Surface elevation (dark mode) — matches DC mockup */
   --surface-0: #0e1113;
   --surface-1: #15181b;
   --surface-2: #1c1f23;
@@ -83,6 +88,11 @@
   --color-border: #26292d;
   --color-input: #26292d;
   --color-ring: var(--color-crimson);
+  --color-card-border: #26292d;
+  --color-card-radius: 15px;
+  --color-table-header: #1c1f23;
+  --color-table-border: #26292d;
+  --color-divider: #1c1f23;
   --color-sidebar-background: #0a0c0d;
   --color-sidebar-foreground: #f2f2f3;
   --color-sidebar-accent: rgba(227, 30, 36, 0.16);
@@ -115,6 +125,11 @@
   --color-sidebar-accent-foreground: var(--color-sidebar-accent-foreground);
   --color-sidebar-border: var(--color-sidebar-border);
   --color-sidebar-ring: var(--color-sidebar-ring);
+  --color-card-border: var(--color-card-border);
+  --color-card-radius: var(--color-card-radius);
+  --color-table-header: var(--color-table-header);
+  --color-table-border: var(--color-table-border);
+  --color-divider: var(--color-divider);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -182,20 +197,52 @@ html[dir='rtl'] {
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
-/* ===== KPI accent stripe ===== */
+/* ===== KPI accent stripe (DC-style bottom bar) ===== */
 .kpi-accent {
   position: relative;
 }
 .kpi-accent::before {
   content: '';
   position: absolute;
-  right: 0;
-  top: 0;
   bottom: 0;
-  width: 3px;
-  border-radius: 0 var(--radius) var(--radius) 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 0 0 var(--radius) var(--radius);
   background: var(--kpi-color, var(--color-crimson));
-  opacity: 0.8;
+  transform-origin: right;
+  animation: tfGrow 0.7s ease both;
+}
+@keyframes tfGrow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes tfUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes tfPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(227,30,36,0.5); }
+  50% { box-shadow: 0 0 0 5px rgba(227,30,36,0); }
+}
+@keyframes tfRise {
+  from { height: 0; }
+}
+
+/* ===== DC-style cards ===== */
+.dc-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--color-card-radius);
+  overflow: hidden;
+}
+.dc-card-sm {
+  background: var(--color-card);
+  border: 1px solid var(--color-card-border);
+  border-radius: 13px;
+}
+.dc-divider {
+  border-color: var(--color-divider);
 }
 
 /* ===== Card interactive states ===== */

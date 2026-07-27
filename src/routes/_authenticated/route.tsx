@@ -33,9 +33,9 @@ function AuthenticatedLayout() {
       <div className="min-h-screen bg-background">
         <ErrorBoundary>
           <Sidebar />
-          <div className="md:pr-64">
+          <div className="md:pr-[264px]">
             <Header title={title} />
-            <main className="p-4 md:p-6 pb-20 md:pb-6">
+            <main className="p-5 md:p-7 pb-20 md:pb-10 max-w-[1360px] w-full">
               <ErrorBoundary>
                 <PageTransition>
                   <Outlet />

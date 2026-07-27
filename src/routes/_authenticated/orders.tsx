@@ -225,53 +225,36 @@ function OrdersPage() {
     <StaggerContainer className="space-y-4">
       {/* Search + Filters */}
       <FadeIn>
-        <div className="flex flex-col md:flex-row md:items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-col md:flex-row md:items-center gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[220px]">
+            <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">⌕</span>
             <Input
-              placeholder="بحث بالاسم أو الهاتف..."
+              placeholder="بحث بالاسم أو رقم الهاتف…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pr-9"
+              className="start-9 h-10 rounded-[11px] border-border"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="الحالة" />
+              <SelectTrigger className="w-auto h-10 rounded-[11px] border-border px-3.5">
+                <SelectValue placeholder="كل الحالات" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">كل الحالات</SelectItem>
                 {ALL_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={wilayaFilter} onValueChange={setWilayaFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="الولاية" />
+              <SelectTrigger className="w-auto h-10 rounded-[11px] border-border px-3.5">
+                <SelectValue placeholder="كل الولايات" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">كل الولايات</SelectItem>
                 {wilayas.map((w) => (
-                  <SelectItem key={w} value={w}>
-                    {w}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={productFilter} onValueChange={setProductFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="المنتج" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">كل المنتجات</SelectItem>
-                {products.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
-                  </SelectItem>
+                  <SelectItem key={w} value={w}>{w}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -346,16 +329,16 @@ function OrdersPage() {
               variant="outline"
               size="sm"
               onClick={() => handleExport('xlsx')}
-              className="gap-1.5"
+              className="gap-1.5 h-10 rounded-[11px] border-border font-semibold"
             >
               <Download className="h-3.5 w-3.5" />
-              Excel
+              تصدير Excel
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleExport('csv')}
-              className="gap-1.5"
+              className="gap-1.5 h-10 rounded-[11px] border-border font-semibold"
             >
               <Download className="h-3.5 w-3.5" />
               CSV
@@ -393,11 +376,11 @@ function OrdersPage() {
         </FadeIn>
       ) : (
         <FadeIn delay={0.15}>
-          <div className="rounded-xl border bg-card">
+          <div className="dc-card overflow-hidden">
             {/* Sticky header row */}
-            <div className="flex items-center border-b bg-surface-1/50 text-xs text-muted-foreground font-medium sticky top-0 z-10">
+            <div className="flex items-center text-[11.5px] font-bold text-muted-foreground sticky top-0 z-10" style={{ background: 'var(--color-table-header)', borderBottom: '1px solid var(--color-table-border)' }}>
               {canBulkEdit && (
-                <div className="p-3 w-10 shrink-0">
+                <div className="px-3.5 py-3 w-10 shrink-0">
                   <Checkbox
                     checked={
                       selectedRows.size === filteredOrders.length && filteredOrders.length > 0
@@ -406,26 +389,25 @@ function OrdersPage() {
                   />
                 </div>
               )}
-              <div className="p-3 w-12 shrink-0">#</div>
+              <div className="px-2 py-3 w-[108px] shrink-0">رقم الطلب</div>
               <div
-                className="p-3 w-28 shrink-0 cursor-pointer hover:text-foreground transition-colors"
+                className="px-2 py-3 flex-1 min-w-[130px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => {
                   setSortField('_row')
                   setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
                 }}
               >
                 <span className="flex items-center gap-1">
-                  الطلب
+                  الزبون
                   <ArrowUpDown className="h-3 w-3" />
                 </span>
               </div>
-              <div className="p-3 flex-1 min-w-0">الاسم</div>
-              <div className="p-3 w-28 shrink-0">الهاتف</div>
-              <div className="p-3 w-24 shrink-0">الولاية</div>
-              <div className="p-3 w-32 shrink-0">المنتج</div>
-              <div className="p-3 w-24 shrink-0">السعر</div>
+              <div className="px-2 py-3 w-[120px] shrink-0">الهاتف</div>
+              <div className="px-2 py-3 w-24 shrink-0">الولاية</div>
+              <div className="px-2 py-3 w-[150px] shrink-0">المنتج</div>
+              <div className="px-2 py-3 w-[104px] shrink-0">السعر</div>
               <div
-                className="p-3 w-24 shrink-0 cursor-pointer hover:text-foreground transition-colors"
+                className="px-2 py-3 w-[118px] shrink-0 cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => {
                   setSortField('status')
                   setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -437,7 +419,7 @@ function OrdersPage() {
                 </span>
               </div>
               <div
-                className="p-3 w-24 shrink-0 cursor-pointer hover:text-foreground transition-colors"
+                className="px-2 py-3 w-20 shrink-0 cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => {
                   setSortField('date')
                   setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -467,51 +449,44 @@ function OrdersPage() {
                         left: 0,
                         width: '100%',
                         transform: `translateY(${virtualRow.start}px)`,
+                        borderBottomColor: 'var(--color-divider)',
                       }}
-                      className={`flex items-center border-b last:border-0 table-row-hover cursor-pointer text-sm ${
+                      className={`flex items-center text-[13px] cursor-pointer transition-colors border-b last:border-b-0 ${
                         isDup ? 'bg-[var(--status-processing)]/5' : ''
                       }`}
                     >
                       {canBulkEdit && (
-                        <div className="p-3 w-10 shrink-0 flex items-center">
+                        <div className="px-3.5 py-2.5 w-10 shrink-0 flex items-center">
                           <Checkbox
                             checked={selectedRows.has(order._row)}
                             onCheckedChange={() => toggleRow(order._row)}
                           />
                         </div>
                       )}
-                      <div className="p-3 w-12 shrink-0 font-mono text-xs text-muted-foreground">
-                        {order._row}
-                      </div>
-                      <div className="p-3 w-28 shrink-0">
+                      <div className="px-2 py-2.5 w-[108px] shrink-0">
                         <Link
                           to="/orders/$row"
                           params={{ row: String(order._row) }}
-                          className="text-primary hover:underline font-medium text-xs font-mono"
+                          className="text-[#c41a1f] hover:underline font-semibold text-[11.5px] font-mono"
                         >
                           {order.order_id}
                         </Link>
-                        {isDup && (
-                          <Badge className="mr-1 text-[9px] bg-[var(--status-processing)] text-white border-transparent">
-                            مكرر
-                          </Badge>
-                        )}
                       </div>
-                      <div className="p-3 flex-1 min-w-0 font-medium text-sm truncate">
+                      <div className="px-2 py-2.5 flex-1 min-w-[130px] font-bold truncate">
                         {order.customerName}
                       </div>
-                      <div className="p-3 w-28 shrink-0 font-mono text-xs" dir="ltr">
+                      <div className="px-2 py-2.5 w-[120px] shrink-0 font-mono text-[11.5px] text-muted-foreground" dir="ltr">
                         {order.phone}
                       </div>
-                      <div className="p-3 w-24 shrink-0 text-xs">{order.wilaya}</div>
-                      <div className="p-3 w-32 shrink-0 text-xs truncate">{order.product}</div>
-                      <div className="p-3 w-24 shrink-0 font-mono text-xs">
+                      <div className="px-2 py-2.5 w-24 shrink-0 text-muted-foreground">{order.wilaya}</div>
+                      <div className="px-2 py-2.5 w-[150px] shrink-0 text-muted-foreground truncate">{order.product}</div>
+                      <div className="px-2 py-2.5 w-[104px] shrink-0 font-mono text-[12px] font-semibold">
                         {order.price ? formatCurrency(Number(order.price)) : '-'}
                       </div>
-                      <div className="p-3 w-24 shrink-0">
+                      <div className="px-2 py-2.5 w-[118px] shrink-0">
                         <StatusBadge status={order.status} />
                       </div>
-                      <div className="p-3 w-24 shrink-0 text-xs text-muted-foreground">
+                      <div className="px-2 py-2.5 w-20 shrink-0 font-mono text-[11px] text-muted-foreground">
                         {formatDate(order.date)}
                       </div>
                     </div>
@@ -524,16 +499,9 @@ function OrdersPage() {
       )}
 
       {/* Footer */}
-      <FadeIn delay={0.2}>
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            {filteredOrders.length} طلب من {orders.length}
-          </span>
-          {data?.fromCache && (
-            <span>بيانات مؤقتة — آخر تحديث: {new Date().toLocaleTimeString('ar-DZ')}</span>
-          )}
-        </div>
-      </FadeIn>
+      <div className="text-[12px] text-muted-foreground">
+        عرض <b className="text-foreground">{filteredOrders.length}</b> طلب من {orders.length}
+      </div>
     </StaggerContainer>
   )
 }
