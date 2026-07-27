@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
@@ -7,23 +7,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { supabase } from '~/utils/supabase-client'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { AUTH_TOKEN_COOKIE } from '~/config'
+import { setAuthCookie } from '~/utils/auth-cookie'
 
 export const Route = createFileRoute('/auth')({
   component: AuthPage,
 })
-
-function setAuthCookie(accessToken: string, expiresIn: number) {
-  const maxAge = Math.max(expiresIn, 60 * 60 * 24 * 7)
-  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
-  document.cookie = `${AUTH_TOKEN_COOKIE}=${accessToken}; path=/; max-age=${maxAge}; SameSite=Lax${secure}`
-}
 
 function AuthPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // If a client-side session still exists (e.g. the SSR cookie expired but the
+  // refresh token is valid), restore the cookie and go straight to the dashboard.
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        setAuthCookie(data.session.access_token, data.session.expires_in)
+        navigate({ to: '/dashboard' })
+      }
+    })
+  }, [navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

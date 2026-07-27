@@ -29,7 +29,10 @@ export function BottomNav() {
   })
 
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 safe-area-bottom" style={{ background: 'var(--surface-1)', borderTop: '1px solid var(--color-card-border)' }}>
+    <nav
+      className="md:hidden fixed bottom-0 inset-x-0 z-50 safe-area-bottom"
+      style={{ background: 'var(--surface-1)', borderTop: '1px solid var(--color-card-border)' }}
+    >
       <div className="flex items-center justify-around h-16 px-1">
         {visibleItems.map((item) => {
           const isActive = location.pathname.startsWith(item.to)
@@ -40,9 +43,7 @@ export function BottomNav() {
               className="relative flex flex-col items-center gap-0.5 px-2 py-1.5 min-w-[3.5rem]"
             >
               {isActive && (
-                <div
-                  className="absolute -top-px left-1/2 -translate-x-1/2 w-5 h-[2px] rounded-full bg-primary"
-                />
+                <div className="absolute -top-px left-1/2 -translate-x-1/2 w-5 h-[2px] rounded-full bg-primary" />
               )}
               <span
                 className={cn(

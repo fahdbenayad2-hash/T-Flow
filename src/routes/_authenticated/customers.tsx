@@ -77,7 +77,7 @@ function CustomersPage() {
   const { data, isLoading, isError, error, refetch } = useOrders()
   const [search, setSearch] = useState('')
 
-  const orders = data?.orders || []
+  const orders = useMemo(() => data?.orders ?? [], [data])
   const customers = useMemo(() => aggregateCustomers(orders), [orders])
 
   const filteredCustomers = useMemo(() => {
@@ -131,7 +131,9 @@ function CustomersPage() {
       </div>
 
       <div className="relative">
-        <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">⌕</span>
+        <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+          ⌕
+        </span>
         <Input
           placeholder="بحث بالاسم أو رقم الهاتف..."
           value={search}
@@ -182,13 +184,17 @@ function CustomersPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-[12px] text-muted-foreground">
-                  <span dir="ltr" className="font-mono">{customer.phone}</span>
+                  <span dir="ltr" className="font-mono">
+                    {customer.phone}
+                  </span>
                   <span>{customer.totalOrders} طلب</span>
                   <span>{customer.name.split(' ')[0]}</span>
                 </div>
               </div>
               <div className="text-left shrink-0">
-                <div className="font-mono text-[14px] font-bold">{formatCurrency(customer.totalSpent)}</div>
+                <div className="font-mono text-[14px] font-bold">
+                  {formatCurrency(customer.totalSpent)}
+                </div>
               </div>
             </Link>
           ))}

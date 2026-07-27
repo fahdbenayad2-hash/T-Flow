@@ -9,7 +9,7 @@ export const listUsers = createServerFn({ method: 'GET' }).handler(async () => {
     return [
       {
         id: 'demo-admin-id',
-        email: 'fahdbenayad2@gmail.com',
+        email: 'demo@tflow.app',
         full_name: 'المدير',
         roles: ['admin'] as AppRole[],
         created_at: new Date().toISOString(),

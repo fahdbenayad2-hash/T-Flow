@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useOrders } from '~/lib/queries'
 import { Skeleton } from '~/components/ui/skeleton'
-import { ShoppingCart, CheckCircle, Truck, Clock } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { STATUS_MAP, STATUS } from '~/lib/sheet-mapping'
 import { formatCurrency } from '~/lib/utils'
 import { ErrorState } from '~/components/empty-state'
@@ -39,39 +39,97 @@ function DashboardPage() {
   const { roles } = useRole()
 
   if (isLoading) return <DashboardSkeleton />
-  if (isError) return <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={() => refetch()} />
+  if (isError)
+    return (
+      <ErrorState
+        message={error instanceof Error ? error.message : undefined}
+        onRetry={() => refetch()}
+      />
+    )
 
-  const orders = data?.orders || []
+  const orders = data?.orders ?? []
   const n = orders.length
 
-  const confirmed = orders.filter((o) => [STATUS.DELIVERED, STATUS.SHIPPED, STATUS.CONFIRMED].includes(o.status as any))
+  const confirmed = orders.filter((o) =>
+    ([STATUS.DELIVERED, STATUS.SHIPPED, STATUS.CONFIRMED] as string[]).includes(o.status),
+  )
   const delivered = orders.filter((o) => o.status === STATUS.DELIVERED)
-  const pending = orders.filter((o) => [STATUS.PROCESSING, STATUS.PREPARING].includes(o.status as any))
+  const pending = orders.filter((o) =>
+    ([STATUS.PROCESSING, STATUS.PREPARING] as string[]).includes(o.status),
+  )
   const noAnswer = orders.filter((o) => o.status === STATUS.NO_ANSWER)
   const cancelled = orders.filter((o) => o.status === STATUS.CANCELLED)
 
   const confirmRate = n ? Math.round((confirmed.length / n) * 100) : 0
   const deliveryRate = n ? Math.round((delivered.length / n) * 100) : 0
-  const totalRevenue = delivered.reduce((sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1), 0)
+  const totalRevenue = delivered.reduce(
+    (sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1),
+    0,
+  )
   const avgOrderValue = delivered.length > 0 ? Math.round(totalRevenue / delivered.length) : 0
 
   const statusCounts: Record<string, number> = {}
-  orders.forEach((o) => { statusCounts[o.status] = (statusCounts[o.status] || 0) + 1 })
+  orders.forEach((o) => {
+    statusCounts[o.status] = (statusCounts[o.status] || 0) + 1
+  })
 
   const statusDist = Object.entries(statusCounts)
     .sort(([, a], [, b]) => b - a)
     .map(([status, count]) => {
       const info = STATUS_MAP[status as keyof typeof STATUS_MAP]
-      return { status, count, pct: Math.round((count / n) * 100), color: info?.cssVar ? `var(${info.cssVar})` : '#6b7280' }
+      return {
+        status,
+        count,
+        pct: Math.round((count / n) * 100),
+        color: info?.cssVar ? `var(${info.cssVar})` : '#6b7280',
+      }
     })
 
   const roleLabel = roles.length > 0 ? getRoleLabel(roles[0]) : 'مستخدم'
 
   const primaryKpis = [
-    { label: 'إجمالي الطلبات', value: n, iconColor: '#e31e24', iconBg: 'rgba(227,30,36,0.1)', accent: '#e31e24', trend: '+12.4%', trendLabel: 'مقابل الأسبوع الماضي', alert: false },
-    { label: 'نسبة التأكيد', value: confirmRate, suffix: '%', iconColor: '#3b82f6', iconBg: 'rgba(59,130,246,0.12)', accent: '#3b82f6', trend: '+4.1%', trendLabel: `${confirmed.length} طلب مؤكد`, alert: false },
-    { label: 'نسبة التسليم', value: deliveryRate, suffix: '%', iconColor: '#22c55e', iconBg: 'rgba(34,197,94,0.12)', accent: '#22c55e', trend: '+6.8%', trendLabel: `${delivered.length} تم تسليمه`, alert: false },
-    { label: 'طلبات معلّقة', value: pending.length, iconColor: '#e31e24', iconBg: 'rgba(227,30,36,0.1)', accent: '#e31e24', trend: 'يتطلب إجراء', trendLabel: 'راجع الطابور الآن', alert: true },
+    {
+      label: 'إجمالي الطلبات',
+      value: n,
+      iconColor: '#e31e24',
+      iconBg: 'rgba(227,30,36,0.1)',
+      accent: '#e31e24',
+      trend: '+12.4%',
+      trendLabel: 'مقابل الأسبوع الماضي',
+      alert: false,
+    },
+    {
+      label: 'نسبة التأكيد',
+      value: confirmRate,
+      suffix: '%',
+      iconColor: '#3b82f6',
+      iconBg: 'rgba(59,130,246,0.12)',
+      accent: '#3b82f6',
+      trend: '+4.1%',
+      trendLabel: `${confirmed.length} طلب مؤكد`,
+      alert: false,
+    },
+    {
+      label: 'نسبة التسليم',
+      value: deliveryRate,
+      suffix: '%',
+      iconColor: '#22c55e',
+      iconBg: 'rgba(34,197,94,0.12)',
+      accent: '#22c55e',
+      trend: '+6.8%',
+      trendLabel: `${delivered.length} تم تسليمه`,
+      alert: false,
+    },
+    {
+      label: 'طلبات معلّقة',
+      value: pending.length,
+      iconColor: '#e31e24',
+      iconBg: 'rgba(227,30,36,0.1)',
+      accent: '#e31e24',
+      trend: 'يتطلب إجراء',
+      trendLabel: 'راجع الطابور الآن',
+      alert: true,
+    },
   ]
 
   const secondaryKpis = [
@@ -94,31 +152,48 @@ function DashboardPage() {
         <div
           className="absolute inset-0 opacity-[0.16] pointer-events-none"
           style={{
-            backgroundImage: 'repeating-linear-gradient(-18deg, rgba(227,30,36,0.8) 0px, rgba(227,30,36,0.8) 2px, transparent 2px, transparent 40px)',
+            backgroundImage:
+              'repeating-linear-gradient(-18deg, rgba(227,30,36,0.8) 0px, rgba(227,30,36,0.8) 2px, transparent 2px, transparent 40px)',
             WebkitMaskImage: 'linear-gradient(to left, black, transparent 65%)',
             maskImage: 'linear-gradient(to left, black, transparent 65%)',
           }}
         />
         <div className="relative flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <div className="font-mono text-[11px] tracking-[0.14em] mb-2" style={{ color: '#ff8286' }}>
+            <div
+              className="font-mono text-[11px] tracking-[0.14em] mb-2"
+              style={{ color: '#ff8286' }}
+            >
               لوحة اليوم — {todayLabel}
             </div>
             <h2 className="text-[24px] font-black">مرحباً بعودتك، {roleLabel} 👋</h2>
-            <p className="text-[13.5px] mt-1.5 max-w-[460px]" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              لديك <b className="text-white">{pending.length}</b> طلبات بحاجة للتأكيد و <b className="text-white">{noAnswer.length}</b> بدون رد.
-              أداء التسليم اليوم ممتاز.
+            <p
+              className="text-[13.5px] mt-1.5 max-w-[460px]"
+              style={{ color: 'rgba(255,255,255,0.6)' }}
+            >
+              لديك <b className="text-white">{pending.length}</b> طلبات بحاجة للتأكيد و{' '}
+              <b className="text-white">{noAnswer.length}</b> بدون رد. أداء التسليم اليوم ممتاز.
             </p>
           </div>
           <div className="flex gap-5">
             <div className="text-center">
-              <div className="font-mono text-[30px] font-bold text-white">{confirmRate}<span className="text-[16px]">%</span></div>
-              <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>نسبة التأكيد</div>
+              <div className="font-mono text-[30px] font-bold text-white">
+                {confirmRate}
+                <span className="text-[16px]">%</span>
+              </div>
+              <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                نسبة التأكيد
+              </div>
             </div>
             <div className="w-px" style={{ background: 'rgba(255,255,255,0.12)' }} />
             <div className="text-center">
-              <div className="font-mono text-[30px] font-bold" style={{ color: '#22c55e' }}>{deliveryRate}<span className="text-[16px]">%</span></div>
-              <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>نسبة التسليم</div>
+              <div className="font-mono text-[30px] font-bold" style={{ color: '#22c55e' }}>
+                {deliveryRate}
+                <span className="text-[16px]">%</span>
+              </div>
+              <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                نسبة التسليم
+              </div>
             </div>
           </div>
         </div>
@@ -131,7 +206,9 @@ function DashboardPage() {
             key={kpi.label}
             className="relative overflow-hidden bg-card p-[18px] kpi-accent"
             style={{
-              border: kpi.alert ? `1px solid ${kpi.accent}59` : '1px solid var(--color-card-border)',
+              border: kpi.alert
+                ? `1px solid ${kpi.accent}59`
+                : '1px solid var(--color-card-border)',
               borderRadius: 'var(--color-card-radius)',
               boxShadow: kpi.alert ? `0 0 0 3px ${kpi.accent}0d` : 'none',
               ['--kpi-color' as string]: kpi.accent,
@@ -140,8 +217,12 @@ function DashboardPage() {
             <div className="flex items-start justify-between">
               <div>
                 <div className="text-[12.5px] text-muted-foreground font-medium">{kpi.label}</div>
-                <div className="font-mono text-[30px] font-bold mt-1.5 tracking-tight" style={kpi.alert ? { color: '#c41a1f' } : undefined}>
-                  {kpi.value}{kpi.suffix || ''}
+                <div
+                  className="font-mono text-[30px] font-bold mt-1.5 tracking-tight"
+                  style={kpi.alert ? { color: '#c41a1f' } : undefined}
+                >
+                  {kpi.value}
+                  {kpi.suffix || ''}
                 </div>
               </div>
               <div
@@ -152,7 +233,12 @@ function DashboardPage() {
               </div>
             </div>
             <div className="flex items-center gap-1.5 mt-3">
-              <span className="text-[11.5px] font-bold" style={{ color: kpi.alert ? '#e31e24' : '#16a34a' }}>{kpi.trend}</span>
+              <span
+                className="text-[11.5px] font-bold"
+                style={{ color: kpi.alert ? '#e31e24' : '#16a34a' }}
+              >
+                {kpi.trend}
+              </span>
               <span className="text-[11px] text-muted-foreground">{kpi.trendLabel}</span>
             </div>
           </div>
@@ -162,12 +248,12 @@ function DashboardPage() {
       {/* Secondary KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {secondaryKpis.map((kpi) => (
-          <div
-            key={kpi.label}
-            className="dc-card-sm p-3.5"
-          >
+          <div key={kpi.label} className="dc-card-sm p-3.5">
             <div className="text-[11.5px] text-muted-foreground">{kpi.label}</div>
-            <div className="font-mono text-[19px] font-bold mt-1" style={kpi.color ? { color: kpi.color } : undefined}>
+            <div
+              className="font-mono text-[19px] font-bold mt-1"
+              style={kpi.color ? { color: kpi.color } : undefined}
+            >
               {kpi.value}
             </div>
           </div>
@@ -185,8 +271,14 @@ function DashboardPage() {
           <div className="flex flex-col gap-3.5">
             {statusDist.map((s) => (
               <div key={s.status} className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 min-w-[96px] text-[12px] font-semibold" style={{ color: s.color }}>
-                  <span className="h-[7px] w-[7px] rounded-full shrink-0" style={{ background: s.color }} />
+                <span
+                  className="inline-flex items-center gap-1.5 min-w-[96px] text-[12px] font-semibold"
+                  style={{ color: s.color }}
+                >
+                  <span
+                    className="h-[7px] w-[7px] rounded-full shrink-0"
+                    style={{ background: s.color }}
+                  />
                   {s.status}
                 </span>
                 <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
@@ -220,7 +312,7 @@ function DashboardPage() {
             {orders
               .slice(-6)
               .reverse()
-              .map((order, i) => (
+              .map((order) => (
                 <Link
                   key={order._row}
                   to="/orders/$row"
@@ -235,7 +327,9 @@ function DashboardPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] font-bold truncate">{order.customerName}</div>
-                    <div className="text-[11.5px] text-muted-foreground truncate">{order.product}</div>
+                    <div className="text-[11.5px] text-muted-foreground truncate">
+                      {order.product}
+                    </div>
                   </div>
                   <div className="text-start shrink-0">
                     <StatusBadge status={order.status} />

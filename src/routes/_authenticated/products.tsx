@@ -5,6 +5,7 @@ import { Package } from 'lucide-react'
 import { formatCurrency } from '~/lib/utils'
 import { ErrorState, EmptyState } from '~/components/empty-state'
 import { RoleGuard } from '~/components/role-guard'
+import type { Order } from '~/lib/types'
 
 export const Route = createFileRoute('/_authenticated/products')({
   component: ProductsPage,
@@ -18,7 +19,7 @@ interface ProductStats {
   colors: Set<string>
 }
 
-function aggregateProducts(orders: any[]): ProductStats[] {
+function aggregateProducts(orders: Order[]): ProductStats[] {
   const map = new Map<string, ProductStats>()
 
   for (const order of orders) {
@@ -61,7 +62,7 @@ function ProductsSkeleton() {
 function ProductsPage() {
   const { data, isLoading, isError, error, refetch } = useOrders()
 
-  const orders = data?.orders || []
+  const orders = useMemo(() => data?.orders ?? [], [data])
   const products = useMemo(() => aggregateProducts(orders), [orders])
 
   const totalRevenue = products.reduce((sum, p) => sum + p.totalRevenue, 0)
@@ -91,7 +92,8 @@ function ProductsPage() {
       <div className="flex flex-col gap-5" style={{ animation: 'tfUp 0.4s ease both' }}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {products.map((product, i) => {
-            const revenuePercent = totalRevenue > 0 ? Math.round((product.totalRevenue / totalRevenue) * 100) : 0
+            const revenuePercent =
+              totalRevenue > 0 ? Math.round((product.totalRevenue / totalRevenue) * 100) : 0
 
             return (
               <div key={product.name} className="dc-card p-5 card-hover relative">
@@ -109,7 +111,10 @@ function ProductsPage() {
                 {product.colors.size > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-3">
                     {Array.from(product.colors).map((c) => (
-                      <span key={c} className="inline-flex items-center h-5 px-2 rounded-full border border-divider text-[10px] text-muted-foreground">
+                      <span
+                        key={c}
+                        className="inline-flex items-center h-5 px-2 rounded-full border border-divider text-[10px] text-muted-foreground"
+                      >
                         {c}
                       </span>
                     ))}
@@ -133,12 +138,20 @@ function ProductsPage() {
                         }}
                       />
                     </div>
-                    <div className="font-mono text-[14px] font-bold mt-1">{formatCurrency(product.totalRevenue)}</div>
+                    <div className="font-mono text-[14px] font-bold mt-1">
+                      {formatCurrency(product.totalRevenue)}
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
-                    <span className="font-mono font-semibold text-foreground">{product.totalOrders}</span> طلب
-                    <span className="font-mono font-semibold text-foreground">{product.totalUnits}</span> وحدة
+                    <span className="font-mono font-semibold text-foreground">
+                      {product.totalOrders}
+                    </span>{' '}
+                    طلب
+                    <span className="font-mono font-semibold text-foreground">
+                      {product.totalUnits}
+                    </span>{' '}
+                    وحدة
                   </div>
                 </div>
               </div>

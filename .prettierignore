@@ -4,3 +4,6 @@ dist
 .nitro
 .tanstack
 package-lock.json
+.vercel
+src/routeTree.gen.ts
+*.gs

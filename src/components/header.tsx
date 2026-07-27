@@ -57,7 +57,17 @@ export function Header({ title }: HeaderProps) {
 
   const allItems = [
     ...visibleNavItems,
-    ...(isAdmin ? [{ to: '/users', label: 'إدارة المستخدمين', icon: Shield, group: 'system' as const, roles: ['admin'] as AppRole[] }] : []),
+    ...(isAdmin
+      ? [
+          {
+            to: '/users',
+            label: 'إدارة المستخدمين',
+            icon: Shield,
+            group: 'system' as const,
+            roles: ['admin'] as AppRole[],
+          },
+        ]
+      : []),
   ]
 
   const handleLogout = async () => {
@@ -70,7 +80,13 @@ export function Header({ title }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex items-center gap-[18px] h-[66px] px-5 md:px-7 border-b border-border" style={{ background: 'color-mix(in srgb, var(--color-background) 82%, transparent)', backdropFilter: 'blur(14px)' }}>
+      <header
+        className="sticky top-0 z-40 flex items-center gap-[18px] h-[66px] px-5 md:px-7 border-b border-border"
+        style={{
+          background: 'color-mix(in srgb, var(--color-background) 82%, transparent)',
+          backdropFilter: 'blur(14px)',
+        }}
+      >
         <Button
           variant="ghost"
           size="icon"
@@ -89,7 +105,9 @@ export function Header({ title }: HeaderProps) {
 
         {/* Search bar */}
         <div className="relative hidden sm:block w-[260px] max-w-[32vw]">
-          <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">⌕</span>
+          <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+            ⌕
+          </span>
           <input
             placeholder="بحث سريع…"
             className="w-full h-[38px] border border-border rounded-[10px] bg-muted ps-9 pe-14 font-sans text-[13px] text-foreground outline-none focus:border-primary focus:bg-card transition-colors"
@@ -100,8 +118,14 @@ export function Header({ title }: HeaderProps) {
         </div>
 
         {/* Live indicator */}
-        <div className="hidden md:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full text-[12px] font-semibold" style={{ background: 'rgba(34,197,94,0.1)', color: '#16a34a' }}>
-          <span className="h-[7px] w-[7px] rounded-full" style={{ background: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.18)' }} />
+        <div
+          className="hidden md:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full text-[12px] font-semibold"
+          style={{ background: 'rgba(34,197,94,0.1)', color: '#16a34a' }}
+        >
+          <span
+            className="h-[7px] w-[7px] rounded-full"
+            style={{ background: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.18)' }}
+          />
           مباشر
         </div>
 

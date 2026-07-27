@@ -4,8 +4,13 @@ import { getSupabaseAdminClient } from '~/utils/supabase-server'
 import { mapRawRowToOrder, toSheetUpdates } from '~/lib/sheet-mapping'
 import type { Order } from '~/lib/types'
 import { generateOrderId } from '~/lib/utils'
+import { requireUser } from './auth'
 
-const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL!
+function appsScriptUrl(): string {
+  const url = process.env.APPS_SCRIPT_URL
+  if (!url) throw new Error('Missing APPS_SCRIPT_URL environment variable')
+  return url
+}
 
 function scriptHeaders(): Record<string, string> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -17,12 +22,14 @@ let cache: { data: Order[]; fetchedAt: number } | null = null
 const CACHE_TTL = ORDER_CACHE_TTL_S * 1000
 
 export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
+  await requireUser()
+
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL) {
     return { orders: cache.data, fromCache: true }
   }
 
   try {
-    const res = await fetch(APPS_SCRIPT_URL, {
+    const res = await fetch(appsScriptUrl(), {
       method: 'GET',
       headers: scriptHeaders(),
     })
@@ -71,6 +78,8 @@ export const updateOrder = createServerFn({ method: 'POST' })
     }) => data,
   )
   .handler(async ({ data }) => {
+    await requireUser()
+
     if (data.lastModified && cache && cache.fetchedAt > data.lastModified) {
       return {
         ok: false as const,
@@ -90,7 +99,7 @@ export const updateOrder = createServerFn({ method: 'POST' })
       }
       if (APPS_SCRIPT_SECRET) body._secret = APPS_SCRIPT_SECRET
 
-      const response = await fetch(APPS_SCRIPT_URL, {
+      const response = await fetch(appsScriptUrl(), {
         method: 'POST',
         headers: scriptHeaders(),
         body: JSON.stringify(body),
@@ -163,6 +172,8 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
     }) => data,
   )
   .handler(async ({ data }) => {
+    await requireUser()
+
     if (!data.updates.length) return { ok: true as const, data: { count: 0 } }
 
     const sheetUpdates = data.updates.map((u) => ({
@@ -174,7 +185,7 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
       const batchBody: Record<string, unknown> = { batch: sheetUpdates }
       if (APPS_SCRIPT_SECRET) batchBody._secret = APPS_SCRIPT_SECRET
 
-      const response = await fetch(APPS_SCRIPT_URL, {
+      const response = await fetch(appsScriptUrl(), {
         method: 'POST',
         headers: scriptHeaders(),
         body: JSON.stringify(batchBody),
@@ -217,20 +228,18 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
     if (!DEMO_MODE) {
       try {
         const supabase = getSupabaseAdminClient()
-        for (const u of data.updates) {
-          const orderId =
+        const entries = data.updates.map((u) => ({
+          order_id:
             u.order_id ||
             generateOrderId(
               String(u.updates.phone || ''),
               String(u.updates.date || ''),
               String(u.updates.product || ''),
-            )
-          await supabase.from('audit_log').insert({
-            order_id: orderId,
-            action: 'batch_update_order',
-            new_value: toSheetUpdates(u.updates),
-          })
-        }
+            ),
+          action: 'batch_update_order',
+          new_value: toSheetUpdates(u.updates),
+        }))
+        await supabase.from('audit_log').insert(entries)
       } catch (e) {
         console.warn('Audit log failed (non-critical):', e)
       }
@@ -244,6 +253,8 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
 export const getAuditLog = createServerFn({ method: 'GET' })
   .validator((data: { orderId: string }) => data)
   .handler(async ({ data }) => {
+    await requireUser()
+
     if (DEMO_MODE) return []
 
     const supabase = getSupabaseAdminClient()
@@ -259,6 +270,8 @@ export const getAuditLog = createServerFn({ method: 'GET' })
   })
 
 export const invalidateOrdersCache = createServerFn({ method: 'POST' }).handler(async () => {
+  await requireUser()
+
   cache = null
   return { success: true }
 })

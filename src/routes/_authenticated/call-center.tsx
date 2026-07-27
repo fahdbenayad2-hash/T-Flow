@@ -54,10 +54,11 @@ function CallCenterPage() {
   const [callStates, setCallStates] = useState<CallCardState>({})
   const [activeTab, setActiveTab] = useState<'queue' | 'stats'>('queue')
 
-  const orders = data?.orders || []
+  const orders = useMemo(() => data?.orders ?? [], [data])
 
   const queueOrders = useMemo(
-    () => orders.filter((o) => [STATUS.PROCESSING, STATUS.PREPARING].includes(o.status as any)),
+    () =>
+      orders.filter((o) => ([STATUS.PROCESSING, STATUS.PREPARING] as string[]).includes(o.status)),
     [orders],
   )
 
@@ -117,10 +118,30 @@ function CallCenterPage() {
   }
 
   const kpis = [
-    { label: 'في الطابور', value: queueOrders.length, accent: '#e31e24', iconBg: 'rgba(227,30,36,0.1)' },
-    { label: 'ردّ اليوم', value: todayStats.answered, accent: '#22c55e', iconBg: 'rgba(34,197,94,0.12)' },
-    { label: 'ما ردّش', value: todayStats.noAnswer, accent: '#f97316', iconBg: 'rgba(249,115,22,0.12)' },
-    { label: 'مؤجّل', value: todayStats.postponed, accent: '#f59e0b', iconBg: 'rgba(245,158,11,0.12)' },
+    {
+      label: 'في الطابور',
+      value: queueOrders.length,
+      accent: '#e31e24',
+      iconBg: 'rgba(227,30,36,0.1)',
+    },
+    {
+      label: 'ردّ اليوم',
+      value: todayStats.answered,
+      accent: '#22c55e',
+      iconBg: 'rgba(34,197,94,0.12)',
+    },
+    {
+      label: 'ما ردّش',
+      value: todayStats.noAnswer,
+      accent: '#f97316',
+      iconBg: 'rgba(249,115,22,0.12)',
+    },
+    {
+      label: 'مؤجّل',
+      value: todayStats.postponed,
+      accent: '#f59e0b',
+      iconBg: 'rgba(245,158,11,0.12)',
+    },
   ]
 
   const actionButtons = [
@@ -143,7 +164,10 @@ function CallCenterPage() {
             }}
           >
             <div className="text-[12.5px] text-muted-foreground font-medium">{kpi.label}</div>
-            <div className="font-mono text-[30px] font-bold mt-1.5 tracking-tight" style={{ color: kpi.accent }}>
+            <div
+              className="font-mono text-[30px] font-bold mt-1.5 tracking-tight"
+              style={{ color: kpi.accent }}
+            >
               {kpi.value}
             </div>
           </div>
@@ -165,7 +189,8 @@ function CallCenterPage() {
               className="h-9 px-4 rounded-[11px] text-[12px] font-bold transition-all"
               style={{
                 background: activeTab === tab ? 'var(--color-foreground)' : 'var(--color-card)',
-                color: activeTab === tab ? 'var(--color-background)' : 'var(--color-muted-foreground)',
+                color:
+                  activeTab === tab ? 'var(--color-background)' : 'var(--color-muted-foreground)',
                 border: '1px solid var(--color-card-border)',
               }}
             >
@@ -189,7 +214,11 @@ function CallCenterPage() {
                 <div
                   key={order._row}
                   className="dc-card p-4 transition-all duration-200"
-                  style={borderColor ? { borderColor: `${borderColor}40`, boxShadow: `0 0 0 3px ${borderColor}0a` } : undefined}
+                  style={
+                    borderColor
+                      ? { borderColor: `${borderColor}40`, boxShadow: `0 0 0 3px ${borderColor}0a` }
+                      : undefined
+                  }
                 >
                   <div className="flex flex-col md:flex-row md:items-start gap-4">
                     <div className="flex items-start gap-3 flex-1">
@@ -262,13 +291,17 @@ function CallCenterPage() {
                           <Input
                             type="date"
                             value={state.followUpDate || ''}
-                            onChange={(e) => updateCallState(order.order_id, 'followUpDate', e.target.value)}
+                            onChange={(e) =>
+                              updateCallState(order.order_id, 'followUpDate', e.target.value)
+                            }
                             className="h-9 rounded-[11px] text-[12px]"
                           />
                           <Input
                             type="time"
                             value={state.followUpTime || ''}
-                            onChange={(e) => updateCallState(order.order_id, 'followUpTime', e.target.value)}
+                            onChange={(e) =>
+                              updateCallState(order.order_id, 'followUpTime', e.target.value)
+                            }
                             className="h-9 rounded-[11px] text-[12px]"
                           />
                         </div>
@@ -299,13 +332,28 @@ function CallCenterPage() {
             <div className="flex flex-col gap-3.5">
               {[
                 { label: 'إجمالي المكالمات', value: todayStats.total },
-                { label: 'نسبة الرد', value: `${todayStats.total > 0 ? Math.round((todayStats.answered / todayStats.total) * 100) : 0}%`, color: '#22c55e' },
-                { label: 'نسبة عدم الرد', value: `${todayStats.total > 0 ? Math.round((todayStats.noAnswer / todayStats.total) * 100) : 0}%`, color: '#f97316' },
-                { label: 'نسبة التأجيل', value: `${todayStats.total > 0 ? Math.round((todayStats.postponed / todayStats.total) * 100) : 0}%`, color: '#f59e0b' },
+                {
+                  label: 'نسبة الرد',
+                  value: `${todayStats.total > 0 ? Math.round((todayStats.answered / todayStats.total) * 100) : 0}%`,
+                  color: '#22c55e',
+                },
+                {
+                  label: 'نسبة عدم الرد',
+                  value: `${todayStats.total > 0 ? Math.round((todayStats.noAnswer / todayStats.total) * 100) : 0}%`,
+                  color: '#f97316',
+                },
+                {
+                  label: 'نسبة التأجيل',
+                  value: `${todayStats.total > 0 ? Math.round((todayStats.postponed / todayStats.total) * 100) : 0}%`,
+                  color: '#f59e0b',
+                },
               ].map((item) => (
                 <div key={item.label} className="flex justify-between items-center">
                   <span className="text-[12.5px] text-muted-foreground">{item.label}</span>
-                  <span className="font-mono text-[13px] font-bold" style={item.color ? { color: item.color } : undefined}>
+                  <span
+                    className="font-mono text-[13px] font-bold"
+                    style={item.color ? { color: item.color } : undefined}
+                  >
                     {item.value}
                   </span>
                 </div>

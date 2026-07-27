@@ -4,7 +4,6 @@ import { useOrders, useBulkUpdateOrders } from '~/lib/queries'
 import { Card, CardContent } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
-import { Badge } from '~/components/ui/badge'
 import { Checkbox } from '~/components/ui/checkbox'
 import { Skeleton } from '~/components/ui/skeleton'
 import { useRole } from '~/hooks/useRole'
@@ -15,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
-import { Search, Download, X, AlertCircle, ArrowUpDown, Filter } from 'lucide-react'
+import { Download, X, AlertCircle, ArrowUpDown, Filter } from 'lucide-react'
 import { formatCurrency, formatDate } from '~/lib/utils'
 import { ALL_STATUSES, toExportRow } from '~/lib/sheet-mapping'
 import { StaggerContainer, FadeIn } from '~/components/page-transition'
@@ -73,7 +72,7 @@ function OrdersPage() {
   const [sortField, setSortField] = useState<'_row' | 'date' | 'status'>('_row')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
-  const orders = data?.orders || []
+  const orders = useMemo(() => data?.orders ?? [], [data])
 
   const wilayas = useMemo(() => {
     const set = new Set(orders.map((o) => String(o.wilaya)).filter(Boolean))
@@ -166,17 +165,16 @@ function OrdersPage() {
       updates: { status: bulkStatus },
     }))
     toast.loading(`جاري تحديث ${items.length} طلب...`, { id: 'bulk' })
-    const results = await bulkMutation.mutateAsync(items)
-    const successCount = results.filter((r) => r.success).length
-    const failCount = results.filter((r) => !r.success).length
-    toast.dismiss('bulk')
-    if (failCount > 0) {
-      toast.error(`تم تحديث ${successCount} طلب، فشل ${failCount}`)
-    } else {
-      toast.success(`تم تحديث ${successCount} طلب بنجاح`)
+    try {
+      const { count } = await bulkMutation.mutateAsync(items)
+      toast.dismiss('bulk')
+      toast.success(`تم تحديث ${count} طلب بنجاح`)
+      setSelectedRows(new Set())
+      setBulkStatus('')
+    } catch (error) {
+      toast.dismiss('bulk')
+      toast.error(error instanceof Error ? error.message : 'فشل التحديث الجماعي')
     }
-    setSelectedRows(new Set())
-    setBulkStatus('')
   }
 
   const handleExport = (format: 'xlsx' | 'csv') => {
@@ -227,7 +225,9 @@ function OrdersPage() {
       <FadeIn>
         <div className="flex flex-col md:flex-row md:items-center gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[220px]">
-            <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">⌕</span>
+            <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+              ⌕
+            </span>
             <Input
               placeholder="بحث بالاسم أو رقم الهاتف…"
               value={search}
@@ -243,7 +243,9 @@ function OrdersPage() {
               <SelectContent>
                 <SelectItem value="all">كل الحالات</SelectItem>
                 {ALL_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -254,7 +256,22 @@ function OrdersPage() {
               <SelectContent>
                 <SelectItem value="all">كل الولايات</SelectItem>
                 {wilayas.map((w) => (
-                  <SelectItem key={w} value={w}>{w}</SelectItem>
+                  <SelectItem key={w} value={w}>
+                    {w}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={productFilter} onValueChange={setProductFilter}>
+              <SelectTrigger className="w-auto h-10 rounded-[11px] border-border px-3.5">
+                <SelectValue placeholder="كل المنتجات" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">كل المنتجات</SelectItem>
+                {products.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -378,7 +395,13 @@ function OrdersPage() {
         <FadeIn delay={0.15}>
           <div className="dc-card overflow-hidden">
             {/* Sticky header row */}
-            <div className="flex items-center text-[11.5px] font-bold text-muted-foreground sticky top-0 z-10" style={{ background: 'var(--color-table-header)', borderBottom: '1px solid var(--color-table-border)' }}>
+            <div
+              className="flex items-center text-[11.5px] font-bold text-muted-foreground sticky top-0 z-10"
+              style={{
+                background: 'var(--color-table-header)',
+                borderBottom: '1px solid var(--color-table-border)',
+              }}
+            >
               {canBulkEdit && (
                 <div className="px-3.5 py-3 w-10 shrink-0">
                   <Checkbox
@@ -475,11 +498,18 @@ function OrdersPage() {
                       <div className="px-2 py-2.5 flex-1 min-w-[130px] font-bold truncate">
                         {order.customerName}
                       </div>
-                      <div className="px-2 py-2.5 w-[120px] shrink-0 font-mono text-[11.5px] text-muted-foreground" dir="ltr">
+                      <div
+                        className="px-2 py-2.5 w-[120px] shrink-0 font-mono text-[11.5px] text-muted-foreground"
+                        dir="ltr"
+                      >
                         {order.phone}
                       </div>
-                      <div className="px-2 py-2.5 w-24 shrink-0 text-muted-foreground">{order.wilaya}</div>
-                      <div className="px-2 py-2.5 w-[150px] shrink-0 text-muted-foreground truncate">{order.product}</div>
+                      <div className="px-2 py-2.5 w-24 shrink-0 text-muted-foreground">
+                        {order.wilaya}
+                      </div>
+                      <div className="px-2 py-2.5 w-[150px] shrink-0 text-muted-foreground truncate">
+                        {order.product}
+                      </div>
                       <div className="px-2 py-2.5 w-[104px] shrink-0 font-mono text-[12px] font-semibold">
                         {order.price ? formatCurrency(Number(order.price)) : '-'}
                       </div>

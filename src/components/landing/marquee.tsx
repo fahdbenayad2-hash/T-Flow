@@ -1,5 +1,3 @@
-import { useEffect, useRef } from 'react'
-
 const FEATURES = [
   'إدارة الطلبات',
   'قاعدة العملاء',
@@ -11,45 +9,6 @@ const FEATURES = [
   'إشعارات لحظية',
 ]
 const TECH = ['GOOGLE SHEETS', 'SUPABASE', 'REALTIME', 'RTL', 'TANSTACK', 'POSTGRESQL']
-
-function Ticker({
-  items,
-  reverse = false,
-  speed = 26,
-}: {
-  items: string[]
-  reverse?: boolean
-  speed?: number
-}) {
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    let pos = reverse ? -50 : 0
-    let raf: number
-    const tick = () => {
-      pos += reverse ? 0.15 : -0.15
-      if (!reverse && pos <= -50) pos = 0
-      if (reverse && pos >= 0) pos = -50
-      el.style.transform = `translateX(${pos}%)`
-      raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [reverse])
-
-  return (
-    <div ref={ref} style={{ animationDuration: `${speed}s` }} className="lp-marquee-track">
-      {items.map((item) => (
-        <span key={item}>{item}</span>
-      ))}
-      {items.map((item) => (
-        <span key={`dup-${item}`}>{item}</span>
-      ))}
-    </div>
-  )
-}
 
 export function Marquee() {
   return (

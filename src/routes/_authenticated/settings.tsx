@@ -2,17 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
-import {
-  Globe,
-  Shield,
-  Save,
-  RefreshCw,
-  CheckCircle,
-  Trash2,
-  Moon,
-  Bell,
-  Copy,
-} from 'lucide-react'
+import { Globe, Shield, Save, RefreshCw, CheckCircle, Trash2, Moon, Bell, Copy } from 'lucide-react'
 import { RoleGuard } from '~/components/role-guard'
 import toast from 'react-hot-toast'
 
@@ -51,6 +41,8 @@ function SettingsPage() {
   const [alerts, setAlerts] = useState(true)
   const [duplicateDetection, setDuplicateDetection] = useState(true)
 
+  // localStorage and <html> class only exist in the browser — sync after hydration
+  // to avoid an SSR mismatch.
   useEffect(() => {
     const stored = localStorage.getItem('tflow_script_url') || ''
     setScriptUrl(stored)
@@ -101,7 +93,10 @@ function SettingsPage() {
 
   return (
     <RoleGuard roles={['admin']}>
-      <div className="flex flex-col gap-5 mx-auto" style={{ maxWidth: '720px', animation: 'tfUp 0.4s ease both' }}>
+      <div
+        className="flex flex-col gap-5 mx-auto"
+        style={{ maxWidth: '720px', animation: 'tfUp 0.4s ease both' }}
+      >
         {/* Connection */}
         <div className="dc-card p-5">
           <div className="flex items-center gap-2 mb-1">
@@ -124,7 +119,11 @@ function SettingsPage() {
               size="sm"
               className="h-10 rounded-[11px] font-bold text-[12px] shrink-0"
             >
-              {isSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {isSaving ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
             </Button>
             <Button
               variant="outline"
@@ -133,7 +132,11 @@ function SettingsPage() {
               disabled={isTesting || !scriptUrl}
               className="h-10 rounded-[11px] font-bold text-[12px] shrink-0"
             >
-              {isTesting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+              {isTesting ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="h-4 w-4" />
+              )}
               اختبار
             </Button>
           </div>
@@ -193,17 +196,32 @@ function SettingsPage() {
           <div className="flex flex-col gap-3">
             <div className="flex justify-between items-center">
               <span className="text-[12.5px] text-muted-foreground">الحالة</span>
-              <span className="inline-flex items-center h-5 px-2 rounded-full text-[10px] font-bold" style={{ background: '#22c55e', color: '#fff' }}>متصل</span>
+              <span
+                className="inline-flex items-center h-5 px-2 rounded-full text-[10px] font-bold"
+                style={{ background: '#22c55e', color: '#fff' }}
+              >
+                متصل
+              </span>
             </div>
             <div className="h-px bg-[var(--color-divider)]" />
             <div className="flex justify-between items-center">
               <span className="text-[12.5px] text-muted-foreground">Project URL</span>
-              <span className="text-[11.5px] font-mono" dir="ltr">jvuoexqjnovgmhywpxzq.supabase.co</span>
+              <span className="text-[11.5px] font-mono" dir="ltr">
+                {(import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(
+                  /^https?:\/\//,
+                  '',
+                ) || '—'}
+              </span>
             </div>
             <div className="h-px bg-[var(--color-divider)]" />
             <div className="flex justify-between items-center">
               <span className="text-[12.5px] text-muted-foreground">RLS</span>
-              <span className="inline-flex items-center h-5 px-2 rounded-full text-[10px] font-bold" style={{ background: '#22c55e', color: '#fff' }}>نشط</span>
+              <span
+                className="inline-flex items-center h-5 px-2 rounded-full text-[10px] font-bold"
+                style={{ background: '#22c55e', color: '#fff' }}
+              >
+                نشط
+              </span>
             </div>
           </div>
         </div>

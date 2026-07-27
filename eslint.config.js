@@ -47,6 +47,7 @@ export default tseslint.config(
       'dist/**',
       '.output/**',
       '.nitro/**',
+      '.vercel/**',
       'node_modules/**',
       '.tanstack/**',
       'vitest.config.ts',

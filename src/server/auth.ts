@@ -9,7 +9,7 @@ import type { AppRole } from '~/lib/types'
 
 export const fetchUser = createServerFn({ method: 'GET' }).handler(async () => {
   if (DEMO_MODE) {
-    return { id: 'demo-admin-id', email: 'fahdbenayad2@gmail.com' }
+    return { id: 'demo-admin-id', email: 'demo@tflow.app' }
   }
 
   const { getCookie } = await import('@tanstack/react-start/server')
@@ -93,4 +93,23 @@ const _requireAdmin = createServerFn({ method: 'GET' }).handler(async () => {
 
 export async function requireAdmin(): Promise<string> {
   return _requireAdmin()
+}
+
+const _requireUser = createServerFn({ method: 'GET' }).handler(async () => {
+  if (DEMO_MODE) return 'demo-admin-id'
+
+  const { getCookie } = await import('@tanstack/react-start/server')
+  const token = getCookie(AUTH_TOKEN_COOKIE)
+  if (!token) throw new Error('UNAUTHORIZED')
+
+  const supabase = getSupabaseSessionClient(token)
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data.user) throw new Error('UNAUTHORIZED')
+
+  return data.user.id
+})
+
+/** Guard for server functions that any signed-in user may call. */
+export async function requireUser(): Promise<string> {
+  return _requireUser()
 }

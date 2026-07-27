@@ -20,7 +20,15 @@ interface DeliveryStats {
   cancelled: number
   byWilaya: Map<
     string,
-    { total: number; delivered: number; pending: number; cancelled: number; home: number; desk: number; revenue: number }
+    {
+      total: number
+      delivered: number
+      pending: number
+      cancelled: number
+      home: number
+      desk: number
+      revenue: number
+    }
   >
 }
 
@@ -39,12 +47,20 @@ function DeliverySkeleton() {
 
 function DeliveryPage() {
   const { data, isLoading, isError, error, refetch } = useOrders()
-  const orders = data?.orders || []
+  const orders = useMemo(() => data?.orders ?? [], [data])
 
   const stats = useMemo<DeliveryStats>(() => {
     const byWilaya = new Map<
       string,
-      { total: number; delivered: number; pending: number; cancelled: number; home: number; desk: number; revenue: number }
+      {
+        total: number
+        delivered: number
+        pending: number
+        cancelled: number
+        home: number
+        desk: number
+        revenue: number
+      }
     >()
 
     let homeDelivery = 0
@@ -66,7 +82,13 @@ function DeliveryPage() {
 
       const wilaya = String(o.wilaya) || 'غير معروف'
       const existing = byWilaya.get(wilaya) || {
-        total: 0, delivered: 0, pending: 0, cancelled: 0, home: 0, desk: 0, revenue: 0,
+        total: 0,
+        delivered: 0,
+        pending: 0,
+        cancelled: 0,
+        home: 0,
+        desk: 0,
+        revenue: 0,
       }
       existing.total++
       if (isHome) existing.home++
@@ -80,7 +102,15 @@ function DeliveryPage() {
       byWilaya.set(wilaya, existing)
     }
 
-    return { totalOrders: orders.length, homeDelivery, stopDesk, delivered, pending, cancelled, byWilaya }
+    return {
+      totalOrders: orders.length,
+      homeDelivery,
+      stopDesk,
+      delivered,
+      pending,
+      cancelled,
+      byWilaya,
+    }
   }, [orders])
 
   if (isLoading) return <DeliverySkeleton />
@@ -100,8 +130,10 @@ function DeliveryPage() {
     )
 
   const wilayas = Array.from(stats.byWilaya.entries()).sort((a, b) => b[1].total - a[1].total)
-  const homePercent = stats.totalOrders > 0 ? Math.round((stats.homeDelivery / stats.totalOrders) * 100) : 0
-  const deskPercent = stats.totalOrders > 0 ? Math.round((stats.stopDesk / stats.totalOrders) * 100) : 0
+  const homePercent =
+    stats.totalOrders > 0 ? Math.round((stats.homeDelivery / stats.totalOrders) * 100) : 0
+  const deskPercent =
+    stats.totalOrders > 0 ? Math.round((stats.stopDesk / stats.totalOrders) * 100) : 0
 
   return (
     <RoleGuard roles={['admin', 'shipping_manager']}>
@@ -109,7 +141,12 @@ function DeliveryPage() {
         {/* Two large delivery-type cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
-            { label: 'توصيل دوميسيل', count: stats.homeDelivery, percent: homePercent, accent: '#e31e24' },
+            {
+              label: 'توصيل دوميسيل',
+              count: stats.homeDelivery,
+              percent: homePercent,
+              accent: '#e31e24',
+            },
             { label: 'ستوب ديسك', count: stats.stopDesk, percent: deskPercent, accent: '#8b5cf6' },
           ].map((item) => (
             <div
@@ -122,12 +159,17 @@ function DeliveryPage() {
               }}
             >
               <div className="text-[12.5px] text-muted-foreground font-medium">{item.label}</div>
-              <div className="font-mono text-[36px] font-bold mt-1.5 tracking-tight" style={{ color: item.accent }}>
+              <div
+                className="font-mono text-[36px] font-bold mt-1.5 tracking-tight"
+                style={{ color: item.accent }}
+              >
                 {item.count}
               </div>
               <div className="mt-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] text-muted-foreground">{item.percent}% من الإجمالي</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {item.percent}% من الإجمالي
+                  </span>
                 </div>
                 <div className="h-[6px] bg-muted rounded-full overflow-hidden">
                   <div
@@ -152,7 +194,11 @@ function DeliveryPage() {
           </div>
           <div
             className="flex items-center text-[11.5px] font-bold text-muted-foreground"
-            style={{ background: 'var(--color-table-header)', borderTop: '1px solid var(--color-table-border)', borderBottom: '1px solid var(--color-table-border)' }}
+            style={{
+              background: 'var(--color-table-header)',
+              borderTop: '1px solid var(--color-table-border)',
+              borderBottom: '1px solid var(--color-table-border)',
+            }}
           >
             <div className="px-4 py-2.5 flex-1 min-w-[100px]">الولاية</div>
             <div className="px-3 py-2.5 w-16 text-center shrink-0">الطلبات</div>
@@ -183,24 +229,31 @@ function DeliveryPage() {
                       )}
                     </div>
                   </div>
-                  <div className="px-3 py-2.5 w-16 text-center shrink-0 font-mono">{data.total}</div>
+                  <div className="px-3 py-2.5 w-16 text-center shrink-0 font-mono">
+                    {data.total}
+                  </div>
                   <div className="px-3 py-2.5 w-24 shrink-0">
                     <div className="h-[7px] bg-muted rounded-full overflow-hidden flex">
                       <div
                         className="h-full bg-[#e31e24]"
-                        style={{ width: `${homeW}%`, animation: 'tfGrow 0.6s ease both', transformOrigin: 'right' }}
+                        style={{
+                          width: `${homeW}%`,
+                          animation: 'tfGrow 0.6s ease both',
+                          transformOrigin: 'right',
+                        }}
                       />
-                      <div
-                        className="h-full bg-[#8b5cf6]"
-                        style={{ width: `${deskW}%` }}
-                      />
+                      <div className="h-full bg-[#8b5cf6]" style={{ width: `${deskW}%` }} />
                     </div>
                   </div>
                   <div className="px-3 py-2.5 w-24 shrink-0">
                     <div className="h-[7px] bg-muted rounded-full overflow-hidden flex">
                       <div
                         className="h-full bg-[var(--status-delivered)]"
-                        style={{ width: `${deliveredW}%`, animation: 'tfGrow 0.6s ease both', transformOrigin: 'right' }}
+                        style={{
+                          width: `${deliveredW}%`,
+                          animation: 'tfGrow 0.6s ease both',
+                          transformOrigin: 'right',
+                        }}
                       />
                       <div
                         className="h-full bg-[var(--status-cancelled)]"
@@ -208,7 +261,9 @@ function DeliveryPage() {
                       />
                     </div>
                   </div>
-                  <div className="px-3 py-2.5 w-[90px] shrink-0 font-mono text-[11px] text-center">{formatCurrency(data.revenue)}</div>
+                  <div className="px-3 py-2.5 w-[90px] shrink-0 font-mono text-[11px] text-center">
+                    {formatCurrency(data.revenue)}
+                  </div>
                 </div>
               )
             })}

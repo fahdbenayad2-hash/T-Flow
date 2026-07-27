@@ -1,13 +1,11 @@
-import { STATUS_MAP } from '~/lib/sheet-mapping'
-
 const STATUS_COLORS: Record<string, string> = {
   'جاري التجهيز': '#f59e0b',
   'قيد المعالجة': '#f59e0b',
-  'مؤكد': '#3b82f6',
-  'مشحون': '#8b5cf6',
+  مؤكد: '#3b82f6',
+  مشحون: '#8b5cf6',
   'تم التسليم': '#22c55e',
   'ما جاوبش': '#f97316',
-  'ملغي': '#6b7280',
+  ملغي: '#6b7280',
 }
 
 interface StatusBadgeProps {

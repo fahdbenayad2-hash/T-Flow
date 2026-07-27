@@ -1,11 +1,10 @@
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useOrders, useUpdateOrder, useAuditLog } from '~/lib/queries'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
-import { Badge } from '~/components/ui/badge'
 import { Separator } from '~/components/ui/separator'
 import { Skeleton } from '~/components/ui/skeleton'
 import {
@@ -15,13 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
-import { ArrowRight, RefreshCw, Save, Clock, User, MapPin, Package } from 'lucide-react'
+import { ArrowRight, RefreshCw, Save, Clock, User, Package } from 'lucide-react'
 import { formatCurrency } from '~/lib/utils'
 import { ALL_STATUSES } from '~/lib/sheet-mapping'
-import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
+import { FadeIn, StaggerContainer } from '~/components/page-transition'
 import { ErrorState } from '~/components/empty-state'
 import toast from 'react-hot-toast'
-import { motion } from 'framer-motion'
+import type { AuditEntry } from '~/lib/types'
 import { StatusBadge } from '~/components/status-badge'
 
 export const Route = createFileRoute('/_authenticated/orders/$row')({
@@ -252,7 +251,7 @@ function OrderDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-0">
-                {auditLogs.map((log: any, i: number) => (
+                {auditLogs.map((log: AuditEntry, i: number) => (
                   <div
                     key={log.id}
                     className="relative flex items-start gap-3 py-2.5 border-b last:border-0"

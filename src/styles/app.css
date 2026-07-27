@@ -214,19 +214,36 @@ html[dir='rtl'] {
   animation: tfGrow 0.7s ease both;
 }
 @keyframes tfGrow {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 @keyframes tfUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes tfPulse {
-  0%,100% { box-shadow: 0 0 0 0 rgba(227,30,36,0.5); }
-  50% { box-shadow: 0 0 0 5px rgba(227,30,36,0); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(227, 30, 36, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(227, 30, 36, 0);
+  }
 }
 @keyframes tfRise {
-  from { height: 0; }
+  from {
+    height: 0;
+  }
 }
 
 /* ===== DC-style cards ===== */

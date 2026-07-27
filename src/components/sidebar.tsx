@@ -1,21 +1,17 @@
-import { Link, useLocation, useNavigate } from '@tanstack/react-router'
+import { Link, useLocation } from '@tanstack/react-router'
 import {
   LayoutDashboard,
   ShoppingCart,
   Users,
   Phone,
-  LogOut,
   Settings,
   Package,
   DollarSign,
   Truck,
   BarChart3,
-  Shield,
 } from 'lucide-react'
 import { cn } from '~/lib/utils'
-import { supabase } from '~/utils/supabase-client'
 import { useRole, getRoleLabel } from '~/hooks/useRole'
-import { useOrders } from '~/lib/queries'
 import type { AppRole } from '~/lib/types'
 
 export interface NavItem {
@@ -33,7 +29,13 @@ export const navItems: NavItem[] = [
   { to: '/call-center', label: 'مركز المكالمات', icon: Phone, group: 'ops' },
   { to: '/products', label: 'المنتجات', icon: Package, group: 'analytics', roles: ['admin'] },
   { to: '/earnings', label: 'الإيرادات', icon: DollarSign, group: 'analytics', roles: ['admin'] },
-  { to: '/delivery', label: 'التوصيل', icon: Truck, group: 'analytics', roles: ['admin', 'shipping_manager'] },
+  {
+    to: '/delivery',
+    label: 'التوصيل',
+    icon: Truck,
+    group: 'analytics',
+    roles: ['admin', 'shipping_manager'],
+  },
   { to: '/reports', label: 'التقارير', icon: BarChart3, group: 'analytics', roles: ['admin'] },
   { to: '/settings', label: 'الإعدادات', icon: Settings, group: 'system', roles: ['admin'] },
 ]
@@ -88,11 +90,7 @@ function NavGroup({
 
 export function Sidebar() {
   const location = useLocation()
-  const navigate = useNavigate()
   const { roles, isAdmin } = useRole()
-  const { data } = useOrders()
-  const orders = data?.orders || []
-  const orderCount = orders.length
 
   const visibleNavItems = navItems.filter((item) => {
     if (!item.roles) return true
@@ -101,14 +99,7 @@ export function Sidebar() {
 
   const opsItems = visibleNavItems.filter((i) => i.group === 'ops')
   const analyticsItems = visibleNavItems.filter((i) => i.group === 'analytics')
-  const systemItems = visibleNavItems.filter(
-    (i) => i.group === 'system' || i.to === '/users',
-  )
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    navigate({ to: '/' })
-  }
+  const systemItems = visibleNavItems.filter((i) => i.group === 'system' || i.to === '/users')
 
   const primaryRole = roles[0]
   const userInitials = 'م'
@@ -136,7 +127,10 @@ export function Sidebar() {
           <div className="text-[19px] font-black tracking-tight">
             <span className="text-primary">T</span>-Flow
           </div>
-          <div className="font-mono text-[8.5px] tracking-[0.18em] mt-[3px]" style={{ color: 'rgba(242,242,243,0.4)' }}>
+          <div
+            className="font-mono text-[8.5px] tracking-[0.18em] mt-[3px]"
+            style={{ color: 'rgba(242,242,243,0.4)' }}
+          >
             FAST · SMART · DELIVERED
           </div>
         </div>
@@ -153,10 +147,10 @@ export function Sidebar() {
             label="النظام"
             items={[
               ...systemItems.filter((i) => i.to === '/users'),
-              ...systemItems.filter((i) => i.to === '/users' && !systemItems.find((s) => s.to === i.to)),
-            ].filter(
-              (item, i, arr) => arr.findIndex((a) => a.to === item.to) === i,
-            )}
+              ...systemItems.filter(
+                (i) => i.to === '/users' && !systemItems.find((s) => s.to === i.to),
+              ),
+            ].filter((item, i, arr) => arr.findIndex((a) => a.to === item.to) === i)}
             pathname={location.pathname}
           />
         )}
@@ -173,7 +167,10 @@ export function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[13px] font-bold truncate">{userName}</div>
-            <div className="flex items-center gap-1.5 text-[10px] mt-0.5" style={{ color: '#ff8286' }}>
+            <div
+              className="flex items-center gap-1.5 text-[10px] mt-0.5"
+              style={{ color: '#ff8286' }}
+            >
               <span className="h-[5px] w-[5px] rounded-full bg-primary" />
               {primaryRole ? getRoleLabel(primaryRole) : 'مستخدم'}
             </div>

@@ -28,7 +28,7 @@ function EarningsSkeleton() {
 function EarningsPage() {
   const { data, isLoading, isError, error, refetch } = useOrders()
 
-  const orders = data?.orders || []
+  const orders = useMemo(() => data?.orders ?? [], [data])
 
   const stats = useMemo(() => {
     const delivered = orders.filter((o) => o.status === STATUS.DELIVERED)
@@ -61,7 +61,9 @@ function EarningsPage() {
       existing.orders++
       byProduct.set(product, existing)
     }
-    const productEntries = Array.from(byProduct.entries()).sort((a, b) => b[1].revenue - a[1].revenue)
+    const productEntries = Array.from(byProduct.entries()).sort(
+      (a, b) => b[1].revenue - a[1].revenue,
+    )
 
     // Monthly growth (compare last month vs previous)
     let monthlyGrowth = 0
@@ -78,7 +80,8 @@ function EarningsPage() {
       monthlyGrowth,
       monthlyTrend,
       productEntries,
-      maxMonthlyRevenue: monthlyTrend.length > 0 ? Math.max(...monthlyTrend.map(([, d]) => d.revenue)) : 1,
+      maxMonthlyRevenue:
+        monthlyTrend.length > 0 ? Math.max(...monthlyTrend.map(([, d]) => d.revenue)) : 1,
       maxProductRevenue: productEntries.length > 0 ? productEntries[0][1].revenue : 1,
     }
   }, [orders])
@@ -107,13 +110,26 @@ function EarningsPage() {
     { label: 'إيرادات صافية', value: formatCurrency(stats.totalRevenue), accent: '#22c55e' },
     { label: 'متوسط طلب', value: formatCurrency(stats.avgOrderValue), accent: '#3b82f6' },
     { label: 'تم التسليم', value: stats.deliveredCount, accent: '#8b5cf6' },
-    { label: 'نمو شهر', value: `${stats.monthlyGrowth > 0 ? '+' : ''}${stats.monthlyGrowth}%`, accent: stats.monthlyGrowth >= 0 ? '#22c55e' : '#ef4444' },
+    {
+      label: 'نمو شهر',
+      value: `${stats.monthlyGrowth > 0 ? '+' : ''}${stats.monthlyGrowth}%`,
+      accent: stats.monthlyGrowth >= 0 ? '#22c55e' : '#ef4444',
+    },
   ]
 
   const monthLabels: Record<string, string> = {
-    '01': 'يناير', '02': 'فبراير', '03': 'مارس', '04': 'أبريل',
-    '05': 'مايو', '06': 'يونيو', '07': 'يوليو', '08': 'أغسطس',
-    '09': 'سبتمبر', '10': 'أكتوبر', '11': 'نوفمبر', '12': 'ديسمبر',
+    '01': 'يناير',
+    '02': 'فبراير',
+    '03': 'مارس',
+    '04': 'أبريل',
+    '05': 'مايو',
+    '06': 'يونيو',
+    '07': 'يوليو',
+    '08': 'أغسطس',
+    '09': 'سبتمبر',
+    '10': 'أكتوبر',
+    '11': 'نوفمبر',
+    '12': 'ديسمبر',
   }
 
   return (
@@ -131,7 +147,10 @@ function EarningsPage() {
               }}
             >
               <div className="text-[12.5px] text-muted-foreground font-medium">{kpi.label}</div>
-              <div className="font-mono text-[22px] font-bold mt-1.5 tracking-tight" style={{ color: kpi.accent }}>
+              <div
+                className="font-mono text-[22px] font-bold mt-1.5 tracking-tight"
+                style={{ color: kpi.accent }}
+              >
                 {kpi.value}
               </div>
             </div>
@@ -143,13 +162,16 @@ function EarningsPage() {
           <h3 className="text-[14.5px] font-extrabold mb-5">الإيرادات الشهرية</h3>
           <div className="flex items-end justify-around gap-3" style={{ height: '180px' }}>
             {stats.monthlyTrend.map(([month, data]) => {
-              const heightPercent = stats.maxMonthlyRevenue > 0 ? (data.revenue / stats.maxMonthlyRevenue) * 100 : 0
+              const heightPercent =
+                stats.maxMonthlyRevenue > 0 ? (data.revenue / stats.maxMonthlyRevenue) * 100 : 0
               const monthPart = month.slice(5, 7)
               const label = monthLabels[monthPart] || monthPart
 
               return (
                 <div key={month} className="flex flex-col items-center gap-2 flex-1">
-                  <span className="font-mono text-[10px] text-muted-foreground">{formatCurrency(data.revenue)}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {formatCurrency(data.revenue)}
+                  </span>
                   <div
                     className="w-full max-w-[36px] rounded-t-[8px]"
                     style={{
@@ -171,12 +193,17 @@ function EarningsPage() {
           <h3 className="text-[14.5px] font-extrabold mb-4">الإيرادات حسب المنتج</h3>
           <div className="flex flex-col gap-3.5">
             {stats.productEntries.map(([name, data]) => {
-              const percent = stats.maxProductRevenue > 0 ? Math.round((data.revenue / stats.maxProductRevenue) * 100) : 0
+              const percent =
+                stats.maxProductRevenue > 0
+                  ? Math.round((data.revenue / stats.maxProductRevenue) * 100)
+                  : 0
               return (
                 <div key={name} className="space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[12.5px] font-medium">{name}</span>
-                    <span className="font-mono text-[12px] font-bold">{formatCurrency(data.revenue)}</span>
+                    <span className="font-mono text-[12px] font-bold">
+                      {formatCurrency(data.revenue)}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-[7px] bg-muted rounded-full overflow-hidden">
@@ -190,7 +217,9 @@ function EarningsPage() {
                         }}
                       />
                     </div>
-                    <span className="text-[11px] text-muted-foreground w-16 text-start shrink-0">{data.orders} طلب</span>
+                    <span className="text-[11px] text-muted-foreground w-16 text-start shrink-0">
+                      {data.orders} طلب
+                    </span>
                   </div>
                 </div>
               )

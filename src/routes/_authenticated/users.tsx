@@ -151,7 +151,9 @@ function UsersPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-[12px] font-medium text-muted-foreground">الاسم الكامل</Label>
+                  <Label className="text-[12px] font-medium text-muted-foreground">
+                    الاسم الكامل
+                  </Label>
                   <Input
                     placeholder="محمد أحمد"
                     value={newName}
@@ -160,7 +162,9 @@ function UsersPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[12px] font-medium text-muted-foreground">البريد الإلكتروني</Label>
+                  <Label className="text-[12px] font-medium text-muted-foreground">
+                    البريد الإلكتروني
+                  </Label>
                   <Input
                     type="email"
                     placeholder="user@example.com"
@@ -171,7 +175,9 @@ function UsersPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[12px] font-medium text-muted-foreground">كلمة المرور</Label>
+                  <Label className="text-[12px] font-medium text-muted-foreground">
+                    كلمة المرور
+                  </Label>
                   <Input
                     type="password"
                     placeholder="6 أحرف على الأقل"
@@ -219,7 +225,10 @@ function UsersPage() {
         <div className="dc-card overflow-hidden">
           <div
             className="flex items-center text-[11.5px] font-bold text-muted-foreground"
-            style={{ background: 'var(--color-table-header)', borderBottom: '1px solid var(--color-table-border)' }}
+            style={{
+              background: 'var(--color-table-header)',
+              borderBottom: '1px solid var(--color-table-border)',
+            }}
           >
             <div className="px-4 py-2.5 flex-1 min-w-[160px]">المستخدم</div>
             <div className="px-3 py-2.5 w-[180px] shrink-0 hidden md:block">البريد</div>
@@ -250,7 +259,10 @@ function UsersPage() {
                     </div>
                   </div>
                   <div className="px-3 py-2.5 w-[180px] shrink-0 hidden md:block">
-                    <span className="text-[12px] text-muted-foreground font-mono truncate block" dir="ltr">
+                    <span
+                      className="text-[12px] text-muted-foreground font-mono truncate block"
+                      dir="ltr"
+                    >
                       {user.email || '—'}
                     </span>
                   </div>

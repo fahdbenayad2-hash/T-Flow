@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { useOrders } from '~/lib/queries'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
-import { ArrowRight, Phone, ShoppingCart, Ban, MapPin } from 'lucide-react'
+import { ArrowRight, ShoppingCart, Ban, MapPin } from 'lucide-react'
 import { formatCurrency } from '~/lib/utils'
 import { STATUS } from '~/lib/sheet-mapping'
 import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
@@ -19,7 +19,7 @@ function CustomerDetailPage() {
   const router = useRouter()
   const { data, isLoading, isError, error, refetch } = useOrders()
 
-  const orders = data?.orders || []
+  const orders = useMemo(() => data?.orders ?? [], [data])
   const customerOrders = useMemo(
     () => orders.filter((o) => String(o.phone) === phone),
     [orders, phone],

@@ -2,11 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import { useOrders } from '~/lib/queries'
 import { Button } from '~/components/ui/button'
-import {
-  TrendingUp,
-  Download,
-  Users,
-} from 'lucide-react'
+import { TrendingUp, Download, Users } from 'lucide-react'
 import { formatCurrency } from '~/lib/utils'
 import { STATUS, toExportRow } from '~/lib/sheet-mapping'
 import { ErrorState, EmptyState } from '~/components/empty-state'
@@ -38,7 +34,7 @@ function ReportsSkeleton() {
 
 function ReportsPage() {
   const { data, isLoading, isError, error, refetch } = useOrders()
-  const orders = data?.orders || []
+  const orders = useMemo(() => data?.orders ?? [], [data])
 
   const analytics = useMemo(() => {
     const totalOrders = orders.length
@@ -149,13 +145,19 @@ function ReportsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-semibold truncate">{c.name}</div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="font-mono text-[10.5px] text-muted-foreground">{c.orders} طلب</span>
+                      <span className="font-mono text-[10.5px] text-muted-foreground">
+                        {c.orders} طلب
+                      </span>
                       {c.revenue > 0 && (
-                        <span className="font-mono text-[10.5px] text-muted-foreground">{formatCurrency(c.revenue)}</span>
+                        <span className="font-mono text-[10.5px] text-muted-foreground">
+                          {formatCurrency(c.revenue)}
+                        </span>
                       )}
                     </div>
                   </div>
-                  <span className="text-[11px] font-mono text-muted-foreground shrink-0">#{i + 1}</span>
+                  <span className="text-[11px] font-mono text-muted-foreground shrink-0">
+                    #{i + 1}
+                  </span>
                 </div>
               ))}
             </div>
@@ -184,15 +186,21 @@ function ReportsPage() {
                 <div className="h-px bg-[var(--color-divider)]" />
                 <div className="flex justify-between items-center">
                   <span className="text-[12.5px] text-muted-foreground">نسبة التحويل</span>
-                  <span className="font-mono text-[13px] font-bold text-[var(--status-delivered)]">{analytics.conversionRate}%</span>
+                  <span className="font-mono text-[13px] font-bold text-[var(--status-delivered)]">
+                    {analytics.conversionRate}%
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[12.5px] text-muted-foreground">نسبة الإلغاء</span>
-                  <span className="font-mono text-[13px] font-bold text-[var(--status-cancelled)]">{analytics.cancelRate}%</span>
+                  <span className="font-mono text-[13px] font-bold text-[var(--status-cancelled)]">
+                    {analytics.cancelRate}%
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[12.5px] text-muted-foreground">زبائن عائدون</span>
-                  <span className="font-mono text-[13px] font-bold" style={{ color: '#e31e24' }}>{analytics.repeatRate}%</span>
+                  <span className="font-mono text-[13px] font-bold" style={{ color: '#e31e24' }}>
+                    {analytics.repeatRate}%
+                  </span>
                 </div>
               </div>
             </div>
