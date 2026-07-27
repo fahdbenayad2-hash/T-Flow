@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react'
 import { Outlet, createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
 import { ThemeProvider } from '~/components/theme-provider'
 import { TooltipProvider } from '~/components/ui/tooltip'

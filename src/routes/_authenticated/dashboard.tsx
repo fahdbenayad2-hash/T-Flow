@@ -6,7 +6,6 @@ import { Button } from '~/components/ui/button'
 import { AnimatedCounter } from '~/components/ui/animated-counter'
 import { Skeleton } from '~/components/ui/skeleton'
 import {
-  RefreshCw,
   ShoppingCart,
   CheckCircle,
   Truck,

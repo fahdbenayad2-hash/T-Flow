@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect } from 'react'
 import { Link } from '@tanstack/react-router'
 import { PageLoader } from '~/components/landing/page-loader'
 import { Hero } from '~/components/landing/hero'

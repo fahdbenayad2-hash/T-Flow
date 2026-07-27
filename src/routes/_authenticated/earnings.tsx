@@ -2,8 +2,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { useOrders } from '~/lib/queries'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
-import { Badge } from '~/components/ui/badge'
-import { Separator } from '~/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import { Skeleton } from '~/components/ui/skeleton'
 import { motion } from 'framer-motion'
@@ -11,13 +9,11 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  ShoppingCart,
-  Package,
   BarChart3,
 } from 'lucide-react'
 import { STATUS } from '~/lib/sheet-mapping'
 import { formatCurrency } from '~/lib/utils'
-import { FadeIn, StaggerContainer, StaggerItem } from '~/components/page-transition'
+import { FadeIn, StaggerContainer } from '~/components/page-transition'
 import { ErrorState, EmptyState } from '~/components/empty-state'
 import { RoleGuard } from '~/components/role-guard'
 

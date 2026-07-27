@@ -15,10 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
-import { Search, Download, X, AlertCircle, ArrowUpDown, Filter, ShoppingCart } from 'lucide-react'
+import { Search, Download, X, AlertCircle, ArrowUpDown, Filter } from 'lucide-react'
 import { formatCurrency, formatDate } from '~/lib/utils'
 import { ALL_STATUSES, toExportRow } from '~/lib/sheet-mapping'
-import { StaggerContainer, StaggerItem, FadeIn } from '~/components/page-transition'
+import { StaggerContainer, FadeIn } from '~/components/page-transition'
 import { ErrorState, OrdersEmptyState } from '~/components/empty-state'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'

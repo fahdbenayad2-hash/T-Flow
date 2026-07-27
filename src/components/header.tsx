@@ -1,4 +1,4 @@
-import { Bell, Menu, X, LogOut, Moon, Sun, Shield } from 'lucide-react'
+import { Menu, X, LogOut, Moon, Sun, Shield } from 'lucide-react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'

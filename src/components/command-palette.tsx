@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useRole, getRoleLabel } from '~/hooks/useRole'
+import { useRole } from '~/hooks/useRole'
 import {
   LayoutDashboard,
   ShoppingCart,
