@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
-import { UserPlus, Trash2, RefreshCw, ShieldCheck, Users } from 'lucide-react'
+import { UserPlus, Trash2, RefreshCw } from 'lucide-react'
 import { RoleGuard } from '~/components/role-guard'
 import { getRoleLabel } from '~/hooks/useRole'
 import toast from 'react-hot-toast'
@@ -21,6 +21,13 @@ import type { AppRole } from '~/lib/types'
 export const Route = createFileRoute('/_authenticated/users')({
   component: UsersPage,
 })
+
+function getInitials(name: string | null) {
+  if (!name) return '??'
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return parts[0][0] + parts[1][0]
+  return parts[0]?.slice(0, 2) || '??'
+}
 
 function UsersSkeleton() {
   return (
@@ -119,31 +126,28 @@ function UsersPage() {
     shipping_manager: { bg: '#8b5cf6', text: '#fff' },
   }
 
-  const permissions = [
-    { role: 'مدير', color: '#22c55e', desc: 'وصول كامل — إدارة المستخدمين، الإعدادات، المنتجات، الإيرادات، التقارير، التوصيل، الطلبات، العملاء، مركز المكالمات' },
-    { role: 'وكيل تأكيد', color: '#f59e0b', desc: 'الطلبات، العملاء، مركز المكالمات، لوحة التحكم — تعديل حالات الطلبات، تحديث جماعي' },
-    { role: 'مدير شحن', color: '#8b5cf6', desc: 'الطلبات، التوصيل، لوحة التحكم — عرض الطلبات وتحديث حالات الشحن' },
-  ]
-
   return (
     <RoleGuard roles={['admin']}>
       <div className="flex flex-col gap-5" style={{ animation: 'tfUp 0.4s ease both' }}>
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-[12.5px] text-muted-foreground">المستخدمون</span>
+            <span className="inline-flex items-center h-5 px-2 rounded-full bg-muted text-[10px] font-bold text-muted-foreground font-mono">
+              {users.length}
+            </span>
+          </div>
           <Button
             onClick={() => setShowForm(!showForm)}
-            className="h-10 rounded-[11px] font-semibold text-[13px]"
+            className="h-10 rounded-[11px] font-bold text-[13px]"
           >
             <UserPlus className="h-4 w-4 ml-1" />
-            مستخدم جديد
+            إضافة مستخدم
           </Button>
         </div>
 
         {showForm && (
           <div className="dc-card p-5" style={{ borderColor: 'rgba(227,30,36,0.3)' }}>
-            <div className="flex items-center gap-2 mb-4">
-              <UserPlus className="h-4 w-4 text-muted-foreground" />
-              <h3 className="text-[14.5px] font-extrabold">إنشاء مستخدم جديد</h3>
-            </div>
+            <h3 className="text-[14.5px] font-extrabold mb-4">إنشاء مستخدم جديد</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -205,128 +209,121 @@ function UsersPage() {
                   ) : (
                     <UserPlus className="h-4 w-4 ml-1" />
                   )}
-                  إنشاء المستخدم
+                  إنشاء
                 </Button>
               </div>
             </div>
           </div>
         )}
 
-        <div className="dc-card p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-[14.5px] font-extrabold">المستخدمون ({users.length})</h3>
+        <div className="dc-card overflow-hidden">
+          <div
+            className="flex items-center text-[11.5px] font-bold text-muted-foreground"
+            style={{ background: 'var(--color-table-header)', borderBottom: '1px solid var(--color-table-border)' }}
+          >
+            <div className="px-4 py-2.5 flex-1 min-w-[160px]">المستخدم</div>
+            <div className="px-3 py-2.5 w-[180px] shrink-0 hidden md:block">البريد</div>
+            <div className="px-3 py-2.5 w-[100px] shrink-0 text-center">الدور</div>
+            <div className="px-3 py-2.5 w-20 shrink-0 text-center">الحالة</div>
+            <div className="px-3 py-2.5 w-16 shrink-0" />
           </div>
           {isLoading ? (
             <UsersSkeleton />
           ) : users.length === 0 ? (
             <p className="text-[13px] text-muted-foreground text-center py-8">لا يوجد مستخدمون</p>
           ) : (
-            <div className="flex flex-col">
+            <div className="overflow-auto">
               {users.map((user) => (
                 <div
                   key={user.id}
-                  className="flex flex-col md:flex-row md:items-center justify-between py-3 border-b border-divider last:border-0 table-row-hover"
+                  className="flex items-center text-[13px] border-b border-divider last:border-b-0 table-row-hover"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-[13px]">{user.full_name || 'مستخدم'}</p>
-                      {user.email && (
-                        <span className="text-[11px] text-muted-foreground font-mono" dir="ltr">
-                          {user.email}
-                        </span>
-                      )}
+                  <div className="px-4 py-2.5 flex-1 min-w-[160px]">
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-bold text-white text-[12px]"
+                        style={{ background: 'linear-gradient(135deg, #e31e24, #7d1622)' }}
+                      >
+                        {getInitials(user.full_name)}
+                      </div>
+                      <span className="font-semibold truncate">{user.full_name || 'مستخدم'}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  </div>
+                  <div className="px-3 py-2.5 w-[180px] shrink-0 hidden md:block">
+                    <span className="text-[12px] text-muted-foreground font-mono truncate block" dir="ltr">
+                      {user.email || '—'}
+                    </span>
+                  </div>
+                  <div className="px-3 py-2.5 w-[100px] shrink-0 text-center">
+                    <div className="flex items-center justify-center gap-1 flex-wrap">
                       {user.roles.length > 0 ? (
                         user.roles.map((role) => {
                           const colors = roleColors[role] || { bg: '#6b7280', text: '#fff' }
                           return (
                             <span
                               key={role}
-                              className="inline-flex items-center h-5 px-2 rounded-full text-[10px] font-bold"
+                              className="inline-flex items-center h-5 px-2 rounded-full text-[9px] font-bold cursor-pointer hover:opacity-80"
                               style={{ background: colors.bg, color: colors.text }}
+                              onClick={() => removeRoleMutation.mutate({ userId: user.id, role })}
+                              title={`إزالة ${getRoleLabel(role)}`}
                             >
                               {getRoleLabel(role)}
-                              <button
-                                className="mr-1 hover:opacity-70"
-                                onClick={() => removeRoleMutation.mutate({ userId: user.id, role })}
-                                title={`إزالة ${getRoleLabel(role)}`}
-                              >
-                                ×
-                              </button>
                             </span>
                           )
                         })
                       ) : (
-                        <span className="inline-flex items-center h-5 px-2 rounded-full border border-divider text-[10px] font-bold text-muted-foreground">
+                        <span className="inline-flex items-center h-5 px-2 rounded-full border border-divider text-[9px] font-bold text-muted-foreground">
                           بدون دور
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-2 md:mt-0">
-                    <Select
-                      value=""
-                      onValueChange={(v) => {
-                        if (v && !user.roles.includes(v as AppRole)) {
-                          addRoleMutation.mutate({ userId: user.id, role: v as AppRole })
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-[140px] h-8 rounded-[11px] text-[11px]">
-                        <SelectValue placeholder="إضافة دور" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(['admin', 'confirmation_agent', 'shipping_manager'] as AppRole[])
-                          .filter((r) => !user.roles.includes(r))
-                          .map((r) => (
-                            <SelectItem key={r} value={r} className="text-[11px]">
-                              {getRoleLabel(r)}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <button
-                      className="flex items-center justify-center h-8 w-8 rounded-[9px] text-destructive hover:bg-destructive/10 transition-colors"
-                      onClick={() => {
-                        if (confirm(`هل أنت متأكد من حذف ${user.email || user.full_name}؟`)) {
-                          deleteUserMutation.mutate({ userId: user.id })
-                        }
-                      }}
-                      title="حذف المستخدم"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                  <div className="px-3 py-2.5 w-20 shrink-0 text-center">
+                    <span className="inline-flex items-center gap-1 h-5 px-2 rounded-full bg-[var(--status-delivered)]/15 text-[var(--status-delivered)] text-[9px] font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--status-delivered)]" />
+                      نشط
+                    </span>
+                  </div>
+                  <div className="px-3 py-2.5 w-16 shrink-0 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Select
+                        value=""
+                        onValueChange={(v) => {
+                          if (v && !user.roles.includes(v as AppRole)) {
+                            addRoleMutation.mutate({ userId: user.id, role: v as AppRole })
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-[100px] h-7 rounded-[9px] text-[10px] border-0 bg-transparent">
+                          <SelectValue placeholder="إضافة دور" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(['admin', 'confirmation_agent', 'shipping_manager'] as AppRole[])
+                            .filter((r) => !user.roles.includes(r))
+                            .map((r) => (
+                              <SelectItem key={r} value={r} className="text-[11px]">
+                                {getRoleLabel(r)}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <button
+                        className="flex items-center justify-center h-7 w-7 rounded-[9px] text-destructive hover:bg-destructive/10 transition-colors"
+                        onClick={() => {
+                          if (confirm(`هل أنت متأكد من حذف ${user.email || user.full_name}؟`)) {
+                            deleteUserMutation.mutate({ userId: user.id })
+                          }
+                        }}
+                        title="حذف المستخدم"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
-
-        <div className="dc-card p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-[14.5px] font-extrabold">ملخص الأدوار والصلاحيات</h3>
-          </div>
-          <div className="flex flex-col gap-2.5">
-            {permissions.map((perm) => (
-              <div
-                key={perm.role}
-                className="flex items-start gap-3 p-3 rounded-[11px]"
-                style={{ background: `${perm.color}0a` }}
-              >
-                <span
-                  className="inline-flex items-center h-5 px-2 rounded-full text-[10px] font-bold shrink-0"
-                  style={{ background: perm.color, color: '#fff' }}
-                >
-                  {perm.role}
-                </span>
-                <div className="text-[11.5px] text-muted-foreground">{perm.desc}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </RoleGuard>

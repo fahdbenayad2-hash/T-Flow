@@ -23,6 +23,12 @@ interface CallCardState {
   }
 }
 
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return parts[0][0] + parts[1][0]
+  return parts[0]?.slice(0, 2) || '??'
+}
+
 function CallCenterSkeleton() {
   return (
     <div className="flex flex-col gap-5">
@@ -117,6 +123,12 @@ function CallCenterPage() {
     { label: 'مؤجّل', value: todayStats.postponed, accent: '#f59e0b', iconBg: 'rgba(245,158,11,0.12)' },
   ]
 
+  const actionButtons = [
+    { key: 'answered', label: 'ردّ', icon: CheckCircle, color: '#22c55e' },
+    { key: 'no_answer', label: 'ما ردّش', icon: PhoneOff, color: '#f97316' },
+    { key: 'postponed', label: 'مؤجّل', icon: Clock, color: '#f59e0b' },
+  ] as const
+
   return (
     <div className="flex flex-col gap-5" style={{ animation: 'tfUp 0.4s ease both' }}>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -138,21 +150,29 @@ function CallCenterPage() {
         ))}
       </div>
 
-      <div className="flex gap-2">
-        {(['queue', 'stats'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className="h-10 px-4 rounded-[11px] text-[13px] font-bold transition-all"
-            style={{
-              background: activeTab === tab ? 'var(--color-foreground)' : 'var(--color-card)',
-              color: activeTab === tab ? 'var(--color-background)' : 'var(--color-muted-foreground)',
-              border: '1px solid var(--color-card-border)',
-            }}
-          >
-            {tab === 'queue' ? `الطابور (${queueOrders.length})` : 'الإحصائيات'}
-          </button>
-        ))}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h3 className="text-[14.5px] font-extrabold">طابور التأكيد</h3>
+          <span className="inline-flex items-center h-5 px-2 rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
+            {queueOrders.length}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          {(['queue', 'stats'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className="h-9 px-4 rounded-[11px] text-[12px] font-bold transition-all"
+              style={{
+                background: activeTab === tab ? 'var(--color-foreground)' : 'var(--color-card)',
+                color: activeTab === tab ? 'var(--color-background)' : 'var(--color-muted-foreground)',
+                border: '1px solid var(--color-card-border)',
+              }}
+            >
+              {tab === 'queue' ? `القائمة (${queueOrders.length})` : 'الإحصائيات'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {activeTab === 'queue' && (
@@ -162,59 +182,71 @@ function CallCenterPage() {
           ) : (
             queueOrders.map((order) => {
               const state = callStates[order.order_id]
+              const selectedAction = actionButtons.find((a) => a.key === state?.outcome)
+              const borderColor = selectedAction ? selectedAction.color : undefined
+
               return (
                 <div
                   key={order._row}
                   className="dc-card p-4 transition-all duration-200"
-                  style={state?.outcome ? { borderColor: 'rgba(227,30,36,0.3)', boxShadow: '0 0 0 3px rgba(227,30,36,0.06)' } : undefined}
+                  style={borderColor ? { borderColor: `${borderColor}40`, boxShadow: `0 0 0 3px ${borderColor}0a` } : undefined}
                 >
                   <div className="flex flex-col md:flex-row md:items-start gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-[14px]">{order.customerName}</h3>
-                        <span className="inline-flex items-center h-5 px-2 rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
-                          {order.status}
-                        </span>
+                    <div className="flex items-start gap-3 flex-1">
+                      <div
+                        className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 font-bold text-white text-[14px]"
+                        style={{ background: 'linear-gradient(135deg, #e31e24, #7d1622)' }}
+                      >
+                        {getInitials(order.customerName)}
                       </div>
-                      <p className="text-[12.5px] text-muted-foreground mb-1">
-                        {order.product} — {order.color} — {order.size}
-                      </p>
-                      <p className="font-mono text-[11.5px] text-muted-foreground" dir="ltr">
-                        <Phone className="inline h-3 w-3 ml-1" />
-                        {order.phone}
-                      </p>
-                      <p className="font-mono text-[13px] font-semibold mt-1">
-                        {formatCurrency(Number(order.price) || 0)}
-                      </p>
-                      {order.notes && (
-                        <p className="text-[11.5px] text-muted-foreground mt-1">
-                          <MessageSquare className="inline h-3 w-3 ml-1" />
-                          {order.notes}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-[14px]">{order.customerName}</h3>
+                          <span className="inline-flex items-center h-5 px-2 rounded-full bg-muted text-[10px] font-bold text-muted-foreground shrink-0">
+                            {order.status}
+                          </span>
+                        </div>
+                        <p className="text-[12.5px] text-muted-foreground mb-1">
+                          {order.product} — {order.color} — {order.size}
                         </p>
-                      )}
+                        <div className="flex items-center gap-3 text-[11.5px] text-muted-foreground">
+                          <span dir="ltr" className="font-mono">
+                            <Phone className="inline h-3 w-3 ml-1" />
+                            {order.phone}
+                          </span>
+                          <span className="font-mono font-semibold text-foreground">
+                            {formatCurrency(Number(order.price) || 0)}
+                          </span>
+                        </div>
+                        {order.notes && (
+                          <p className="text-[11.5px] text-muted-foreground mt-1">
+                            <MessageSquare className="inline h-3 w-3 ml-1" />
+                            {order.notes}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="w-full md:w-72 space-y-3">
                       <div className="flex gap-2">
-                        {([
-                          { key: 'answered', label: 'ردّ', icon: CheckCircle, color: '#22c55e' },
-                          { key: 'no_answer', label: 'ما ردّش', icon: PhoneOff, color: '#f97316' },
-                          { key: 'postponed', label: 'مؤجّل', icon: Clock, color: '#f59e0b' },
-                        ] as const).map(({ key, label, icon: Icon, color }) => (
-                          <button
-                            key={key}
-                            onClick={() => updateCallState(order.order_id, 'outcome', key)}
-                            className="flex-1 flex items-center justify-center gap-1 h-9 rounded-[11px] text-[12px] font-bold transition-all"
-                            style={{
-                              background: state?.outcome === key ? color : 'transparent',
-                              color: state?.outcome === key ? '#fff' : 'var(--color-muted-foreground)',
-                              border: `1px solid ${state?.outcome === key ? color : 'var(--color-card-border)'}`,
-                            }}
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                            {label}
-                          </button>
-                        ))}
+                        {actionButtons.map(({ key, label, icon: Icon, color }) => {
+                          const isActive = state?.outcome === key
+                          return (
+                            <button
+                              key={key}
+                              onClick={() => updateCallState(order.order_id, 'outcome', key)}
+                              className="flex-1 flex items-center justify-center gap-1 h-9 rounded-[11px] text-[12px] font-bold transition-all"
+                              style={{
+                                background: isActive ? color : 'transparent',
+                                color: isActive ? '#fff' : color,
+                                border: `1px solid ${color}`,
+                              }}
+                            >
+                              <Icon className="h-3.5 w-3.5" />
+                              {label}
+                            </button>
+                          )
+                        })}
                       </div>
 
                       <Input
@@ -222,6 +254,7 @@ function CallCenterPage() {
                         value={state?.note || ''}
                         onChange={(e) => updateCallState(order.order_id, 'note', e.target.value)}
                         className="h-9 rounded-[11px] text-[12px]"
+                        style={borderColor ? { borderColor: `${borderColor}60` } : undefined}
                       />
 
                       {state?.outcome === 'postponed' && (

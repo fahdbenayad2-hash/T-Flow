@@ -2,12 +2,11 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { useOrders } from '~/lib/queries'
 import { Input } from '~/components/ui/input'
-import { Search, Users, ShoppingCart, DollarSign } from 'lucide-react'
+import { Search } from 'lucide-react'
 import type { Order, Customer } from '~/lib/types'
 import { formatCurrency } from '~/lib/utils'
 import { STATUS } from '~/lib/sheet-mapping'
 import { ErrorState, CustomersEmptyState } from '~/components/empty-state'
-
 
 export const Route = createFileRoute('/_authenticated/customers')({
   component: CustomersPage,
@@ -50,16 +49,26 @@ function aggregateCustomers(orders: Order[]): Customer[] {
   return Array.from(map.values()).sort((a, b) => b.totalOrders - a.totalOrders)
 }
 
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return parts[0][0] + parts[1][0]
+  return parts[0]?.slice(0, 2) || '??'
+}
+
 function CustomersSkeleton() {
   return (
     <div className="flex flex-col gap-5">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-[110px] rounded-[15px] skeleton-shimmer" />
+          <div key={i} className="h-[100px] rounded-[15px] skeleton-shimmer" />
         ))}
       </div>
       <div className="h-10 rounded-[11px] skeleton-shimmer" />
-      <div className="h-[400px] rounded-[15px] skeleton-shimmer" />
+      <div className="flex flex-col gap-3">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-[72px] rounded-[15px] skeleton-shimmer" />
+        ))}
+      </div>
     </div>
   )
 }
@@ -93,9 +102,9 @@ function CustomersPage() {
   }
 
   const kpis = [
-    { label: 'إجمالي العملاء', value: customers.length, icon: Users, color: '#e31e24', accent: '#e31e24', iconBg: 'rgba(227,30,36,0.1)' },
-    { label: 'متوسط الطلبات', value: avgOrders, icon: ShoppingCart, color: '#3b82f6', accent: '#3b82f6', iconBg: 'rgba(59,130,246,0.12)' },
-    { label: 'إجمالي الإنفاق', value: formatCurrency(totalRevenue), icon: DollarSign, color: '#22c55e', accent: '#22c55e', iconBg: 'rgba(34,197,94,0.12)' },
+    { label: 'العملاء', value: customers.length },
+    { label: 'إجمالي الإنفاق', value: formatCurrency(totalRevenue) },
+    { label: 'متوسط الطلبات', value: avgOrders },
   ]
 
   return (
@@ -104,27 +113,21 @@ function CustomersPage() {
         {kpis.map((kpi) => (
           <div
             key={kpi.label}
-            className="relative overflow-hidden bg-card p-[18px] kpi-accent"
+            className="relative overflow-hidden bg-card p-[18px]"
             style={{
               border: '1px solid var(--color-card-border)',
               borderRadius: 'var(--color-card-radius)',
-              ['--kpi-color' as string]: kpi.accent,
             }}
           >
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-[12.5px] text-muted-foreground font-medium">{kpi.label}</div>
-                <div className="font-mono text-[30px] font-bold mt-1.5 tracking-tight">{kpi.value}</div>
-              </div>
-              <div
-                className="flex items-center justify-center w-[38px] h-[38px] rounded-[11px] shrink-0"
-                style={{ background: kpi.iconBg }}
-              >
-                <kpi.icon className="w-[18px] h-[18px]" style={{ color: kpi.color }} />
-              </div>
-            </div>
+            <div className="font-mono text-[30px] font-bold tracking-tight">{kpi.value}</div>
+            <div className="text-[12.5px] text-muted-foreground font-medium mt-1">{kpi.label}</div>
           </div>
         ))}
+      </div>
+
+      <div className="flex items-center justify-between">
+        <h3 className="text-[14.5px] font-extrabold">قاعدة العملاء</h3>
+        <span className="text-[12px] text-muted-foreground">مرتّبة حسب الإنفاق</span>
       </div>
 
       <div className="relative">
@@ -154,67 +157,41 @@ function CustomersPage() {
           )}
         </div>
       ) : (
-        <div className="dc-card overflow-hidden">
-          <div
-            className="flex items-center text-[11.5px] font-bold text-muted-foreground sticky top-0 z-10"
-            style={{ background: 'var(--color-table-header)', borderBottom: '1px solid var(--color-table-border)' }}
-          >
-            <div className="px-3 py-3 flex-1 min-w-[130px]">الاسم</div>
-            <div className="px-2 py-3 w-[120px] shrink-0">الهاتف</div>
-            <div className="px-2 py-3 w-20 shrink-0 text-center">الطلبات</div>
-            <div className="px-2 py-3 w-[104px] shrink-0">الإنفاق</div>
-            <div className="px-2 py-3 w-16 shrink-0 text-center">إلغاء</div>
-            <div className="px-2 py-3 w-16 shrink-0 text-center">ما جاوبش</div>
-            <div className="px-2 py-3 w-[100px] shrink-0">آخر طلب</div>
-            <div className="px-2 py-3 w-16 shrink-0">الملف</div>
-          </div>
-          <div className="overflow-auto max-h-[calc(100vh-22rem)]">
-            {filteredCustomers.map((customer) => (
+        <div className="flex flex-col gap-3">
+          {filteredCustomers.map((customer) => (
+            <Link
+              key={customer.phone}
+              to="/customers/$phone"
+              params={{ phone: customer.phone }}
+              className="dc-card p-4 flex items-center gap-4 card-hover"
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
               <div
-                key={customer.phone}
-                className="flex items-center text-[13px] border-b border-divider last:border-b-0 table-row-hover"
+                className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 font-bold text-white text-[15px]"
+                style={{ background: 'linear-gradient(135deg, #e31e24, #7d1622)' }}
               >
-                <div className="px-3 py-2.5 flex-1 min-w-[130px] font-bold truncate">{customer.name}</div>
-                <div className="px-2 py-2.5 w-[120px] shrink-0 font-mono text-[11.5px] text-muted-foreground" dir="ltr">
-                  {customer.phone}
-                </div>
-                <div className="px-2 py-2.5 w-20 shrink-0 font-mono text-center">{customer.totalOrders}</div>
-                <div className="px-2 py-2.5 w-[104px] shrink-0 font-mono text-[12px] font-semibold">
-                  {formatCurrency(customer.totalSpent)}
-                </div>
-                <div className="px-2 py-2.5 w-16 shrink-0 text-center">
-                  {customer.cancelledCount > 0 ? (
-                    <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-[var(--status-cancelled)]/15 text-[var(--status-cancelled)] font-mono text-[10px] font-bold">
-                      {customer.cancelledCount}
+                {getInitials(customer.name)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-[14px] truncate">{customer.name}</span>
+                  {customer.isBlacklisted && (
+                    <span className="inline-flex items-center h-5 px-2 rounded-full bg-[var(--status-cancelled)]/15 text-[var(--status-cancelled)] text-[10px] font-bold shrink-0">
+                      محظور
                     </span>
-                  ) : (
-                    <span className="text-muted-foreground text-[11px]">-</span>
                   )}
                 </div>
-                <div className="px-2 py-2.5 w-16 shrink-0 text-center">
-                  {customer.noAnswerCount > 0 ? (
-                    <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-[var(--status-no-answer)]/15 text-[var(--status-no-answer)] font-mono text-[10px] font-bold">
-                      {customer.noAnswerCount}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground text-[11px]">-</span>
-                  )}
-                </div>
-                <div className="px-2 py-2.5 w-[100px] shrink-0 font-mono text-[11px] text-muted-foreground">
-                  {customer.lastOrderDate.slice(0, 12)}
-                </div>
-                <div className="px-2 py-2.5 w-16 shrink-0">
-                  <Link
-                    to="/customers/$phone"
-                    params={{ phone: customer.phone }}
-                    className="text-[#c41a1f] hover:underline font-semibold text-[11.5px]"
-                  >
-                    عرض
-                  </Link>
+                <div className="flex items-center gap-3 mt-1 text-[12px] text-muted-foreground">
+                  <span dir="ltr" className="font-mono">{customer.phone}</span>
+                  <span>{customer.totalOrders} طلب</span>
+                  <span>{customer.name.split(' ')[0]}</span>
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="text-left shrink-0">
+                <div className="font-mono text-[14px] font-bold">{formatCurrency(customer.totalSpent)}</div>
+              </div>
+            </Link>
+          ))}
         </div>
       )}
 
