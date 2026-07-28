@@ -63,14 +63,27 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
     }
 
     const fetchedAt = Date.now()
-    const orders: Order[] = raw.map((row) => {
-      const mapped = mapRawRowToOrder(row)
-      return {
-        ...mapped,
-        order_id: generateOrderId(mapped.phone, mapped.date, mapped.product),
-        lastModified: fetchedAt,
-      }
-    })
+    const ghostRows: Array<{ _row: number; date: string; status: string }> = []
+    const orders: Order[] = raw
+      .map((row) => {
+        const mapped = mapRawRowToOrder(row)
+        return {
+          ...mapped,
+          order_id: generateOrderId(mapped.phone, mapped.date, mapped.product),
+          lastModified: fetchedAt,
+        }
+      })
+      .filter((order) => {
+        const isGhost = !String(order.phone || '').trim() && !String(order.product || '').trim()
+        if (isGhost) {
+          ghostRows.push({ _row: order._row, date: order.date, status: order.status })
+        }
+        return !isGhost
+      })
+
+    if (ghostRows.length > 0) {
+      console.warn(`[T-Flow] Filtered out ${ghostRows.length} ghost rows`, ghostRows)
+    }
 
     cache = { data: orders, fetchedAt }
 
