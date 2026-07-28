@@ -31,6 +31,27 @@ export const fetchUserRoles = createServerFn({ method: 'GET' })
   .handler(async ({ data: userId }) => {
     if (DEMO_MODE) return ['admin'] as AppRole[]
 
+    // Only the target user or an admin may read roles
+    const { getCookie } = await import('@tanstack/react-start/server')
+    const token = getCookie(AUTH_TOKEN_COOKIE)
+    if (!token) return []
+
+    const session = getSupabaseSessionClient(token)
+    const { data: caller, error: callerError } = await session.auth.getUser()
+    if (callerError || !caller.user) return []
+
+    const isSelf = caller.user.id === userId
+    if (!isSelf) {
+      // Check if caller is admin
+      const admin = getSupabaseAdminClient()
+      const { data: callerRoles } = await admin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', caller.user.id)
+      const roles = (callerRoles || []).map((r) => r.role) as AppRole[]
+      if (!roles.includes('admin')) return []
+    }
+
     const supabase = getSupabaseAdminClient()
     const { data, error } = await supabase.from('user_roles').select('role').eq('user_id', userId)
 
