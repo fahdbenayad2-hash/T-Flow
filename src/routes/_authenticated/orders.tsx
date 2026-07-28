@@ -160,10 +160,15 @@ function OrdersPage() {
       toast.error('اختر الحالة والطلبات')
       return
     }
-    const items = Array.from(selectedRows).map((row) => ({
-      row,
-      updates: { status: bulkStatus },
-    }))
+    const items = Array.from(selectedRows).map((row) => {
+      const order = orders.find((o) => o._row === row)
+      return {
+        row,
+        updates: { status: bulkStatus },
+        phone: order ? String(order.phone) : undefined,
+        product: order ? order.product : undefined,
+      }
+    })
     toast.loading(`جاري تحديث ${items.length} طلب...`, { id: 'bulk' })
     try {
       const { count } = await bulkMutation.mutateAsync(items)

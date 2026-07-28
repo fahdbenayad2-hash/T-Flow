@@ -3,6 +3,7 @@ import {
   getOrders,
   updateOrder,
   batchUpdateOrders,
+  deleteOrder,
   getAuditLog,
   invalidateOrdersCache,
 } from '~/server/orders'
@@ -57,6 +58,27 @@ export function useBulkUpdateOrders() {
       items: Array<{ row: number; updates: Record<string, unknown>; order_id?: string }>,
     ) => {
       const result = await batchUpdateOrders({ data: { updates: items } })
+      if (!result.ok) {
+        throw new Error(result.error.message)
+      }
+      return result.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  })
+}
+
+export function useDeleteOrder() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (data: {
+      row: number
+      order_id?: string
+      orderData?: Record<string, unknown>
+    }) => {
+      const result = await deleteOrder({ data })
       if (!result.ok) {
         throw new Error(result.error.message)
       }

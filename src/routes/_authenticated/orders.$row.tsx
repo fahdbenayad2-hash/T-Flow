@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useOrders, useUpdateOrder, useAuditLog } from '~/lib/queries'
+import { useOrders, useUpdateOrder, useAuditLog, useDeleteOrder } from '~/lib/queries'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -14,11 +14,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
-import { ArrowRight, RefreshCw, Save, Clock, User, Package } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '~/components/ui/dialog'
+import { ArrowRight, RefreshCw, Save, Clock, User, Package, Trash2 } from 'lucide-react'
 import { formatCurrency } from '~/lib/utils'
 import { ALL_STATUSES } from '~/lib/sheet-mapping'
 import { FadeIn, StaggerContainer } from '~/components/page-transition'
 import { ErrorState } from '~/components/empty-state'
+import { useRole } from '~/hooks/useRole'
 import toast from 'react-hot-toast'
 import type { AuditEntry } from '~/lib/types'
 import { StatusBadge } from '~/components/status-badge'
@@ -32,7 +41,10 @@ function OrderDetailPage() {
   const router = useRouter()
   const { data, isLoading, isError, error, refetch } = useOrders()
   const updateMutation = useUpdateOrder()
+  const deleteMutation = useDeleteOrder()
   const { data: auditLogs } = useAuditLog(row)
+  const { isAdmin } = useRole()
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   const order = data?.orders?.find((o) => o._row === Number(row))
 
@@ -88,12 +100,29 @@ function OrderDetailPage() {
         row: order._row,
         updates,
         lastModified: order.lastModified,
+        phone: String(order.phone),
+        product: order.product,
       })
       toast.success('تم تحديث الطلب بنجاح')
       setEditStatus('')
       setEditNotes('')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'فشل التحديث')
+    }
+  }
+
+  const handleDelete = async () => {
+    try {
+      await deleteMutation.mutateAsync({
+        row: order._row,
+        order_id: order.order_id,
+        orderData: order as unknown as Record<string, unknown>,
+      })
+      toast.success('تم حذف الطلب بنجاح')
+      setDeleteDialogOpen(false)
+      router.navigate({ to: '/orders' })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'فشل الحذف')
     }
   }
 
@@ -225,7 +254,20 @@ function OrderDetailPage() {
                 />
               </div>
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center">
+              <div>
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    حذف الطلب
+                  </Button>
+                )}
+              </div>
               <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-1.5">
                 {updateMutation.isPending ? (
                   <RefreshCw className="h-4 w-4 animate-spin" />
@@ -238,6 +280,54 @@ function OrderDetailPage() {
           </CardContent>
         </Card>
       </FadeIn>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تأكيد حذف الطلب</DialogTitle>
+            <DialogDescription>
+              هل أنت متأكد من حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm py-2">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">الزبون</span>
+              <span className="font-medium">{order.customerName}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">رقم الطلب</span>
+              <span className="font-mono text-xs">{order.order_id}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">الهاتف</span>
+              <span className="font-mono text-xs" dir="ltr">{order.phone}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">المنتج</span>
+              <span className="font-medium">{order.product}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="gap-1.5"
+            >
+              {deleteMutation.isPending ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              تأكيد الحذف
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Audit log */}
       {auditLogs && auditLogs.length > 0 && (
