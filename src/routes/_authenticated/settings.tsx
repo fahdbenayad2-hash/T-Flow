@@ -4,6 +4,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Globe, Shield, Save, RefreshCw, CheckCircle, Trash2, Moon, Bell, Copy } from 'lucide-react'
 import { RoleGuard } from '~/components/role-guard'
+import { OrderMigrationCard } from '~/components/order-migration-card'
 import toast from 'react-hot-toast'
 
 export const Route = createFileRoute('/_authenticated/settings')({
@@ -225,6 +226,9 @@ function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Order storage migration */}
+        <OrderMigrationCard />
 
         {/* Cache */}
         <div className="dc-card p-5">

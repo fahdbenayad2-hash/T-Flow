@@ -164,6 +164,7 @@ function OrdersPage() {
       const order = orders.find((o) => o._row === row)
       return {
         row,
+        order_id: order?.order_id,
         updates: { status: bulkStatus },
         phone: order ? String(order.phone) : undefined,
         product: order ? order.product : undefined,

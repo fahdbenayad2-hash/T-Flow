@@ -98,6 +98,7 @@ function OrderDetailPage() {
     try {
       await updateMutation.mutateAsync({
         row: order._row,
+        order_id: order.order_id,
         updates,
         lastModified: order.lastModified,
         phone: String(order.phone),

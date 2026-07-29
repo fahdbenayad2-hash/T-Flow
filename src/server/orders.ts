@@ -1,27 +1,30 @@
 import { createServerFn } from '@tanstack/react-start'
-import { DEMO_MODE_SERVER as DEMO_MODE, ORDER_CACHE_TTL_S, APPS_SCRIPT_SECRET } from '~/config'
+import {
+  DEMO_MODE_SERVER as DEMO_MODE,
+  ORDER_CACHE_TTL_S,
+  APPS_SCRIPT_SECRET,
+  getOrderStorageMode,
+  type OrderStorageMode,
+} from '~/config'
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
-import { mapRawRowToOrder, toSheetUpdates } from '~/lib/sheet-mapping'
+import { toSheetUpdates } from '~/lib/sheet-mapping'
 import type { Order } from '~/lib/types'
 import type { AppRole } from '~/lib/types'
 import { generateOrderId } from '~/lib/utils'
 import { requireUser, fetchUserRoles, requireAdmin } from './auth'
+import {
+  batchUpdateSupabaseOrders,
+  listSupabaseOrders,
+  softDeleteSupabaseOrder,
+  updateSupabaseOrder,
+} from './order-repository'
+import { appsScriptUrl, fetchSheetOrders, scriptHeaders } from './sheet-orders'
 
-function appsScriptUrl(): string {
-  const url = process.env.APPS_SCRIPT_URL
-  if (!url) throw new Error('Missing APPS_SCRIPT_URL environment variable')
-  const separator = url.includes('?') ? '&' : '?'
-  const secretParam = APPS_SCRIPT_SECRET ? `${separator}secret=${encodeURIComponent(APPS_SCRIPT_SECRET)}` : ''
-  return url + secretParam
-}
-
-function scriptHeaders(): Record<string, string> {
-  const h: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (APPS_SCRIPT_SECRET) h['X-TFlow-Secret'] = APPS_SCRIPT_SECRET
-  return h
-}
-
-let cache: { data: Order[]; fetchedAt: number } | null = null
+let cache: {
+  data: Order[]
+  fetchedAt: number
+  mode: OrderStorageMode
+} | null = null
 const CACHE_TTL = ORDER_CACHE_TTL_S * 1000
 
 async function requireRole(allowedRoles: AppRole[]): Promise<string> {
@@ -34,58 +37,17 @@ async function requireRole(allowedRoles: AppRole[]): Promise<string> {
 }
 
 export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
-  await requireUser()
+  const userId = await requireUser()
+  const mode = getOrderStorageMode()
 
-  if (cache && Date.now() - cache.fetchedAt < CACHE_TTL) {
+  if (cache && cache.mode === mode && Date.now() - cache.fetchedAt < CACHE_TTL) {
     return { orders: cache.data, fromCache: true }
   }
 
   try {
-    const res = await fetch(appsScriptUrl(), {
-      method: 'GET',
-      headers: scriptHeaders(),
-    })
-
-    if (!res.ok) {
-      // If 403 from GAS, the secret is wrong — surface a clear message
-      if (res.status === 403) {
-        throw new Error('Apps Script authentication failed — check APPS_SCRIPT_SECRET')
-      }
-      throw new Error(`Apps Script responded with ${res.status}`)
-    }
-
-    const json = await res.json()
-
-    const raw: Array<Record<string, unknown>> = Array.isArray(json) ? json : json.orders || []
-
-    if (!Array.isArray(json) && !json.orders) {
-      throw new Error('Unexpected Apps Script response format')
-    }
-
+    const orders = mode === 'supabase' ? await listSupabaseOrders(userId) : await fetchSheetOrders()
     const fetchedAt = Date.now()
-    const ghostRows: Array<{ _row: number; date: string; status: string }> = []
-    const orders: Order[] = raw
-      .map((row) => {
-        const mapped = mapRawRowToOrder(row)
-        return {
-          ...mapped,
-          order_id: generateOrderId(mapped.phone, mapped.date, mapped.product),
-          lastModified: fetchedAt,
-        }
-      })
-      .filter((order) => {
-        const isGhost = !String(order.phone || '').trim() && !String(order.product || '').trim()
-        if (isGhost) {
-          ghostRows.push({ _row: order._row, date: order.date, status: order.status })
-        }
-        return !isGhost
-      })
-
-    if (ghostRows.length > 0) {
-      console.warn(`[T-Flow] Filtered out ${ghostRows.length} ghost rows`, ghostRows)
-    }
-
-    cache = { data: orders, fetchedAt }
+    cache = { data: orders, fetchedAt, mode }
 
     return { orders, fromCache: false }
   } catch (error) {
@@ -110,12 +72,11 @@ export const updateOrder = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     // admin + shipping_manager can update status; confirmation_agent limited to notes
-    await requireRole(['admin', 'shipping_manager', 'confirmation_agent'])
+    const actorUserId = await requireRole(['admin', 'shipping_manager', 'confirmation_agent'])
+    const storageMode = getOrderStorageMode()
 
     // Limit confirmation_agent to notes-only updates
-    const roles = DEMO_MODE
-      ? (['admin'] as AppRole[])
-      : await fetchUserRoles({ data: await requireUser() })
+    const roles = DEMO_MODE ? (['admin'] as AppRole[]) : await fetchUserRoles({ data: actorUserId })
     if (roles.includes('confirmation_agent')) {
       const allowedKeys = ['notes', 'status']
       const updateKeys = Object.keys(data.updates)
@@ -125,7 +86,12 @@ export const updateOrder = createServerFn({ method: 'POST' })
       }
     }
 
-    if (data.lastModified && cache && cache.fetchedAt > data.lastModified) {
+    if (
+      storageMode !== 'supabase' &&
+      data.lastModified &&
+      cache &&
+      cache.fetchedAt > data.lastModified
+    ) {
       return {
         ok: false as const,
         error: {
@@ -136,6 +102,63 @@ export const updateOrder = createServerFn({ method: 'POST' })
     }
 
     const sheetUpdates = toSheetUpdates(data.updates)
+
+    if (storageMode === 'supabase') {
+      try {
+        const result = await updateSupabaseOrder(
+          actorUserId,
+          { orderId: data.order_id, sheetRow: data.row },
+          data.updates,
+          data.lastModified,
+        )
+
+        if (result.stale) {
+          return {
+            ok: false as const,
+            error: {
+              code: 'STALE_DATA',
+              message: 'تم تعديل الطلب من مستخدم آخر، حدّث الصفحة ثم أعد المحاولة',
+            },
+          }
+        }
+
+        if (!result.updated) {
+          return {
+            ok: false as const,
+            error: {
+              code: 'ORDER_NOT_FOUND',
+              message: 'لم يتم العثور على الطلب في قاعدة البيانات',
+            },
+          }
+        }
+
+        if (!DEMO_MODE) {
+          try {
+            const supabase = getSupabaseAdminClient()
+            await supabase.from('audit_log').insert({
+              order_id: result.orderId || data.order_id || null,
+              actor_id: actorUserId,
+              action: 'update_order',
+              old_value: data.lastModified ? { lastModified: data.lastModified } : null,
+              new_value: data.updates,
+            })
+          } catch (error) {
+            console.warn('Audit log failed (non-critical):', error)
+          }
+        }
+
+        cache = null
+        return { ok: true as const, data: { success: true } }
+      } catch (error) {
+        return {
+          ok: false as const,
+          error: {
+            code: 'DATABASE_ERROR',
+            message: error instanceof Error ? error.message : 'فشل تحديث الطلب في قاعدة البيانات',
+          },
+        }
+      }
+    }
 
     try {
       const body: Record<string, unknown> = {
@@ -188,6 +211,17 @@ export const updateOrder = createServerFn({ method: 'POST' })
           error: { code: 'PROXY_ERROR', message: `فشل الاتصال بالخادوم (${response.status})` },
         }
       }
+
+      const responseBody = await response.json().catch(() => ({}))
+      if (responseBody.ok === false) {
+        return {
+          ok: false as const,
+          error: {
+            code: 'PROXY_ERROR',
+            message: responseBody.error || responseBody.message || 'رفض Apps Script عملية التحديث',
+          },
+        }
+      }
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'خطأ غير معروف'
       if (
@@ -206,6 +240,18 @@ export const updateOrder = createServerFn({ method: 'POST' })
       return { ok: false as const, error: { code: 'UNKNOWN', message: `خطأ غير متوقع: ${msg}` } }
     }
 
+    if (storageMode === 'shadow') {
+      try {
+        await updateSupabaseOrder(
+          actorUserId,
+          { orderId: data.order_id, sheetRow: data.row },
+          data.updates,
+        )
+      } catch (error) {
+        console.warn('Supabase shadow update failed (Sheets succeeded):', error)
+      }
+    }
+
     if (!DEMO_MODE) {
       try {
         const supabase = getSupabaseAdminClient()
@@ -218,6 +264,7 @@ export const updateOrder = createServerFn({ method: 'POST' })
           )
         await supabase.from('audit_log').insert({
           order_id: orderId,
+          actor_id: actorUserId,
           action: 'update_order',
           old_value: data.lastModified ? { lastModified: data.lastModified } : null,
           new_value: sheetUpdates,
@@ -246,9 +293,62 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     // Only admin and shipping_manager can bulk-update
-    await requireRole(['admin', 'shipping_manager'])
+    const actorUserId = await requireRole(['admin', 'shipping_manager'])
+    const storageMode = getOrderStorageMode()
 
     if (!data.updates.length) return { ok: true as const, data: { count: 0 } }
+
+    if (storageMode === 'supabase') {
+      try {
+        const result = await batchUpdateSupabaseOrders(
+          actorUserId,
+          data.updates.map((item) => ({
+            identifier: {
+              orderId: item.order_id,
+              sheetRow: item.row,
+            },
+            updates: item.updates,
+          })),
+        )
+        if (result.missing > 0) {
+          return {
+            ok: false as const,
+            error: {
+              code: 'PARTIAL_UPDATE',
+              message: `تعذر العثور على ${result.missing} طلب`,
+            },
+          }
+        }
+
+        if (!DEMO_MODE) {
+          try {
+            const supabase = getSupabaseAdminClient()
+            await supabase.from('audit_log').insert(
+              data.updates.map((item) => ({
+                order_id: item.order_id || null,
+                actor_id: actorUserId,
+                action: 'batch_update_order',
+                new_value: item.updates,
+              })),
+            )
+          } catch (error) {
+            console.warn('Audit log failed (non-critical):', error)
+          }
+        }
+
+        cache = null
+        return { ok: true as const, data: { count: result.count } }
+      } catch (error) {
+        return {
+          ok: false as const,
+          error: {
+            code: 'DATABASE_ERROR',
+            message:
+              error instanceof Error ? error.message : 'فشل التحديث الجماعي في قاعدة البيانات',
+          },
+        }
+      }
+    }
 
     const sheetUpdates = data.updates.map((u) => ({
       _row: u.row,
@@ -266,6 +366,25 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
         headers: scriptHeaders(),
         body: JSON.stringify(batchBody),
       })
+
+      const batchResponseBody = response.ok
+        ? await response
+            .clone()
+            .json()
+            .catch(() => ({}))
+        : {}
+      if (batchResponseBody.ok === false) {
+        return {
+          ok: false as const,
+          error: {
+            code: 'PROXY_ERROR',
+            message:
+              batchResponseBody.error ||
+              batchResponseBody.message ||
+              'رفض Apps Script عملية التحديث الجماعي',
+          },
+        }
+      }
 
       if (!response.ok) {
         const text = await response.text().catch(() => '')
@@ -310,6 +429,23 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
       return { ok: false as const, error: { code: 'UNKNOWN', message: `خطأ غير متوقع: ${msg}` } }
     }
 
+    if (storageMode === 'shadow') {
+      try {
+        await batchUpdateSupabaseOrders(
+          actorUserId,
+          data.updates.map((item) => ({
+            identifier: {
+              orderId: item.order_id,
+              sheetRow: item.row,
+            },
+            updates: item.updates,
+          })),
+        )
+      } catch (error) {
+        console.warn('Supabase shadow batch update failed (Sheets succeeded):', error)
+      }
+    }
+
     if (!DEMO_MODE) {
       try {
         const supabase = getSupabaseAdminClient()
@@ -321,6 +457,7 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
               String(u.updates.date || ''),
               String(u.updates.product || ''),
             ),
+          actor_id: actorUserId,
           action: 'batch_update_order',
           new_value: toSheetUpdates(u.updates),
         }))
@@ -337,14 +474,11 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
 
 export const deleteOrder = createServerFn({ method: 'POST' })
   .validator(
-    (data: {
-      row: number
-      order_id?: string
-      orderData?: Record<string, unknown>
-    }) => data,
+    (data: { row: number; order_id?: string; orderData?: Record<string, unknown> }) => data,
   )
   .handler(async ({ data }) => {
-    await requireAdmin()
+    const actorUserId = await requireAdmin()
+    const storageMode = getOrderStorageMode()
 
     // Log the full order data before deletion (for audit trail)
     if (!DEMO_MODE && data.orderData) {
@@ -352,12 +486,41 @@ export const deleteOrder = createServerFn({ method: 'POST' })
         const supabase = getSupabaseAdminClient()
         await supabase.from('audit_log').insert({
           order_id: data.order_id || null,
+          actor_id: actorUserId,
           action: 'delete_order',
           old_value: data.orderData,
           new_value: null,
         })
       } catch (e) {
         console.warn('Audit log failed (non-critical):', e)
+      }
+    }
+
+    if (storageMode === 'supabase') {
+      try {
+        const deleted = await softDeleteSupabaseOrder(actorUserId, {
+          orderId: data.order_id,
+          sheetRow: data.row,
+        })
+        if (!deleted) {
+          return {
+            ok: false as const,
+            error: {
+              code: 'ORDER_NOT_FOUND',
+              message: 'لم يتم العثور على الطلب في قاعدة البيانات',
+            },
+          }
+        }
+        cache = null
+        return { ok: true as const, data: { success: true } }
+      } catch (error) {
+        return {
+          ok: false as const,
+          error: {
+            code: 'DATABASE_ERROR',
+            message: error instanceof Error ? error.message : 'فشل حذف الطلب من قاعدة البيانات',
+          },
+        }
       }
     }
 
@@ -371,8 +534,26 @@ export const deleteOrder = createServerFn({ method: 'POST' })
         body: JSON.stringify(body),
       })
 
+      const deleteResponseBody = response.ok
+        ? await response
+            .clone()
+            .json()
+            .catch(() => ({}))
+        : {}
+      if (deleteResponseBody.ok === false) {
+        return {
+          ok: false as const,
+          error: {
+            code: 'PROXY_ERROR',
+            message:
+              deleteResponseBody.error ||
+              deleteResponseBody.message ||
+              'رفض Apps Script عملية الحذف',
+          },
+        }
+      }
+
       if (!response.ok) {
-        const text = await response.text().catch(() => '')
         if (response.status === 403) {
           return {
             ok: false as const,
@@ -406,6 +587,17 @@ export const deleteOrder = createServerFn({ method: 'POST' })
         }
       }
       return { ok: false as const, error: { code: 'UNKNOWN', message: `خطأ غير متوقع: ${msg}` } }
+    }
+
+    if (storageMode === 'shadow') {
+      try {
+        await softDeleteSupabaseOrder(actorUserId, {
+          orderId: data.order_id,
+          sheetRow: data.row,
+        })
+      } catch (error) {
+        console.warn('Supabase shadow delete failed (Sheets succeeded):', error)
+      }
     }
 
     // Invalidate cache immediately — row numbers have shifted

@@ -23,3 +23,17 @@ export const AUTH_TOKEN_COOKIE = 'tf-at'
 
 /** Apps Script shared secret — sent as X-TFlow-Secret header */
 export const APPS_SCRIPT_SECRET = process.env.APPS_SCRIPT_SECRET || ''
+
+export type OrderStorageMode = 'sheets' | 'shadow' | 'supabase'
+
+/**
+ * Order storage rollout mode.
+ *
+ * - sheets: Google Sheets is the only order store (current production behavior)
+ * - shadow: Sheets remains primary; successful mutations are mirrored to Supabase
+ * - supabase: Supabase is primary; switch back to sheets for an immediate rollback
+ */
+export function getOrderStorageMode(value = process.env.ORDER_STORAGE_MODE): OrderStorageMode {
+  if (value === 'shadow' || value === 'supabase') return value
+  return 'sheets'
+}

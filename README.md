@@ -295,6 +295,11 @@ T-Flow expects your Google Sheet to have these columns (Arabic headers):
 
 ## Roadmap
 
+> The Supabase order-storage foundation is implemented behind
+> `ORDER_STORAGE_MODE`. See
+> [`docs/supabase-order-migration.md`](docs/supabase-order-migration.md) for the
+> non-disruptive `sheets → shadow → supabase` rollout.
+
 ### Near-term (hardening what exists)
 
 | Priority | Item                              | Notes                                                                                                                                                                     |
