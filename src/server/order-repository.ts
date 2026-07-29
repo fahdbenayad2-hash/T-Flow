@@ -4,6 +4,7 @@ import {
   databaseRowToOrder,
   orderToDatabaseInsert,
   toDatabaseOrderUpdates,
+  type DatabaseOrderInsert,
   type DatabaseOrderRow,
 } from '~/lib/order-record'
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
@@ -33,6 +34,52 @@ function chunks<T>(items: T[], size: number): T[][] {
     result.push(items.slice(i, i + size))
   }
   return result
+}
+
+function prepareSheetOrderRows(
+  orders: Order[],
+  storeId: string,
+): { rows: DatabaseOrderInsert[]; skipped: number } {
+  const validOrders = orders.filter(
+    (order) =>
+      Boolean(String(order.phone || '').trim()) || Boolean(String(order.product || '').trim()),
+  )
+  const idFrequency = new Map<string, number>()
+  for (const order of validOrders) {
+    idFrequency.set(order.order_id, (idFrequency.get(order.order_id) || 0) + 1)
+  }
+
+  const rows = validOrders.map((order) => {
+    const sourceOrderId =
+      (idFrequency.get(order.order_id) || 0) > 1
+        ? `${order.order_id}:sheet-row:${order._row}`
+        : order.order_id
+    return orderToDatabaseInsert(order, storeId, sourceOrderId)
+  })
+
+  return { rows, skipped: orders.length - validOrders.length }
+}
+
+async function loadExistingSourceOrderIds(
+  supabase: SupabaseClient,
+  storeId: string,
+): Promise<Set<string>> {
+  const existingIds = new Set<string>()
+
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data: existing, error } = await supabase
+      .from('orders')
+      .select('source_order_id')
+      .eq('store_id', storeId)
+      .eq('source', 'google_sheets')
+      .range(from, from + PAGE_SIZE - 1)
+
+    if (error) throw error
+    for (const row of existing || []) existingIds.add(row.source_order_id)
+    if (!existing || existing.length < PAGE_SIZE) break
+  }
+
+  return existingIds
 }
 
 async function addExistingUsersToStore(supabase: SupabaseClient, storeId: string): Promise<void> {
@@ -277,6 +324,38 @@ export async function softDeleteSupabaseOrder(
   return true
 }
 
+/**
+ * Bridges an external storefront that still writes new orders to Google Sheets
+ * after Supabase becomes the operational source of truth. Existing Supabase
+ * rows are never updated or deleted here, so dashboard edits cannot be
+ * overwritten by a stale Sheet snapshot.
+ */
+export async function ingestNewSheetOrdersToSupabase(
+  userId: string,
+  orders: Order[],
+): Promise<{ storeId: string; scanned: number; inserted: number; skipped: number }> {
+  const supabase = getSupabaseAdminClient()
+  const storeId = await resolveDefaultStoreId(userId, supabase)
+  const { rows, skipped } = prepareSheetOrderRows(orders, storeId)
+  const existingIds = await loadExistingSourceOrderIds(supabase, storeId)
+  const newRows = rows.filter((row) => !existingIds.has(row.source_order_id))
+
+  for (const group of chunks(newRows, UPSERT_BATCH_SIZE)) {
+    const { error } = await supabase.from('orders').upsert(group, {
+      onConflict: 'store_id,source,source_order_id',
+      ignoreDuplicates: true,
+    })
+    if (error) throw error
+  }
+
+  return {
+    storeId,
+    scanned: orders.length,
+    inserted: newRows.length,
+    skipped,
+  }
+}
+
 export async function importOrdersToSupabase(
   userId: string,
   orders: Order[],
@@ -299,36 +378,10 @@ export async function importOrdersToSupabase(
 
   if (syncRunError) throw syncRunError
 
-  const validOrders = orders.filter(
-    (order) =>
-      Boolean(String(order.phone || '').trim()) || Boolean(String(order.product || '').trim()),
-  )
-  const idFrequency = new Map<string, number>()
-  for (const order of validOrders) {
-    idFrequency.set(order.order_id, (idFrequency.get(order.order_id) || 0) + 1)
-  }
-  const rows = validOrders.map((order) => {
-    const sourceOrderId =
-      (idFrequency.get(order.order_id) || 0) > 1
-        ? `${order.order_id}:sheet-row:${order._row}`
-        : order.order_id
-    return orderToDatabaseInsert(order, storeId, sourceOrderId)
-  })
-  const existingIds = new Set<string>()
+  const { rows, skipped } = prepareSheetOrderRows(orders, storeId)
 
   try {
-    for (let from = 0; ; from += PAGE_SIZE) {
-      const { data: existing, error: existingError } = await supabase
-        .from('orders')
-        .select('source_order_id')
-        .eq('store_id', storeId)
-        .eq('source', 'google_sheets')
-        .range(from, from + PAGE_SIZE - 1)
-
-      if (existingError) throw existingError
-      for (const row of existing || []) existingIds.add(row.source_order_id)
-      if (!existing || existing.length < PAGE_SIZE) break
-    }
+    const existingIds = await loadExistingSourceOrderIds(supabase, storeId)
 
     // Sheet rows shift after deletions. Clear old pointers before assigning the
     // current snapshot so the partial unique index cannot conflict transiently.
@@ -363,8 +416,6 @@ export async function importOrdersToSupabase(
     const updated = rows.filter((row) => existingIds.has(row.source_order_id)).length
     const inserted = rows.length - updated
     const deleted = staleIds.length
-    const skipped = orders.length - validOrders.length
-
     const { error: finishError } = await supabase
       .from('order_sync_runs')
       .update({

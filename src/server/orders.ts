@@ -15,6 +15,7 @@ import { requireUser, fetchUserRoles, requireAdmin } from './auth'
 import {
   batchUpdateSupabaseOrders,
   importOrdersToSupabase,
+  ingestNewSheetOrdersToSupabase,
   listSupabaseOrders,
   softDeleteSupabaseOrder,
   updateSupabaseOrder,
@@ -27,6 +28,81 @@ let cache: {
   mode: OrderStorageMode
 } | null = null
 const CACHE_TTL = ORDER_CACHE_TTL_S * 1000
+
+async function requireSuccessfulSheetMirror(response: Response, operation: string): Promise<void> {
+  const responseBody = await response
+    .clone()
+    .json()
+    .catch(() => ({}))
+
+  if (!response.ok || responseBody.ok === false) {
+    throw new Error(
+      responseBody.error ||
+        responseBody.message ||
+        `${operation} failed with status ${response.status}`,
+    )
+  }
+}
+
+async function mirrorOrderUpdateToSheet(data: {
+  row: number
+  updates: Record<string, unknown>
+  phone?: string
+  product?: string
+}): Promise<void> {
+  const body: Record<string, unknown> = {
+    _row: data.row,
+    updates: toSheetUpdates(data.updates),
+  }
+  if (APPS_SCRIPT_SECRET) body._secret = APPS_SCRIPT_SECRET
+  if (data.phone) body._phone = data.phone
+  if (data.product) body._product = data.product
+
+  const response = await fetch(appsScriptUrl(), {
+    method: 'POST',
+    headers: scriptHeaders(),
+    body: JSON.stringify(body),
+  })
+  await requireSuccessfulSheetMirror(response, 'Sheet backup update')
+}
+
+async function mirrorBatchUpdateToSheet(
+  updates: Array<{
+    row: number
+    updates: Record<string, unknown>
+    phone?: string
+    product?: string
+  }>,
+): Promise<void> {
+  const body: Record<string, unknown> = {
+    batch: updates.map((item) => ({
+      _row: item.row,
+      updates: toSheetUpdates(item.updates),
+      _phone: item.phone,
+      _product: item.product,
+    })),
+  }
+  if (APPS_SCRIPT_SECRET) body._secret = APPS_SCRIPT_SECRET
+
+  const response = await fetch(appsScriptUrl(), {
+    method: 'POST',
+    headers: scriptHeaders(),
+    body: JSON.stringify(body),
+  })
+  await requireSuccessfulSheetMirror(response, 'Sheet backup batch update')
+}
+
+async function mirrorOrderDeleteToSheet(row: number): Promise<void> {
+  const body: Record<string, unknown> = { _delete: true, _row: row }
+  if (APPS_SCRIPT_SECRET) body._secret = APPS_SCRIPT_SECRET
+
+  const response = await fetch(appsScriptUrl(), {
+    method: 'POST',
+    headers: scriptHeaders(),
+    body: JSON.stringify(body),
+  })
+  await requireSuccessfulSheetMirror(response, 'Sheet backup delete')
+}
 
 async function requireRole(allowedRoles: AppRole[]): Promise<string> {
   const userId = await requireUser()
@@ -46,7 +122,22 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
   }
 
   try {
-    const orders = mode === 'supabase' ? await listSupabaseOrders(userId) : await fetchSheetOrders()
+    let orders: Order[]
+
+    if (mode === 'supabase') {
+      try {
+        const sheetOrders = await fetchSheetOrders()
+        await ingestNewSheetOrdersToSupabase(userId, sheetOrders)
+      } catch (error) {
+        // Sheets remains an inbound bridge for the external storefront only.
+        // Existing Supabase orders stay available if that bridge is offline.
+        console.warn('Sheet order intake failed (Supabase served):', error)
+      }
+
+      orders = await listSupabaseOrders(userId)
+    } else {
+      orders = await fetchSheetOrders()
+    }
 
     if (mode === 'shadow') {
       try {
@@ -160,6 +251,12 @@ export const updateOrder = createServerFn({ method: 'POST' })
           } catch (error) {
             console.warn('Audit log failed (non-critical):', error)
           }
+        }
+
+        try {
+          await mirrorOrderUpdateToSheet(data)
+        } catch (error) {
+          console.warn('Sheet backup update failed (Supabase succeeded):', error)
         }
 
         cache = null
@@ -351,6 +448,12 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
           }
         }
 
+        try {
+          await mirrorBatchUpdateToSheet(data.updates)
+        } catch (error) {
+          console.warn('Sheet backup batch update failed (Supabase succeeded):', error)
+        }
+
         cache = null
         return { ok: true as const, data: { count: result.count } }
       } catch (error) {
@@ -526,6 +629,13 @@ export const deleteOrder = createServerFn({ method: 'POST' })
             },
           }
         }
+
+        try {
+          await mirrorOrderDeleteToSheet(data.row)
+        } catch (error) {
+          console.warn('Sheet backup delete failed (Supabase succeeded):', error)
+        }
+
         cache = null
         return { ok: true as const, data: { success: true } }
       } catch (error) {

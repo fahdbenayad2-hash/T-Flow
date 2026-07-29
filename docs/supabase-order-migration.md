@@ -94,6 +94,13 @@ Orders are then read and mutated in Supabase. Existing UI routes keep working
 because imported records retain the original `sheet_row` and stable
 `source_order_id`.
 
+Until the external storefront writes directly to Supabase, each fresh orders
+read also checks Sheets for previously unseen orders and inserts only those new
+records. Existing Supabase rows are never overwritten or deleted by this intake
+bridge. Dashboard updates and deletes use Supabase as the primary write and
+mirror to Sheets on a best-effort basis so the Sheet remains a usable rollback
+copy.
+
 ## Rollback
 
 Set `ORDER_STORAGE_MODE=sheets` and redeploy. No database rollback or data
