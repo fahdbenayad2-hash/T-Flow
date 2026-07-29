@@ -72,13 +72,15 @@ After the first verified import, set:
 ORDER_STORAGE_MODE=shadow
 ```
 
-Reads and user-visible writes still use Google Sheets. Successful updates,
-bulk updates, and deletes are mirrored to Supabase on a best-effort basis.
-Shadow failures are logged, but do not fail an operation that already succeeded
-in Sheets.
+Reads and user-visible writes still use Google Sheets. Every fresh Sheets
+snapshot is reconciled to Supabase, which captures orders added directly by an
+external storefront as well as out-of-band edits and deletes. Successful
+updates, bulk updates, and deletes made inside T-Flow are also mirrored
+immediately on a best-effort basis. Shadow failures are logged, but never block
+the primary Sheets read or an operation that already succeeded in Sheets.
 
-Run the import again after the shadow observation period to reconcile any missed
-mirrors.
+Run the import again after the shadow observation period as a final explicit
+verification before cutover.
 
 ## 5. Cut over to Supabase
 

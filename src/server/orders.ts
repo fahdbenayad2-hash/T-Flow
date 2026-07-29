@@ -14,6 +14,7 @@ import { generateOrderId } from '~/lib/utils'
 import { requireUser, fetchUserRoles, requireAdmin } from './auth'
 import {
   batchUpdateSupabaseOrders,
+  importOrdersToSupabase,
   listSupabaseOrders,
   softDeleteSupabaseOrder,
   updateSupabaseOrder,
@@ -46,6 +47,20 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
 
   try {
     const orders = mode === 'supabase' ? await listSupabaseOrders(userId) : await fetchSheetOrders()
+
+    if (mode === 'shadow') {
+      try {
+        // New orders can be written directly to Google Sheets by an external
+        // storefront. Reconcile every fresh sheet snapshot so those inserts,
+        // along with out-of-band edits and deletes, reach Supabase too.
+        await importOrdersToSupabase(userId, orders)
+      } catch (error) {
+        // Shadow mode must never make Supabase availability a dependency for
+        // the primary Sheets read path.
+        console.warn('Supabase shadow reconciliation failed (Sheets served):', error)
+      }
+    }
+
     const fetchedAt = Date.now()
     cache = { data: orders, fetchedAt, mode }
 
