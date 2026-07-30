@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import {
   Activity,
@@ -15,6 +15,8 @@ import {
   Send,
   ShieldCheck,
   Store,
+  TestTube2,
+  Trash2,
   Unplug,
   Webhook,
   XCircle,
@@ -35,6 +37,7 @@ import { Input } from '~/components/ui/input'
 import { STOREFRONT_SAMPLE_ORDER } from '~/lib/storefront-order'
 import {
   useCreateStoreConnection,
+  useDeleteStoreConnection,
   useRotateStoreConnectionSecret,
   useSetStoreConnectionActive,
   useStoreConnections,
@@ -97,9 +100,14 @@ function IntegrationsPage() {
   const createConnection = useCreateStoreConnection()
   const rotateSecret = useRotateStoreConnectionSecret()
   const setActive = useSetStoreConnectionActive()
+  const deleteConnection = useDeleteStoreConnection()
   const [createOpen, setCreateOpen] = useState(false)
   const [connectionName, setConnectionName] = useState('')
   const [revealedSecret, setRevealedSecret] = useState<RevealedSecret | null>(null)
+  const [connectionToDelete, setConnectionToDelete] = useState<{
+    id: string
+    name: string
+  } | null>(null)
   const [isTesting, setIsTesting] = useState(false)
 
   const connections = useMemo(
@@ -171,6 +179,17 @@ function IntegrationsPage() {
       toast.success(connection.isActive ? 'تم إيقاف الاتصال' : 'تم تفعيل الاتصال')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'تعذر تغيير حالة الاتصال')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!connectionToDelete) return
+    try {
+      await deleteConnection.mutateAsync(connectionToDelete.id)
+      toast.success(`تم حذف اتصال ${connectionToDelete.name}`)
+      setConnectionToDelete(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر حذف الاتصال')
     }
   }
 
@@ -379,6 +398,16 @@ function IntegrationsPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-divider">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link
+                          to="/integration-test/$id"
+                          params={{ id: connection.id }}
+                          aria-label={`فتح متجر تجريبي لـ ${connection.name}`}
+                        >
+                          <TestTube2 className="h-4 w-4" />
+                          متجر تجريبي
+                        </Link>
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -400,6 +429,15 @@ function IntegrationsPage() {
                           <CheckCircle2 className="h-4 w-4" />
                         )}
                         {connection.isActive ? 'إيقاف' : 'تفعيل'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConnectionToDelete(connection)}
+                        className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        حذف
                       </Button>
                     </div>
                   </article>
@@ -611,6 +649,47 @@ function IntegrationsPage() {
                   <ExternalLink className="h-4 w-4" />
                 )}
                 اختبار الاتصال
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={Boolean(connectionToDelete)}
+          onOpenChange={(open) => {
+            if (!open && !deleteConnection.isPending) setConnectionToDelete(null)
+          }}
+        >
+          <DialogContent className="sm:max-w-[440px]">
+            <DialogHeader>
+              <DialogTitle>حذف اتصال {connectionToDelete?.name}</DialogTitle>
+              <DialogDescription>
+                سيتوقف هذا الرابط نهائيًا ولن يستقبل طلبات جديدة. الطلبات التي استقبلها سابقًا ستبقى
+                محفوظة.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="rounded-[11px] border border-destructive/25 bg-destructive/10 p-3 text-[12px] text-destructive">
+              لا يمكن التراجع عن حذف الاتصال.
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setConnectionToDelete(null)}
+                disabled={deleteConnection.isPending}
+              >
+                إلغاء
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleteConnection.isPending}
+              >
+                {deleteConnection.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                حذف الاتصال
               </Button>
             </DialogFooter>
           </DialogContent>

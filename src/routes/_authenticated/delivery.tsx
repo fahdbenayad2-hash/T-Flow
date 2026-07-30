@@ -209,7 +209,7 @@ function DeliveryPage() {
       await bulkUpdate.mutateAsync(
         selectedItems.map(({ order }) => ({
           row: order._row,
-          order_id: order.order_id,
+          order_id: order._sourceOrderId || order.order_id,
           phone: String(order.phone),
           product: order.product,
           updates: { status },

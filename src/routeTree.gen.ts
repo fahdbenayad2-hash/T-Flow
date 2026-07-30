@@ -24,6 +24,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
 import { Route as AuthenticatedCallCenterRouteImport } from './routes/_authenticated/call-center'
 import { Route as AuthenticatedOrdersRowRouteImport } from './routes/_authenticated/orders.$row'
+import { Route as AuthenticatedIntegrationTestIdRouteImport } from './routes/_authenticated/integration-test.$id'
 import { Route as AuthenticatedCustomersPhoneRouteImport } from './routes/_authenticated/customers.$phone'
 import { Route as ApiIntegrationsWebhookEndpointKeyRouteImport } from './routes/api/integrations/webhook/$endpointKey'
 
@@ -102,6 +103,12 @@ const AuthenticatedOrdersRowRoute = AuthenticatedOrdersRowRouteImport.update({
   path: '/$row',
   getParentRoute: () => AuthenticatedOrdersRoute,
 } as any)
+const AuthenticatedIntegrationTestIdRoute =
+  AuthenticatedIntegrationTestIdRouteImport.update({
+    id: '/integration-test/$id',
+    path: '/integration-test/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCustomersPhoneRoute =
   AuthenticatedCustomersPhoneRouteImport.update({
     id: '/$phone',
@@ -130,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/users': typeof AuthenticatedUsersRoute
   '/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
+  '/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
   '/orders/$row': typeof AuthenticatedOrdersRowRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
 }
@@ -148,6 +156,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/users': typeof AuthenticatedUsersRoute
   '/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
+  '/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
   '/orders/$row': typeof AuthenticatedOrdersRowRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
 }
@@ -168,6 +177,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
+  '/_authenticated/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
   '/_authenticated/orders/$row': typeof AuthenticatedOrdersRowRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
 }
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/users'
     | '/customers/$phone'
+    | '/integration-test/$id'
     | '/orders/$row'
     | '/api/integrations/webhook/$endpointKey'
   fileRoutesByTo: FileRoutesByTo
@@ -206,6 +217,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/users'
     | '/customers/$phone'
+    | '/integration-test/$id'
     | '/orders/$row'
     | '/api/integrations/webhook/$endpointKey'
   id:
@@ -225,6 +237,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/users'
     | '/_authenticated/customers/$phone'
+    | '/_authenticated/integration-test/$id'
     | '/_authenticated/orders/$row'
     | '/api/integrations/webhook/$endpointKey'
   fileRoutesById: FileRoutesById
@@ -343,6 +356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOrdersRowRouteImport
       parentRoute: typeof AuthenticatedOrdersRoute
     }
+    '/_authenticated/integration-test/$id': {
+      id: '/_authenticated/integration-test/$id'
+      path: '/integration-test/$id'
+      fullPath: '/integration-test/$id'
+      preLoaderRoute: typeof AuthenticatedIntegrationTestIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/customers/$phone': {
       id: '/_authenticated/customers/$phone'
       path: '/$phone'
@@ -397,6 +417,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
+  AuthenticatedIntegrationTestIdRoute: typeof AuthenticatedIntegrationTestIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -411,6 +432,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
+  AuthenticatedIntegrationTestIdRoute: AuthenticatedIntegrationTestIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

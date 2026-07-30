@@ -1,11 +1,19 @@
 import { createFileRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { useState, useMemo, useCallback, useRef } from 'react'
-import { useOrders, useBulkUpdateOrders } from '~/lib/queries'
+import { useOrders, useBulkDeleteOrders, useBulkUpdateOrders } from '~/lib/queries'
 import { Card, CardContent } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Checkbox } from '~/components/ui/checkbox'
 import { Skeleton } from '~/components/ui/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '~/components/ui/dialog'
 import { useRole } from '~/hooks/useRole'
 import {
   Select,
@@ -14,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
-import { Download, X, AlertCircle, ArrowUpDown, Filter } from 'lucide-react'
+import { Download, X, AlertCircle, ArrowUpDown, Filter, Loader2, Trash2 } from 'lucide-react'
 import { formatCurrency, formatDate } from '~/lib/utils'
 import { ALL_STATUSES, toExportRow } from '~/lib/sheet-mapping'
 import { StaggerContainer, FadeIn } from '~/components/page-transition'
@@ -71,14 +79,16 @@ function OrdersSkeleton() {
 function OrdersPage() {
   const { data, isLoading, isError, error, refetch } = useOrders()
   const bulkMutation = useBulkUpdateOrders()
-  const { canBulkEdit } = useRole()
+  const bulkDeleteMutation = useBulkDeleteOrders()
+  const { canBulkEdit, isAdmin } = useRole()
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [wilayaFilter, setWilayaFilter] = useState('all')
   const [productFilter, setProductFilter] = useState('all')
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
   const [bulkStatus, setBulkStatus] = useState('')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [sortField, setSortField] = useState<'_row' | 'date' | 'status'>('_row')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
@@ -148,11 +158,16 @@ function OrdersPage() {
     return result
   }, [orders, search, statusFilter, wilayaFilter, productFilter, sortField, sortDir])
 
-  const toggleRow = useCallback((row: number) => {
+  const selectionKey = useCallback(
+    (order: (typeof orders)[number]) => `${order._row}:${order._sourceOrderId || order.order_id}`,
+    [],
+  )
+
+  const toggleRow = useCallback((key: string) => {
     setSelectedRows((prev) => {
       const next = new Set(prev)
-      if (next.has(row)) next.delete(row)
-      else next.add(row)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
       return next
     })
   }, [])
@@ -161,25 +176,26 @@ function OrdersPage() {
     if (selectedRows.size === filteredOrders.length) {
       setSelectedRows(new Set())
     } else {
-      setSelectedRows(new Set(filteredOrders.map((o) => o._row)))
+      setSelectedRows(new Set(filteredOrders.map(selectionKey)))
     }
-  }, [selectedRows.size, filteredOrders])
+  }, [selectedRows.size, filteredOrders, selectionKey])
 
   const handleBulkUpdate = async () => {
     if (!bulkStatus || selectedRows.size === 0) {
       toast.error('اختر الحالة والطلبات')
       return
     }
-    const items = Array.from(selectedRows).map((row) => {
-      const order = orders.find((o) => o._row === row)
-      return {
-        row,
-        order_id: order?.order_id,
-        updates: { status: bulkStatus },
-        phone: order ? String(order.phone) : undefined,
-        product: order ? order.product : undefined,
-      }
-    })
+    const items = orders
+      .filter((order) => selectedRows.has(selectionKey(order)))
+      .map((order) => {
+        return {
+          row: order._row,
+          order_id: order._sourceOrderId || order.order_id,
+          updates: { status: bulkStatus },
+          phone: String(order.phone),
+          product: order.product,
+        }
+      })
     toast.loading(`جاري تحديث ${items.length} طلب...`, { id: 'bulk' })
     try {
       const { count } = await bulkMutation.mutateAsync(items)
@@ -190,6 +206,33 @@ function OrdersPage() {
     } catch (error) {
       toast.dismiss('bulk')
       toast.error(error instanceof Error ? error.message : 'فشل التحديث الجماعي')
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    const selectedOrders = orders.filter((order) => selectedRows.has(selectionKey(order)))
+    if (!selectedOrders.length) return
+
+    toast.loading(`جاري حذف ${selectedOrders.length} طلب...`, { id: 'bulk-delete' })
+    try {
+      const result = await bulkDeleteMutation.mutateAsync(
+        selectedOrders.map((order) => ({
+          row: order._row,
+          order_id: order._sourceOrderId || order.order_id,
+          orderData: { ...order },
+        })),
+      )
+      toast.dismiss('bulk-delete')
+      toast.success(
+        result.missing
+          ? `تم حذف ${result.count} طلب، وتعذر العثور على ${result.missing}`
+          : `تم حذف ${result.count} طلب بنجاح`,
+      )
+      setSelectedRows(new Set())
+      setDeleteDialogOpen(false)
+    } catch (error) {
+      toast.dismiss('bulk-delete')
+      toast.error(error instanceof Error ? error.message : 'فشل حذف الطلبات')
     }
   }
 
@@ -346,6 +389,17 @@ function OrdersPage() {
                 >
                   تطبيق
                 </Button>
+                {isAdmin && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="ghost"
@@ -477,9 +531,10 @@ function OrdersPage() {
                 {virtualizer.getVirtualItems().map((virtualRow) => {
                   const order = filteredOrders[virtualRow.index]
                   const isDup = duplicates.has(order._row)
+                  const orderSelectionKey = selectionKey(order)
                   return (
                     <div
-                      key={order._row}
+                      key={orderSelectionKey}
                       data-index={virtualRow.index}
                       ref={virtualizer.measureElement}
                       style={{
@@ -497,15 +552,20 @@ function OrdersPage() {
                       {canBulkEdit && (
                         <div className="px-3.5 py-2.5 w-10 shrink-0 flex items-center">
                           <Checkbox
-                            checked={selectedRows.has(order._row)}
-                            onCheckedChange={() => toggleRow(order._row)}
+                            checked={selectedRows.has(orderSelectionKey)}
+                            onCheckedChange={() => toggleRow(orderSelectionKey)}
                           />
                         </div>
                       )}
                       <div className="px-2 py-2.5 w-[108px] shrink-0">
                         <Link
                           to="/orders/$row"
-                          params={{ row: String(order._row) }}
+                          params={{
+                            row:
+                              order._row >= 2
+                                ? String(order._row)
+                                : order._sourceOrderId || order.order_id,
+                          }}
                           className="text-[#c41a1f] hover:underline font-semibold text-[11.5px] font-mono"
                         >
                           {order.order_id}
@@ -548,6 +608,41 @@ function OrdersPage() {
       <div className="text-[12px] text-muted-foreground">
         عرض <b className="text-foreground">{filteredOrders.length}</b> طلب من {orders.length}
       </div>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>حذف الطلبات المحددة</DialogTitle>
+            <DialogDescription>
+              سيتم حذف {selectedRows.size} طلب محدد. لا يمكن التراجع عن هذا الإجراء.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-[11px] border border-destructive/25 bg-destructive/10 p-3 text-[12px] text-destructive">
+            راجع العدد جيدًا قبل المتابعة.
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              {bulkDeleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              حذف {selectedRows.size} طلب
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </StaggerContainer>
   )
 }

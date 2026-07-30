@@ -42,11 +42,16 @@ function OrderDetailPage() {
   const { data, isLoading, isError, error, refetch } = useOrders()
   const updateMutation = useUpdateOrder()
   const deleteMutation = useDeleteOrder()
-  const { data: auditLogs } = useAuditLog(row)
   const { isAdmin } = useRole()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
-  const order = data?.orders?.find((o) => o._row === Number(row))
+  const order = data?.orders?.find(
+    (item) =>
+      (Number(row) >= 2 && item._row === Number(row)) ||
+      item._sourceOrderId === row ||
+      item.order_id === row,
+  )
+  const { data: auditLogs } = useAuditLog(order?._sourceOrderId || order?.order_id || '')
 
   const [editStatus, setEditStatus] = useState('')
   const [editNotes, setEditNotes] = useState('')
@@ -98,7 +103,7 @@ function OrderDetailPage() {
     try {
       await updateMutation.mutateAsync({
         row: order._row,
-        order_id: order.order_id,
+        order_id: order._sourceOrderId || order.order_id,
         updates,
         lastModified: order.lastModified,
         phone: String(order.phone),
@@ -116,7 +121,7 @@ function OrderDetailPage() {
     try {
       await deleteMutation.mutateAsync({
         row: order._row,
-        order_id: order.order_id,
+        order_id: order._sourceOrderId || order.order_id,
         orderData: order as unknown as Record<string, unknown>,
       })
       toast.success('تم حذف الطلب بنجاح')
@@ -302,7 +307,9 @@ function OrderDetailPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">الهاتف</span>
-              <span className="font-mono text-xs" dir="ltr">{order.phone}</span>
+              <span className="font-mono text-xs" dir="ltr">
+                {order.phone}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">المنتج</span>

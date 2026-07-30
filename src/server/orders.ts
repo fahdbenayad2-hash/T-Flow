@@ -735,6 +735,108 @@ export const deleteOrder = createServerFn({ method: 'POST' })
     return { ok: true as const, data: { success: true } }
   })
 
+export const batchDeleteOrders = createServerFn({ method: 'POST' })
+  .validator(
+    (data: {
+      orders: Array<{
+        row: number
+        order_id?: string
+        orderData?: Record<string, unknown>
+      }>
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    const actorUserId = await requireAdmin()
+    const storageMode = getOrderStorageMode()
+    const orders = [...data.orders].sort((a, b) => b.row - a.row)
+
+    if (!orders.length) {
+      return { ok: true as const, data: { count: 0, missing: 0 } }
+    }
+
+    if (!DEMO_MODE) {
+      try {
+        const supabase = getSupabaseAdminClient()
+        await supabase.from('audit_log').insert(
+          orders.map((order) => ({
+            order_id: order.order_id || null,
+            actor_id: actorUserId,
+            action: 'delete_order',
+            old_value: order.orderData || null,
+            new_value: null,
+          })),
+        )
+      } catch (error) {
+        console.warn('Audit log failed (non-critical):', error)
+      }
+    }
+
+    if (storageMode === 'supabase') {
+      try {
+        let count = 0
+        let missing = 0
+
+        for (const order of orders) {
+          const deleted = await softDeleteSupabaseOrder(actorUserId, {
+            orderId: order.order_id,
+            sheetRow: order.row,
+          })
+          if (deleted) count += 1
+          else missing += 1
+        }
+
+        for (const order of orders.filter((item) => item.row >= 2)) {
+          try {
+            await mirrorOrderDeleteToSheet(order.row)
+          } catch (error) {
+            console.warn('Sheet backup delete failed (Supabase succeeded):', error)
+          }
+        }
+
+        cache = null
+        return { ok: true as const, data: { count, missing } }
+      } catch (error) {
+        return {
+          ok: false as const,
+          error: {
+            code: 'DATABASE_ERROR',
+            message: error instanceof Error ? error.message : 'فشل حذف الطلبات من قاعدة البيانات',
+          },
+        }
+      }
+    }
+
+    try {
+      for (const order of orders) {
+        await mirrorOrderDeleteToSheet(order.row)
+      }
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: {
+          code: 'PROXY_ERROR',
+          message: error instanceof Error ? error.message : 'فشل حذف الطلبات من Google Sheets',
+        },
+      }
+    }
+
+    if (storageMode === 'shadow') {
+      for (const order of orders) {
+        try {
+          await softDeleteSupabaseOrder(actorUserId, {
+            orderId: order.order_id,
+            sheetRow: order.row,
+          })
+        } catch (error) {
+          console.warn('Supabase shadow delete failed (Sheets succeeded):', error)
+        }
+      }
+    }
+
+    cache = null
+    return { ok: true as const, data: { count: orders.length, missing: 0 } }
+  })
+
 export const getAuditLog = createServerFn({ method: 'GET' })
   .validator((data: { orderId: string }) => data)
   .handler(async ({ data }) => {

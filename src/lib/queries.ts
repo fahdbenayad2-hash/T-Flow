@@ -3,6 +3,7 @@ import {
   getOrders,
   updateOrder,
   batchUpdateOrders,
+  batchDeleteOrders,
   deleteOrder,
   getAuditLog,
   invalidateOrdersCache,
@@ -12,6 +13,7 @@ import type { CallLog } from '~/lib/types'
 import { getInventorySettings, updateInventorySetting } from '~/server/inventory'
 import {
   createStoreConnection,
+  deleteStoreConnection,
   getStoreConnections,
   rotateStoreConnectionSecret,
   setStoreConnectionActive,
@@ -96,6 +98,29 @@ export function useDeleteOrder() {
       orderData?: Record<string, unknown>
     }) => {
       const result = await deleteOrder({ data })
+      if (!result.ok) {
+        throw new Error(result.error.message)
+      }
+      return result.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  })
+}
+
+export function useBulkDeleteOrders() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (
+      items: Array<{
+        row: number
+        order_id?: string
+        orderData?: Record<string, unknown>
+      }>,
+    ) => {
+      const result = await batchDeleteOrders({ data: { orders: items } })
       if (!result.ok) {
         throw new Error(result.error.message)
       }
@@ -207,6 +232,16 @@ export function useSetStoreConnectionActive() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: { id: string; isActive: boolean }) => setStoreConnectionActive({ data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['store-connections'] })
+    },
+  })
+}
+
+export function useDeleteStoreConnection() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteStoreConnection({ data: { id } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['store-connections'] })
     },

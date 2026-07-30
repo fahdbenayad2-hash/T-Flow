@@ -147,6 +147,7 @@ export function databaseRowToOrder(row: DatabaseOrderRow): Order {
 
   return {
     _row: row.sheet_row ?? 0,
+    _sourceOrderId: row.source_order_id,
     order_id: displayOrderId,
     customerName: row.customer_name,
     phone: row.phone,

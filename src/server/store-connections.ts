@@ -187,3 +187,43 @@ export const setStoreConnectionActive = createServerFn({ method: 'POST' })
 
     return { success: true }
   })
+
+export const deleteStoreConnection = createServerFn({ method: 'POST' })
+  .validator((data: { id: string }) => data)
+  .handler(async ({ data }) => {
+    const userId = await requireAdmin()
+    const supabase = getSupabaseAdminClient()
+    const storeId = await resolveDefaultStoreId(userId, supabase)
+    const { data: connection, error: lookupError } = await supabase
+      .from('store_integrations')
+      .select('id,external_account_id,config')
+      .eq('id', data.id)
+      .eq('store_id', storeId)
+      .eq('provider', 'webhook')
+      .maybeSingle()
+
+    if (lookupError) throw lookupError
+    if (!connection) throw new Error('لم يتم العثور على الاتصال')
+
+    const { error: deleteError } = await supabase
+      .from('store_integrations')
+      .delete()
+      .eq('id', data.id)
+      .eq('store_id', storeId)
+      .eq('provider', 'webhook')
+
+    if (deleteError) throw deleteError
+
+    await supabase.from('audit_log').insert({
+      actor_id: userId,
+      store_id: storeId,
+      action: 'delete_store_webhook',
+      old_value: {
+        integrationId: connection.id,
+        name: (connection.config as StoreConnectionConfig | null)?.name || 'موقع الطلبات',
+        endpointKey: connection.external_account_id,
+      },
+    })
+
+    return { success: true }
+  })
