@@ -8,9 +8,11 @@ import { RoleProvider } from '~/hooks/useRole'
 import { navItems } from '~/components/sidebar'
 import { fetchUser } from '~/server/auth'
 
-const allNavRoutes = [...navItems, { to: '/users', label: 'إدارة المستخدمين' }].sort(
-  (a, b) => b.to.length - a.to.length,
-)
+const allNavRoutes = [
+  ...navItems,
+  { to: '/users', label: 'إدارة المستخدمين' },
+  { to: '/google-sheets', label: 'ربط Google Sheets' },
+].sort((a, b) => b.to.length - a.to.length)
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async () => {

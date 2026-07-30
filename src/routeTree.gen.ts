@@ -18,6 +18,7 @@ import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
 import { Route as AuthenticatedOrdersRouteImport } from './routes/_authenticated/orders'
 import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
+import { Route as AuthenticatedGoogleSheetsRouteImport } from './routes/_authenticated/google-sheets'
 import { Route as AuthenticatedEarningsRouteImport } from './routes/_authenticated/earnings'
 import { Route as AuthenticatedDeliveryRouteImport } from './routes/_authenticated/delivery'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -29,6 +30,7 @@ import { Route as AuthenticatedCustomersPhoneRouteImport } from './routes/_authe
 import { Route as ApiIntegrationsWidgetEndpointKeyRouteImport } from './routes/api/integrations/widget/$endpointKey'
 import { Route as ApiIntegrationsWebhookEndpointKeyRouteImport } from './routes/api/integrations/webhook/$endpointKey'
 import { Route as ApiIntegrationsPublicEndpointKeyRouteImport } from './routes/api/integrations/public/$endpointKey'
+import { Route as ApiIntegrationsGoogleCallbackRouteImport } from './routes/api/integrations/google/callback'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -73,6 +75,12 @@ const AuthenticatedIntegrationsRoute =
   AuthenticatedIntegrationsRouteImport.update({
     id: '/integrations',
     path: '/integrations',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedGoogleSheetsRoute =
+  AuthenticatedGoogleSheetsRouteImport.update({
+    id: '/google-sheets',
+    path: '/google-sheets',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedEarningsRoute = AuthenticatedEarningsRouteImport.update({
@@ -135,6 +143,12 @@ const ApiIntegrationsPublicEndpointKeyRoute =
     path: '/api/integrations/public/$endpointKey',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiIntegrationsGoogleCallbackRoute =
+  ApiIntegrationsGoogleCallbackRouteImport.update({
+    id: '/api/integrations/google/callback',
+    path: '/api/integrations/google/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -144,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/earnings': typeof AuthenticatedEarningsRoute
+  '/google-sheets': typeof AuthenticatedGoogleSheetsRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/orders': typeof AuthenticatedOrdersRouteWithChildren
   '/products': typeof AuthenticatedProductsRoute
@@ -153,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
   '/orders/$row': typeof AuthenticatedOrdersRowRoute
+  '/api/integrations/google/callback': typeof ApiIntegrationsGoogleCallbackRoute
   '/api/integrations/public/$endpointKey': typeof ApiIntegrationsPublicEndpointKeyRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
   '/api/integrations/widget/$endpointKey': typeof ApiIntegrationsWidgetEndpointKeyRoute
@@ -165,6 +181,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/earnings': typeof AuthenticatedEarningsRoute
+  '/google-sheets': typeof AuthenticatedGoogleSheetsRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/orders': typeof AuthenticatedOrdersRouteWithChildren
   '/products': typeof AuthenticatedProductsRoute
@@ -174,6 +191,7 @@ export interface FileRoutesByTo {
   '/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
   '/orders/$row': typeof AuthenticatedOrdersRowRoute
+  '/api/integrations/google/callback': typeof ApiIntegrationsGoogleCallbackRoute
   '/api/integrations/public/$endpointKey': typeof ApiIntegrationsPublicEndpointKeyRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
   '/api/integrations/widget/$endpointKey': typeof ApiIntegrationsWidgetEndpointKeyRoute
@@ -188,6 +206,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/delivery': typeof AuthenticatedDeliveryRoute
   '/_authenticated/earnings': typeof AuthenticatedEarningsRoute
+  '/_authenticated/google-sheets': typeof AuthenticatedGoogleSheetsRoute
   '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
   '/_authenticated/orders': typeof AuthenticatedOrdersRouteWithChildren
   '/_authenticated/products': typeof AuthenticatedProductsRoute
@@ -197,6 +216,7 @@ export interface FileRoutesById {
   '/_authenticated/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/_authenticated/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
   '/_authenticated/orders/$row': typeof AuthenticatedOrdersRowRoute
+  '/api/integrations/google/callback': typeof ApiIntegrationsGoogleCallbackRoute
   '/api/integrations/public/$endpointKey': typeof ApiIntegrationsPublicEndpointKeyRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
   '/api/integrations/widget/$endpointKey': typeof ApiIntegrationsWidgetEndpointKeyRoute
@@ -211,6 +231,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/delivery'
     | '/earnings'
+    | '/google-sheets'
     | '/integrations'
     | '/orders'
     | '/products'
@@ -220,6 +241,7 @@ export interface FileRouteTypes {
     | '/customers/$phone'
     | '/integration-test/$id'
     | '/orders/$row'
+    | '/api/integrations/google/callback'
     | '/api/integrations/public/$endpointKey'
     | '/api/integrations/webhook/$endpointKey'
     | '/api/integrations/widget/$endpointKey'
@@ -232,6 +254,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/delivery'
     | '/earnings'
+    | '/google-sheets'
     | '/integrations'
     | '/orders'
     | '/products'
@@ -241,6 +264,7 @@ export interface FileRouteTypes {
     | '/customers/$phone'
     | '/integration-test/$id'
     | '/orders/$row'
+    | '/api/integrations/google/callback'
     | '/api/integrations/public/$endpointKey'
     | '/api/integrations/webhook/$endpointKey'
     | '/api/integrations/widget/$endpointKey'
@@ -254,6 +278,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/delivery'
     | '/_authenticated/earnings'
+    | '/_authenticated/google-sheets'
     | '/_authenticated/integrations'
     | '/_authenticated/orders'
     | '/_authenticated/products'
@@ -263,6 +288,7 @@ export interface FileRouteTypes {
     | '/_authenticated/customers/$phone'
     | '/_authenticated/integration-test/$id'
     | '/_authenticated/orders/$row'
+    | '/api/integrations/google/callback'
     | '/api/integrations/public/$endpointKey'
     | '/api/integrations/webhook/$endpointKey'
     | '/api/integrations/widget/$endpointKey'
@@ -272,6 +298,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiIntegrationsGoogleCallbackRoute: typeof ApiIntegrationsGoogleCallbackRoute
   ApiIntegrationsPublicEndpointKeyRoute: typeof ApiIntegrationsPublicEndpointKeyRoute
   ApiIntegrationsWebhookEndpointKeyRoute: typeof ApiIntegrationsWebhookEndpointKeyRoute
   ApiIntegrationsWidgetEndpointKeyRoute: typeof ApiIntegrationsWidgetEndpointKeyRoute
@@ -340,6 +367,13 @@ declare module '@tanstack/react-router' {
       path: '/integrations'
       fullPath: '/integrations'
       preLoaderRoute: typeof AuthenticatedIntegrationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/google-sheets': {
+      id: '/_authenticated/google-sheets'
+      path: '/google-sheets'
+      fullPath: '/google-sheets'
+      preLoaderRoute: typeof AuthenticatedGoogleSheetsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/earnings': {
@@ -419,6 +453,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiIntegrationsPublicEndpointKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/integrations/google/callback': {
+      id: '/api/integrations/google/callback'
+      path: '/api/integrations/google/callback'
+      fullPath: '/api/integrations/google/callback'
+      preLoaderRoute: typeof ApiIntegrationsGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -453,6 +494,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDeliveryRoute: typeof AuthenticatedDeliveryRoute
   AuthenticatedEarningsRoute: typeof AuthenticatedEarningsRoute
+  AuthenticatedGoogleSheetsRoute: typeof AuthenticatedGoogleSheetsRoute
   AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
   AuthenticatedOrdersRoute: typeof AuthenticatedOrdersRouteWithChildren
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
@@ -468,6 +510,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDeliveryRoute: AuthenticatedDeliveryRoute,
   AuthenticatedEarningsRoute: AuthenticatedEarningsRoute,
+  AuthenticatedGoogleSheetsRoute: AuthenticatedGoogleSheetsRoute,
   AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
   AuthenticatedOrdersRoute: AuthenticatedOrdersRouteWithChildren,
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
@@ -484,6 +527,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiIntegrationsGoogleCallbackRoute: ApiIntegrationsGoogleCallbackRoute,
   ApiIntegrationsPublicEndpointKeyRoute: ApiIntegrationsPublicEndpointKeyRoute,
   ApiIntegrationsWebhookEndpointKeyRoute:
     ApiIntegrationsWebhookEndpointKeyRoute,

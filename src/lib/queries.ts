@@ -19,6 +19,19 @@ import {
   setStoreConnectionActive,
   updateStoreConnectionLandingPage,
 } from '~/server/store-connections'
+import {
+  beginGoogleOAuth,
+  deleteGoogleAccount,
+  deleteGoogleSheetConnection,
+  getGoogleSheetHeaders,
+  getGoogleSheetsOverview,
+  listGoogleSpreadsheets,
+  listGoogleSpreadsheetSheets,
+  saveGoogleSheetConnection,
+  setGoogleSheetConnectionActive,
+  syncGoogleSheetConnection,
+} from '~/server/google-sheets'
+import type { GoogleSheetColumnMapping } from '~/lib/google-sheet-mapping'
 import { ORDER_CACHE_TTL_S, ORDER_GC_TIME_MS } from '~/config'
 
 export const ordersQueryOptions = queryOptions({
@@ -258,4 +271,100 @@ export function useUpdateStoreConnectionLandingPage() {
       queryClient.invalidateQueries({ queryKey: ['store-connections'] })
     },
   })
+}
+
+export const googleSheetsOverviewQueryOptions = queryOptions({
+  queryKey: ['google-sheets-overview'],
+  queryFn: () => getGoogleSheetsOverview(),
+  staleTime: 10_000,
+  refetchOnWindowFocus: true,
+})
+
+export function useGoogleSheetsOverview() {
+  return useQuery(googleSheetsOverviewQueryOptions)
+}
+
+function useInvalidateGoogleSheetsMutation<TVariables, TResult>(
+  mutationFn: (variables: TVariables) => Promise<TResult>,
+  invalidateOrders = false,
+) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['google-sheets-overview'] })
+      if (invalidateOrders) queryClient.invalidateQueries({ queryKey: ['orders'] })
+    },
+  })
+}
+
+export function useBeginGoogleOAuth() {
+  return useMutation({ mutationFn: () => beginGoogleOAuth() })
+}
+
+export function useGoogleSpreadsheets() {
+  return useMutation({
+    mutationFn: (accountId: string) => listGoogleSpreadsheets({ data: { accountId } }),
+  })
+}
+
+export function useGoogleSpreadsheetSheets() {
+  return useMutation({
+    mutationFn: (data: { accountId: string; spreadsheetId: string }) =>
+      listGoogleSpreadsheetSheets({ data }),
+  })
+}
+
+export function useGoogleSheetHeaders() {
+  return useMutation({
+    mutationFn: (data: {
+      accountId: string
+      spreadsheetId: string
+      sheetTitle: string
+      startRow: number
+    }) => getGoogleSheetHeaders({ data }),
+  })
+}
+
+export interface SaveGoogleSheetConnectionInput {
+  id?: string
+  accountId: string
+  accountEmail: string
+  spreadsheetId: string
+  spreadsheetName: string
+  sheetId: number
+  sheetTitle: string
+  storeName: string
+  startRow: number
+  mergeVariantProduct: boolean
+  columnMapping: GoogleSheetColumnMapping
+}
+
+export function useSaveGoogleSheetConnection() {
+  return useInvalidateGoogleSheetsMutation((data: SaveGoogleSheetConnectionInput) =>
+    saveGoogleSheetConnection({ data }),
+  )
+}
+
+export function useSetGoogleSheetConnectionActive() {
+  return useInvalidateGoogleSheetsMutation((data: { id: string; isActive: boolean }) =>
+    setGoogleSheetConnectionActive({ data }),
+  )
+}
+
+export function useDeleteGoogleSheetConnection() {
+  return useInvalidateGoogleSheetsMutation((id: string) =>
+    deleteGoogleSheetConnection({ data: { id } }),
+  )
+}
+
+export function useDeleteGoogleAccount() {
+  return useInvalidateGoogleSheetsMutation((id: string) => deleteGoogleAccount({ data: { id } }))
+}
+
+export function useSyncGoogleSheetConnection() {
+  return useInvalidateGoogleSheetsMutation(
+    (id: string) => syncGoogleSheetConnection({ data: { id } }),
+    true,
+  )
 }
