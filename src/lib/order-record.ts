@@ -67,7 +67,11 @@ export function parseOrderQuantity(value: unknown): number {
  * only populate ordered_at when parsing is unambiguous enough.
  */
 export function parseOrderDate(value: unknown): string | null {
-  const text = String(value ?? '').trim()
+  const text = String(value ?? '')
+    .trim()
+    .replace(/[\u061c\u200e\u200f]/g, '')
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
   if (!text) return null
 
   const isoTimestamp = Date.parse(text)
@@ -76,16 +80,21 @@ export function parseOrderDate(value: unknown): string | null {
   }
 
   const match = text.match(
-    /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/,
+    /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:[،,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(ص|م|am|pm)?)?/i,
   )
   if (!match) return null
 
-  const [, day, month, year, hour = '0', minute = '0', second = '0'] = match
+  const [, day, month, year, hourText = '0', minute = '0', second = '0', period] = match
+  let hour = Number(hourText)
+  const normalizedPeriod = period?.toLowerCase()
+  if ((normalizedPeriod === 'م' || normalizedPeriod === 'pm') && hour < 12) hour += 12
+  if ((normalizedPeriod === 'ص' || normalizedPeriod === 'am') && hour === 12) hour = 0
+
   const utc = Date.UTC(
     Number(year),
     Number(month) - 1,
     Number(day),
-    Number(hour) - 1, // Africa/Algiers is UTC+1
+    hour - 1, // Africa/Algiers is UTC+1
     Number(minute),
     Number(second),
   )

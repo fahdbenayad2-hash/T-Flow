@@ -53,6 +53,8 @@ describe('order database mapping', () => {
 
   it('preserves date text while parsing common sheet dates', () => {
     expect(parseOrderDate('29/07/2026 14:30:00')).toBe('2026-07-29T13:30:00.000Z')
+    expect(parseOrderDate('20‏/7‏/2026، 12:05:22 م')).toBe('2026-07-20T11:05:22.000Z')
+    expect(parseOrderDate('٢٠/٧/٢٠٢٦، ١٢:٠٥:٢٢ ص')).toBe('2026-07-19T23:05:22.000Z')
     expect(parseOrderDate('not a date')).toBeNull()
   })
 
