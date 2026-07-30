@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { useState, useMemo, useCallback, useRef } from 'react'
 import { useOrders, useBulkUpdateOrders } from '~/lib/queries'
 import { Card, CardContent } from '~/components/ui/card'
@@ -26,8 +26,18 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { StatusBadge } from '~/components/status-badge'
 
 export const Route = createFileRoute('/_authenticated/orders')({
-  component: OrdersPage,
+  component: OrdersRoute,
 })
+
+function OrdersRoute() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+
+  if (pathname !== '/orders' && pathname !== '/orders/') {
+    return <Outlet />
+  }
+
+  return <OrdersPage />
+}
 
 function OrdersSkeleton() {
   return (

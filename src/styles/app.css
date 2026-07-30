@@ -624,6 +624,50 @@ body.lp-loading {
   }
 }
 
+@media print {
+  @page {
+    size: A6 portrait;
+    margin: 6mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .shipment-print-root,
+  .shipment-print-root * {
+    visibility: visible !important;
+  }
+
+  .shipment-print-root {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  .shipment-print-label {
+    min-height: 135mm;
+    border: 2px solid #111 !important;
+    border-radius: 0 !important;
+    padding: 7mm !important;
+    break-after: page;
+    page-break-after: always;
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  .shipment-print-label:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .shipment-print-hide {
+    display: none !important;
+  }
+}
+
 /* ===== Film grain ===== */
 #lp-grain {
   position: fixed;

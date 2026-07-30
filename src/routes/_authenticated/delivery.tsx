@@ -1,268 +1,568 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useMemo } from 'react'
-import { useOrders } from '~/lib/queries'
-import { Truck, AlertTriangle } from 'lucide-react'
-import { STATUS } from '~/lib/sheet-mapping'
-import { formatCurrency } from '~/lib/utils'
-import { ErrorState, EmptyState } from '~/components/empty-state'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { useMemo, useState } from 'react'
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ClipboardCheck,
+  Loader2,
+  MapPin,
+  PackageCheck,
+  Printer,
+  Search,
+  Send,
+  Truck,
+} from 'lucide-react'
+import toast from 'react-hot-toast'
+import { EmptyState, ErrorState } from '~/components/empty-state'
 import { RoleGuard } from '~/components/role-guard'
+import { Button } from '~/components/ui/button'
+import { Checkbox } from '~/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '~/components/ui/dialog'
+import { Input } from '~/components/ui/input'
+import {
+  buildDeliveryItems,
+  getDeliveryStats,
+  type DeliveryItem,
+  type DeliveryStage,
+} from '~/lib/delivery-operations'
+import { useBulkUpdateOrders, useOrders } from '~/lib/queries'
+import { STATUS } from '~/lib/sheet-mapping'
+import { cn, formatCurrency } from '~/lib/utils'
 
 export const Route = createFileRoute('/_authenticated/delivery')({
   component: DeliveryPage,
 })
 
-interface DeliveryStats {
-  totalOrders: number
-  homeDelivery: number
-  stopDesk: number
-  delivered: number
-  pending: number
-  cancelled: number
-  byWilaya: Map<
-    string,
-    {
-      total: number
-      delivered: number
-      pending: number
-      cancelled: number
-      home: number
-      desk: number
-      revenue: number
-    }
-  >
-}
+type DeliveryFilter = 'all' | DeliveryStage
+
+const STAGE_META: Record<DeliveryStage, { label: string; className: string; icon: typeof Truck }> =
+  {
+    ready: {
+      label: 'جاهز للشحن',
+      className: 'border-sky-500/20 bg-sky-500/10 text-sky-500',
+      icon: PackageCheck,
+    },
+    in_transit: {
+      label: 'قيد النقل',
+      className: 'border-violet-500/20 bg-violet-500/10 text-violet-500',
+      icon: Truck,
+    },
+    delivered: {
+      label: 'تم التسليم',
+      className: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500',
+      icon: CheckCircle2,
+    },
+    exception: {
+      label: 'استثناء',
+      className: 'border-red-500/20 bg-red-500/10 text-red-500',
+      icon: AlertTriangle,
+    },
+  }
 
 function DeliverySkeleton() {
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[...Array(2)].map((_, i) => (
-          <div key={i} className="h-[140px] rounded-[15px] skeleton-shimmer" />
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
+        {[...Array(4)].map((_, index) => (
+          <div key={index} className="h-[105px] rounded-[15px] skeleton-shimmer" />
         ))}
       </div>
-      <div className="h-[400px] rounded-[15px] skeleton-shimmer" />
+      <div className="h-52 rounded-[15px] skeleton-shimmer" />
+      {[...Array(3)].map((_, index) => (
+        <div key={index} className="h-[130px] rounded-[15px] skeleton-shimmer" />
+      ))}
     </div>
   )
 }
 
+function ShipmentLabel({ item }: { item: DeliveryItem }) {
+  const { order } = item
+  return (
+    <article className="shipment-print-label rounded-2xl border-2 border-foreground bg-white p-5 text-black">
+      <div className="flex items-start justify-between gap-4 border-b-2 border-black pb-4">
+        <div>
+          <div className="text-2xl font-black tracking-tight">
+            <span className="text-[#e31e24]">T-</span>Flow
+          </div>
+          <p className="text-[10px] font-bold tracking-[0.2em] text-gray-500">
+            FAST · SMART · DELIVERED
+          </p>
+        </div>
+        <div className="text-left">
+          <p className="text-[10px] font-bold text-gray-500">مرجع الشحنة</p>
+          <p className="font-mono text-lg font-black">{order.order_id}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 border-b border-black py-4">
+        <div>
+          <p className="text-[10px] font-bold text-gray-500">المستلم</p>
+          <p className="mt-1 text-lg font-black">{order.customerName}</p>
+          <p dir="ltr" className="mt-1 text-right font-mono text-base font-bold">
+            {order.phone}
+          </p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-gray-500">الوجهة</p>
+          <p className="mt-1 text-base font-black">
+            {order.wilaya} — {order.baladiya}
+          </p>
+          <p className="mt-1 text-xs leading-5">{order.address || 'العنوان غير محدد'}</p>
+        </div>
+      </div>
+
+      <div className="border-b border-black py-4">
+        <p className="text-[10px] font-bold text-gray-500">محتوى الطلب</p>
+        <p className="mt-1 text-base font-black">{order.product}</p>
+        <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs font-bold">
+          <span>الكمية: {order.quantity || 1}</span>
+          {order.color && <span>اللون: {order.color}</span>}
+          {order.size && <span>المقاس: {order.size}</span>}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 items-end gap-4 pt-4">
+        <div>
+          <p className="text-[10px] font-bold text-gray-500">نوع التوصيل</p>
+          <p className="mt-1 text-sm font-black">{order.deliveryType || 'غير محدد'}</p>
+          {order.notes && (
+            <>
+              <p className="mt-3 text-[10px] font-bold text-gray-500">ملاحظة</p>
+              <p className="mt-1 text-xs">{order.notes}</p>
+            </>
+          )}
+        </div>
+        <div className="rounded-xl border-2 border-black p-3 text-center">
+          <p className="text-[10px] font-bold">المبلغ عند التسليم</p>
+          <p className="mt-1 font-mono text-2xl font-black">{formatCurrency(item.amount)}</p>
+        </div>
+      </div>
+    </article>
+  )
+}
+
 function DeliveryPage() {
-  const { data, isLoading, isError, error, refetch } = useOrders()
-  const orders = useMemo(() => data?.orders ?? [], [data])
+  const ordersQuery = useOrders()
+  const bulkUpdate = useBulkUpdateOrders()
+  const [filter, setFilter] = useState<DeliveryFilter>('all')
+  const [search, setSearch] = useState('')
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
+  const [printDialogOpen, setPrintDialogOpen] = useState(false)
 
-  const stats = useMemo<DeliveryStats>(() => {
-    const byWilaya = new Map<
-      string,
-      {
-        total: number
-        delivered: number
-        pending: number
-        cancelled: number
-        home: number
-        desk: number
-        revenue: number
+  const orders = useMemo(() => ordersQuery.data?.orders ?? [], [ordersQuery.data])
+  const items = useMemo(() => buildDeliveryItems(orders), [orders])
+  const stats = useMemo(() => getDeliveryStats(items), [items])
+
+  const filteredItems = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return items.filter((item) => {
+      const matchesFilter = filter === 'all' || item.stage === filter
+      const matchesSearch =
+        !query ||
+        item.order.customerName.toLowerCase().includes(query) ||
+        String(item.order.phone).includes(query) ||
+        item.order.order_id.toLowerCase().includes(query) ||
+        String(item.order.wilaya).toLowerCase().includes(query)
+      return matchesFilter && matchesSearch
+    })
+  }, [filter, items, search])
+
+  const selectableItems = filteredItems.filter(
+    (item) => item.stage === 'ready' || item.stage === 'in_transit',
+  )
+  const selectedItems = items.filter((item) => selectedRows.has(item.order._row))
+  const allVisibleSelected =
+    selectableItems.length > 0 && selectableItems.every((item) => selectedRows.has(item.order._row))
+
+  const toggleRow = (row: number, checked: boolean) => {
+    setSelectedRows((current) => {
+      const next = new Set(current)
+      if (checked) next.add(row)
+      else next.delete(row)
+      return next
+    })
+  }
+
+  const toggleVisible = (checked: boolean) => {
+    setSelectedRows((current) => {
+      const next = new Set(current)
+      for (const item of selectableItems) {
+        if (checked) next.add(item.order._row)
+        else next.delete(item.order._row)
       }
-    >()
+      return next
+    })
+  }
 
-    let homeDelivery = 0
-    let stopDesk = 0
-    let delivered = 0
-    let pending = 0
-    let cancelled = 0
-
-    for (const o of orders) {
-      const type = o.deliveryType || ''
-      const isHome = type.includes('دوميسيل') || type.toLowerCase().includes('home')
-      const isStop = type.includes('ستوب') || type.toLowerCase().includes('stop')
-      if (isHome) homeDelivery++
-      else if (isStop) stopDesk++
-
-      if (o.status === STATUS.DELIVERED) delivered++
-      else if (o.status === STATUS.CANCELLED) cancelled++
-      else if (([STATUS.PROCESSING, STATUS.PREPARING] as string[]).includes(o.status)) pending++
-
-      const wilaya = String(o.wilaya) || 'غير معروف'
-      const existing = byWilaya.get(wilaya) || {
-        total: 0,
-        delivered: 0,
-        pending: 0,
-        cancelled: 0,
-        home: 0,
-        desk: 0,
-        revenue: 0,
-      }
-      existing.total++
-      if (isHome) existing.home++
-      else if (isStop) existing.desk++
-      if (o.status === STATUS.DELIVERED) {
-        existing.delivered++
-        existing.revenue += (Number(o.price) || 0) * (Number(o.quantity) || 1)
-      } else if (o.status === STATUS.CANCELLED) existing.cancelled++
-      else if (([STATUS.PROCESSING, STATUS.PREPARING] as string[]).includes(o.status))
-        existing.pending++
-      byWilaya.set(wilaya, existing)
+  const updateSelectedStatus = async (status: string) => {
+    if (selectedItems.length === 0) {
+      toast.error('حدد طلبًا واحدًا على الأقل')
+      return
     }
 
-    return {
-      totalOrders: orders.length,
-      homeDelivery,
-      stopDesk,
-      delivered,
-      pending,
-      cancelled,
-      byWilaya,
+    try {
+      await bulkUpdate.mutateAsync(
+        selectedItems.map(({ order }) => ({
+          row: order._row,
+          order_id: order.order_id,
+          phone: String(order.phone),
+          product: order.product,
+          updates: { status },
+        })),
+      )
+      toast.success(`تم تحديث ${selectedItems.length} طلب`)
+      setSelectedRows(new Set())
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر تحديث الشحنات')
     }
-  }, [orders])
+  }
 
-  if (isLoading) return <DeliverySkeleton />
-  if (isError)
+  const openPrintPreview = () => {
+    if (selectedItems.length === 0) {
+      toast.error('حدد طلبًا واحدًا على الأقل لطباعة الملصقات')
+      return
+    }
+    setPrintDialogOpen(true)
+  }
+
+  if (ordersQuery.isLoading) return <DeliverySkeleton />
+
+  if (ordersQuery.isError) {
     return (
       <ErrorState
-        message={error instanceof Error ? error.message : undefined}
-        onRetry={() => refetch()}
+        message={ordersQuery.error instanceof Error ? ordersQuery.error.message : undefined}
+        onRetry={() => ordersQuery.refetch()}
       />
     )
-  if (orders.length === 0)
+  }
+
+  if (items.length === 0) {
     return (
       <EmptyState
         icon={<Truck className="h-8 w-8 text-muted-foreground" />}
-        title="لا توجد بيانات توصيل"
+        title="لا توجد شحنات جاهزة"
       />
     )
+  }
 
-  const wilayas = Array.from(stats.byWilaya.entries()).sort((a, b) => b[1].total - a[1].total)
-  const homePercent =
-    stats.totalOrders > 0 ? Math.round((stats.homeDelivery / stats.totalOrders) * 100) : 0
-  const deskPercent =
-    stats.totalOrders > 0 ? Math.round((stats.stopDesk / stats.totalOrders) * 100) : 0
+  const stageCounts: Record<DeliveryFilter, number> = {
+    all: items.length,
+    ready: stats.ready,
+    in_transit: stats.inTransit,
+    delivered: stats.delivered,
+    exception: stats.exceptions,
+  }
+
+  const filters: Array<{ value: DeliveryFilter; label: string }> = [
+    { value: 'all', label: 'الكل' },
+    { value: 'ready', label: 'جاهز' },
+    { value: 'in_transit', label: 'قيد النقل' },
+    { value: 'delivered', label: 'مسلّم' },
+    { value: 'exception', label: 'استثناء' },
+  ]
+
+  const wilayaStats = Array.from(
+    items.reduce((map, item) => {
+      const wilaya = String(item.order.wilaya) || 'غير معروف'
+      const current = map.get(wilaya) || { total: 0, delivered: 0, amount: 0 }
+      current.total += 1
+      if (item.stage === 'delivered') current.delivered += 1
+      current.amount += item.amount
+      map.set(wilaya, current)
+      return map
+    }, new Map<string, { total: number; delivered: number; amount: number }>()),
+  )
+    .sort((a, b) => b[1].total - a[1].total)
+    .slice(0, 6)
 
   return (
     <RoleGuard roles={['admin', 'shipping_manager']}>
       <div className="flex flex-col gap-5" style={{ animation: 'tfUp 0.4s ease both' }}>
-        {/* Two large delivery-type cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
           {[
+            { label: 'جاهزة للشحن', value: stats.ready, icon: PackageCheck, color: 'text-sky-500' },
+            { label: 'قيد النقل', value: stats.inTransit, icon: Truck, color: 'text-violet-500' },
             {
-              label: 'توصيل دوميسيل',
-              count: stats.homeDelivery,
-              percent: homePercent,
-              accent: '#e31e24',
+              label: 'تم التسليم',
+              value: stats.delivered,
+              icon: CheckCircle2,
+              color: 'text-emerald-500',
             },
-            { label: 'ستوب ديسك', count: stats.stopDesk, percent: deskPercent, accent: '#8b5cf6' },
-          ].map((item) => (
+            {
+              label: 'مبالغ قيد التحصيل',
+              value: formatCurrency(stats.collectableAmount),
+              icon: ClipboardCheck,
+              color: 'text-amber-500',
+            },
+          ].map((kpi) => (
             <div
-              key={item.label}
-              className="relative overflow-hidden bg-card p-5 kpi-accent"
+              key={kpi.label}
+              className="relative overflow-hidden bg-card p-4 md:p-[18px]"
               style={{
                 border: '1px solid var(--color-card-border)',
                 borderRadius: 'var(--color-card-radius)',
-                ['--kpi-color' as string]: item.accent,
               }}
             >
-              <div className="text-[12.5px] text-muted-foreground font-medium">{item.label}</div>
-              <div
-                className="font-mono text-[36px] font-bold mt-1.5 tracking-tight"
-                style={{ color: item.accent }}
-              >
-                {item.count}
+              <div className="flex items-start justify-between gap-3">
+                <div className="font-mono text-[22px] md:text-[30px] font-bold tracking-tight">
+                  {kpi.value}
+                </div>
+                <div className="rounded-xl bg-muted p-2">
+                  <kpi.icon className={cn('h-4 w-4', kpi.color)} />
+                </div>
               </div>
-              <div className="mt-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] text-muted-foreground">
-                    {item.percent}% من الإجمالي
-                  </span>
-                </div>
-                <div className="h-[6px] bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${item.percent}%`,
-                      background: item.accent,
-                      transformOrigin: 'right',
-                      animation: 'tfGrow 0.8s ease both',
-                    }}
-                  />
-                </div>
+              <div className="text-[11.5px] md:text-[12.5px] text-muted-foreground font-medium mt-1">
+                {kpi.label}
               </div>
             </div>
           ))}
         </div>
 
-        {/* Wilaya table */}
         <div className="dc-card overflow-hidden">
-          <div className="p-5 pb-3">
-            <h3 className="text-[14.5px] font-extrabold">التوصيل حسب الولاية</h3>
-          </div>
-          <div
-            className="flex items-center text-[11.5px] font-bold text-muted-foreground"
-            style={{
-              background: 'var(--color-table-header)',
-              borderTop: '1px solid var(--color-table-border)',
-              borderBottom: '1px solid var(--color-table-border)',
-            }}
-          >
-            <div className="px-4 py-2.5 flex-1 min-w-[100px]">الولاية</div>
-            <div className="px-3 py-2.5 w-16 text-center shrink-0">الطلبات</div>
-            <div className="px-3 py-2.5 w-24 text-center shrink-0">التوزيع</div>
-            <div className="px-3 py-2.5 w-24 text-center shrink-0">الحالة</div>
-            <div className="px-3 py-2.5 w-[90px] shrink-0 text-center">الإيرادات</div>
-          </div>
-          <div className="overflow-auto max-h-[calc(100vh-28rem)]">
-            {wilayas.map(([wilaya, data]) => {
-              const homeW = data.total > 0 ? (data.home / data.total) * 100 : 0
-              const deskW = data.total > 0 ? (data.desk / data.total) * 100 : 0
-              const deliveredW = data.total > 0 ? (data.delivered / data.total) * 100 : 0
-              const cancelledW = data.total > 0 ? (data.cancelled / data.total) * 100 : 0
-              const isHighRisk = data.cancelled > 0 && data.cancelled / data.total > 0.5
+          <div className="p-4 md:p-5 border-b border-border/70">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-[15px] font-extrabold">مركز تجهيز الشحنات</h3>
+                  {selectedItems.length > 0 && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                      {selectedItems.length} محدد
+                    </span>
+                  )}
+                </div>
+                <p className="text-[12px] text-muted-foreground mt-1">
+                  حدّث الحالات واطبع الملصقات دون مغادرة الصفحة
+                </p>
+              </div>
 
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={openPrintPreview}
+                  disabled={selectedItems.length === 0}
+                  className="h-9 rounded-xl"
+                >
+                  <Printer className="h-4 w-4" />
+                  طباعة الملصقات
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => updateSelectedStatus(STATUS.PREPARING)}
+                  disabled={selectedItems.length === 0 || bulkUpdate.isPending}
+                  className="h-9 rounded-xl"
+                >
+                  <PackageCheck className="h-4 w-4" />
+                  جاري التجهيز
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => updateSelectedStatus(STATUS.SHIPPED)}
+                  disabled={selectedItems.length === 0 || bulkUpdate.isPending}
+                  className="h-9 rounded-xl"
+                >
+                  {bulkUpdate.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  تم الشحن
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => updateSelectedStatus(STATUS.DELIVERED)}
+                  disabled={selectedItems.length === 0 || bulkUpdate.isPending}
+                  className="h-9 rounded-xl border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  تم التسليم
+                </Button>
+              </div>
+            </div>
+
+            <div className="relative mt-4">
+              <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="ابحث بالاسم، الهاتف، الولاية أو رقم الطلب..."
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="h-11 ps-10 rounded-xl bg-muted/35"
+              />
+            </div>
+
+            <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+              {filters.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setFilter(item.value)}
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-[11.5px] font-bold transition-colors',
+                    filter === item.value
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {item.label}
+                  <span className="font-mono text-[10px] opacity-75">
+                    {stageCounts[item.value]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 border-b border-border/70 bg-muted/20 px-4 py-2.5">
+            <Checkbox
+              aria-label="تحديد كل الشحنات الظاهرة"
+              checked={allVisibleSelected}
+              onCheckedChange={(checked) => toggleVisible(checked === true)}
+              disabled={selectableItems.length === 0}
+            />
+            <span className="text-[11px] font-bold text-muted-foreground">
+              تحديد كل الشحنات القابلة للتحديث ({selectableItems.length})
+            </span>
+          </div>
+
+          <div className="p-3 md:p-4">
+            {filteredItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-14 text-center">
+                <div className="rounded-2xl bg-muted p-5 mb-4">
+                  <Search className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold">لا توجد شحنات مطابقة</h3>
+                <p className="text-sm text-muted-foreground mt-1">جرّب تغيير البحث أو الحالة</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {filteredItems.map((item) => {
+                  const { order } = item
+                  const stage = STAGE_META[item.stage]
+                  const StageIcon = stage.icon
+                  const isSelectable = item.stage === 'ready' || item.stage === 'in_transit'
+
+                  return (
+                    <div
+                      key={order.order_id}
+                      className={cn(
+                        'flex flex-col gap-3 rounded-2xl border p-3 transition-colors md:flex-row md:items-center',
+                        selectedRows.has(order._row)
+                          ? 'border-primary/35 bg-primary/[0.035]'
+                          : 'border-transparent hover:border-border hover:bg-muted/20',
+                      )}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Checkbox
+                          aria-label={`تحديد الطلب ${order.order_id}`}
+                          checked={selectedRows.has(order._row)}
+                          onCheckedChange={(checked) => toggleRow(order._row, checked === true)}
+                          disabled={!isSelectable}
+                        />
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted">
+                          <StageIcon className={cn('h-5 w-5', stage.className.split(' ').at(-1))} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-[10.5px] font-bold text-primary">
+                              {order.order_id}
+                            </span>
+                            <span
+                              className={cn(
+                                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold',
+                                stage.className,
+                              )}
+                            >
+                              {stage.label}
+                            </span>
+                          </div>
+                          <h4 className="mt-1 truncate text-[13.5px] font-extrabold">
+                            {order.customerName}
+                          </h4>
+                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10.5px] text-muted-foreground">
+                            <span dir="ltr" className="font-mono">
+                              {order.phone}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {order.wilaya}، {order.baladiya}
+                            </span>
+                            <span>{item.isHomeDelivery ? 'منزل' : 'مكتب'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 md:flex md:items-center md:gap-6">
+                        <div>
+                          <p className="text-[9.5px] text-muted-foreground">المنتج</p>
+                          <p className="mt-1 max-w-32 truncate text-[11px] font-bold">
+                            {order.product}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[9.5px] text-muted-foreground">المبلغ</p>
+                          <p className="mt-1 font-mono text-[11px] font-bold">
+                            {formatCurrency(item.amount)}
+                          </p>
+                        </div>
+                        <Link
+                          to="/orders/$row"
+                          params={{ row: String(order._row) }}
+                          className="self-center justify-self-end rounded-xl border border-border px-3 py-2 text-[10.5px] font-bold text-muted-foreground hover:bg-muted hover:text-foreground"
+                        >
+                          التفاصيل
+                        </Link>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="dc-card overflow-hidden">
+          <div className="p-4 md:p-5 border-b border-border/70">
+            <h3 className="text-[14px] font-extrabold">أداء التوصيل حسب الولاية</h3>
+            <p className="text-[11.5px] text-muted-foreground mt-1">أكثر الولايات نشاطًا</p>
+          </div>
+          <div className="divide-y divide-border/70">
+            {wilayaStats.map(([wilaya, data]) => {
+              const deliveryRate =
+                data.total > 0 ? Math.round((data.delivered / data.total) * 100) : 0
               return (
                 <div
                   key={wilaya}
-                  className="flex items-center text-[12.5px] border-b border-divider last:border-b-0 table-row-hover"
+                  className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-4 py-3 text-[11.5px] md:px-5"
                 >
-                  <div className="px-4 py-2.5 flex-1 min-w-[100px] font-semibold">
-                    <div className="flex items-center gap-1.5">
-                      {wilaya}
-                      {isHighRisk && (
-                        <span className="inline-flex items-center gap-0.5 h-4 px-1.5 rounded-full bg-[var(--status-cancelled)]/15 text-[var(--status-cancelled)] text-[8px] font-bold">
-                          <AlertTriangle className="h-2.5 w-2.5" />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="px-3 py-2.5 w-16 text-center shrink-0 font-mono">
-                    {data.total}
-                  </div>
-                  <div className="px-3 py-2.5 w-24 shrink-0">
-                    <div className="h-[7px] bg-muted rounded-full overflow-hidden flex">
+                  <div>
+                    <p className="font-bold">{wilaya}</p>
+                    <div className="mt-2 h-1.5 max-w-64 overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full bg-[#e31e24]"
-                        style={{
-                          width: `${homeW}%`,
-                          animation: 'tfGrow 0.6s ease both',
-                          transformOrigin: 'right',
-                        }}
-                      />
-                      <div className="h-full bg-[#8b5cf6]" style={{ width: `${deskW}%` }} />
-                    </div>
-                  </div>
-                  <div className="px-3 py-2.5 w-24 shrink-0">
-                    <div className="h-[7px] bg-muted rounded-full overflow-hidden flex">
-                      <div
-                        className="h-full bg-[var(--status-delivered)]"
-                        style={{
-                          width: `${deliveredW}%`,
-                          animation: 'tfGrow 0.6s ease both',
-                          transformOrigin: 'right',
-                        }}
-                      />
-                      <div
-                        className="h-full bg-[var(--status-cancelled)]"
-                        style={{ width: `${cancelledW}%` }}
+                        className="h-full rounded-full bg-emerald-500"
+                        style={{ width: `${deliveryRate}%` }}
                       />
                     </div>
                   </div>
-                  <div className="px-3 py-2.5 w-[90px] shrink-0 font-mono text-[11px] text-center">
-                    {formatCurrency(data.revenue)}
+                  <div className="text-center">
+                    <p className="font-mono font-bold">{data.total}</p>
+                    <p className="text-[9px] text-muted-foreground">شحنة</p>
+                  </div>
+                  <div className="text-left">
+                    <p className="font-mono font-bold">{deliveryRate}%</p>
+                    <p className="text-[9px] text-muted-foreground">تسليم</p>
                   </div>
                 </div>
               )
@@ -270,6 +570,33 @@ function DeliveryPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={printDialogOpen} onOpenChange={setPrintDialogOpen}>
+        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl" dir="rtl">
+          <div className="shipment-print-hide">
+            <DialogHeader>
+              <DialogTitle>معاينة ملصقات الشحن</DialogTitle>
+              <DialogDescription>سيتم طباعة ملصق مستقل لكل طلب محدد بقياس A6.</DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="shipment-print-root space-y-4 bg-muted/25 p-2">
+            {selectedItems.map((item) => (
+              <ShipmentLabel key={item.order.order_id} item={item} />
+            ))}
+          </div>
+
+          <DialogFooter className="shipment-print-hide">
+            <Button type="button" variant="outline" onClick={() => setPrintDialogOpen(false)}>
+              إغلاق
+            </Button>
+            <Button type="button" onClick={() => window.print()}>
+              <Printer className="h-4 w-4" />
+              طباعة {selectedItems.length} ملصق
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </RoleGuard>
   )
 }
