@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { useOrders } from '~/lib/queries'
 import { Input } from '~/components/ui/input'
@@ -22,8 +22,18 @@ import {
 } from '~/lib/customer-insights'
 
 export const Route = createFileRoute('/_authenticated/customers')({
-  component: CustomersPage,
+  component: CustomersRoute,
 })
+
+function CustomersRoute() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+
+  if (pathname !== '/customers' && pathname !== '/customers/') {
+    return <Outlet />
+  }
+
+  return <CustomersPage />
+}
 
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/)
