@@ -169,6 +169,7 @@ function ProductsPage() {
   const alertCount = products.filter(
     (product) => product.health === 'low' || product.health === 'out_of_stock',
   ).length
+  const untrackedCount = products.filter((product) => product.health === 'untracked').length
   const inventoryValue = trackedProducts.reduce(
     (total, product) => total + (product.inventoryValue || 0),
     0,
@@ -280,7 +281,9 @@ function ProductsPage() {
               'rounded-[var(--color-card-radius)] border p-4 md:p-5',
               alertCount > 0
                 ? 'border-amber-500/25 bg-amber-500/5'
-                : 'border-emerald-500/20 bg-emerald-500/5',
+                : untrackedCount > 0
+                  ? 'border-sky-500/20 bg-sky-500/5'
+                  : 'border-emerald-500/20 bg-emerald-500/5',
             )}
           >
             <div className="flex items-start gap-3">
@@ -289,21 +292,29 @@ function ProductsPage() {
                   'rounded-xl p-2.5',
                   alertCount > 0
                     ? 'bg-amber-500/10 text-amber-500'
-                    : 'bg-emerald-500/10 text-emerald-500',
+                    : untrackedCount > 0
+                      ? 'bg-sky-500/10 text-sky-500'
+                      : 'bg-emerald-500/10 text-emerald-500',
                 )}
               >
                 {alertCount > 0 ? (
                   <AlertTriangle className="h-5 w-5" />
+                ) : untrackedCount > 0 ? (
+                  <Boxes className="h-5 w-5" />
                 ) : (
                   <CheckCircle2 className="h-5 w-5" />
                 )}
               </div>
               <div>
                 <h3 className="text-[14px] font-extrabold">
-                  {alertCount > 0 ? `${alertCount} تنبيه يحتاج الانتباه` : 'المخزون في حالة جيدة'}
+                  {alertCount > 0
+                    ? `${alertCount} تنبيه يحتاج الانتباه`
+                    : untrackedCount > 0
+                      ? `${untrackedCount} منتج يحتاج ضبط المخزون`
+                      : 'المخزون في حالة جيدة'}
                 </h3>
                 <p className="text-[11.5px] text-muted-foreground mt-1 leading-5">
-                  {products.some((product) => product.health === 'untracked')
+                  {untrackedCount > 0
                     ? 'اضبط رصيد المنتجات غير المتتبعة للحصول على تنبيهات دقيقة.'
                     : 'سيظهر التنبيه هنا قبل وصول أي منتج إلى حد النفاد.'}
                 </p>
@@ -469,7 +480,7 @@ function ProductsPage() {
 
                       <div className="flex items-end justify-between gap-3 mt-4 pt-3 border-t border-border/70">
                         <div>
-                          <p className="text-[9.5px] text-muted-foreground">إجمالي المبيعات</p>
+                          <p className="text-[9.5px] text-muted-foreground">قيمة الطلبات</p>
                           <p className="font-mono text-[13px] font-bold mt-1">
                             {formatCurrency(product.totalRevenue)}
                           </p>
