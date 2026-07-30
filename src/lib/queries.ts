@@ -9,6 +9,7 @@ import {
 } from '~/server/orders'
 import { getCallLogs, recordCallLog } from '~/server/call-center'
 import type { CallLog } from '~/lib/types'
+import { getInventorySettings, updateInventorySetting } from '~/server/inventory'
 import { ORDER_CACHE_TTL_S, ORDER_GC_TIME_MS } from '~/config'
 
 export const ordersQueryOptions = queryOptions({
@@ -135,6 +136,32 @@ export function useRecordCallLog() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['call-logs'] })
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  })
+}
+
+export const inventorySettingsQueryOptions = queryOptions({
+  queryKey: ['inventory-settings'],
+  queryFn: () => getInventorySettings(),
+  staleTime: 30_000,
+})
+
+export function useInventorySettings() {
+  return useQuery(inventorySettingsQueryOptions)
+}
+
+export function useUpdateInventorySetting() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: {
+      productName: string
+      stockQuantity: number
+      lowStockThreshold: number
+      unitCost: number
+    }) => updateInventorySetting({ data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory-settings'] })
     },
   })
 }
