@@ -1,9 +1,14 @@
 import { createServerFn } from '@tanstack/react-start'
+import { normalizeStorefrontOrigin, readLandingPageConfig } from '~/lib/landing-page'
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
 import { requireAdmin } from './auth'
 import { resolveDefaultStoreId } from './order-repository'
 
 interface StoreConnectionConfig {
+  landingPage?: {
+    enabled?: boolean
+    allowedOrigin?: string
+  }
   name?: string
   version?: number
 }
@@ -45,11 +50,16 @@ function generateWebhookSecret() {
 }
 
 function toConnection(row: StoreConnectionRow) {
+  const landingPage = readLandingPageConfig(row.config)
   return {
     id: row.id,
     name: row.config?.name || 'موقع الطلبات',
     endpointKey: row.external_account_id,
     endpointPath: `/api/integrations/webhook/${row.external_account_id}`,
+    publicEndpointPath: `/api/integrations/public/${row.external_account_id}`,
+    widgetPath: `/api/integrations/widget/${row.external_account_id}`,
+    landingPageEnabled: landingPage.enabled,
+    allowedOrigin: landingPage.allowedOrigin,
     isActive: row.is_active,
     lastReceivedAt: row.last_received_at,
     receivedCount: Number(row.received_count) || 0,
@@ -186,6 +196,66 @@ export const setStoreConnectionActive = createServerFn({ method: 'POST' })
     })
 
     return { success: true }
+  })
+
+export const updateStoreConnectionLandingPage = createServerFn({ method: 'POST' })
+  .validator((data: { id: string; enabled: boolean; siteUrl: string }) => data)
+  .handler(async ({ data }) => {
+    const userId = await requireAdmin()
+    const supabase = getSupabaseAdminClient()
+    const storeId = await resolveDefaultStoreId(userId, supabase)
+    const { data: connection, error: lookupError } = await supabase
+      .from('store_integrations')
+      .select(
+        'id,store_id,external_account_id,config,is_active,last_received_at,received_count,error_count,created_at',
+      )
+      .eq('id', data.id)
+      .eq('store_id', storeId)
+      .eq('provider', 'webhook')
+      .maybeSingle()
+
+    if (lookupError) throw lookupError
+    if (!connection) throw new Error('لم يتم العثور على الاتصال')
+
+    const currentConfig = (connection.config || {}) as StoreConnectionConfig
+    const currentLandingPage = readLandingPageConfig(currentConfig)
+    const allowedOrigin = data.siteUrl.trim()
+      ? normalizeStorefrontOrigin(data.siteUrl)
+      : currentLandingPage.allowedOrigin
+
+    if (data.enabled && !allowedOrigin) throw new Error('رابط موقع Landing Page مطلوب')
+
+    const nextConfig: StoreConnectionConfig = {
+      ...currentConfig,
+      landingPage: {
+        enabled: data.enabled,
+        allowedOrigin,
+      },
+    }
+    const { data: updated, error: updateError } = await supabase
+      .from('store_integrations')
+      .update({ config: nextConfig })
+      .eq('id', data.id)
+      .eq('store_id', storeId)
+      .eq('provider', 'webhook')
+      .select(
+        'id,store_id,external_account_id,config,is_active,last_received_at,received_count,error_count,created_at',
+      )
+      .single()
+
+    if (updateError) throw updateError
+
+    await supabase.from('audit_log').insert({
+      actor_id: userId,
+      store_id: storeId,
+      action: data.enabled ? 'enable_landing_page_integration' : 'disable_landing_page_integration',
+      new_value: {
+        integrationId: data.id,
+        allowedOrigin,
+      },
+    })
+
+    return { connection: toConnection(updated as StoreConnectionRow) }
   })
 
 export const deleteStoreConnection = createServerFn({ method: 'POST' })

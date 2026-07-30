@@ -4,8 +4,10 @@ import {
   Activity,
   CheckCircle2,
   CircleOff,
+  Code2,
   Copy,
   ExternalLink,
+  Globe2,
   KeyRound,
   Link2,
   Loader2,
@@ -41,6 +43,7 @@ import {
   useRotateStoreConnectionSecret,
   useSetStoreConnectionActive,
   useStoreConnections,
+  useUpdateStoreConnectionLandingPage,
 } from '~/lib/queries'
 import { cn } from '~/lib/utils'
 
@@ -53,6 +56,15 @@ interface RevealedSecret {
   connectionName: string
   endpointPath: string
   secret: string
+}
+
+interface LandingPageTarget {
+  id: string
+  name: string
+  endpointKey: string
+  widgetPath: string
+  landingPageEnabled: boolean
+  allowedOrigin: string
 }
 
 const EVENT_META = {
@@ -101,6 +113,7 @@ function IntegrationsPage() {
   const rotateSecret = useRotateStoreConnectionSecret()
   const setActive = useSetStoreConnectionActive()
   const deleteConnection = useDeleteStoreConnection()
+  const updateLandingPage = useUpdateStoreConnectionLandingPage()
   const [createOpen, setCreateOpen] = useState(false)
   const [connectionName, setConnectionName] = useState('')
   const [revealedSecret, setRevealedSecret] = useState<RevealedSecret | null>(null)
@@ -108,6 +121,8 @@ function IntegrationsPage() {
     id: string
     name: string
   } | null>(null)
+  const [landingPageTarget, setLandingPageTarget] = useState<LandingPageTarget | null>(null)
+  const [landingPageUrl, setLandingPageUrl] = useState('')
   const [isTesting, setIsTesting] = useState(false)
 
   const connections = useMemo(
@@ -190,6 +205,27 @@ function IntegrationsPage() {
       setConnectionToDelete(null)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'تعذر حذف الاتصال')
+    }
+  }
+
+  const openLandingPageSetup = (connection: (typeof connections)[number]) => {
+    setLandingPageTarget(connection)
+    setLandingPageUrl(connection.allowedOrigin)
+  }
+
+  const handleLandingPageSave = async (enabled: boolean) => {
+    if (!landingPageTarget) return
+    try {
+      const result = await updateLandingPage.mutateAsync({
+        id: landingPageTarget.id,
+        enabled,
+        siteUrl: landingPageUrl,
+      })
+      setLandingPageTarget(result.connection)
+      setLandingPageUrl(result.connection.allowedOrigin)
+      toast.success(enabled ? 'تم تفعيل ربط Landing Page' : 'تم إيقاف ربط Landing Page')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر حفظ إعداد الربط')
     }
   }
 
@@ -407,6 +443,14 @@ function IntegrationsPage() {
                           <TestTube2 className="h-4 w-4" />
                           متجر تجريبي
                         </Link>
+                      </Button>
+                      <Button
+                        variant={connection.landingPageEnabled ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => openLandingPageSetup(connection)}
+                      >
+                        <Globe2 className="h-4 w-4" />
+                        Landing Page
                       </Button>
                       <Button
                         variant="outline"
@@ -649,6 +693,144 @@ function IntegrationsPage() {
                   <ExternalLink className="h-4 w-4" />
                 )}
                 اختبار الاتصال
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={Boolean(landingPageTarget)}
+          onOpenChange={(open) => {
+            if (!open && !updateLandingPage.isPending) setLandingPageTarget(null)
+          }}
+        >
+          <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Globe2 className="h-5 w-5 text-primary" />
+                ربط Landing Page — {landingPageTarget?.name}
+              </DialogTitle>
+              <DialogDescription>
+                أدخل رابط موقع المنتج، ثم انسخ الكود الجاهز وضعه داخل صفحة الطلب.
+              </DialogDescription>
+            </DialogHeader>
+
+            {landingPageTarget && (
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <label className="text-[12px] font-bold" htmlFor="landing-page-url">
+                    رابط موقع المنتج
+                  </label>
+                  <Input
+                    id="landing-page-url"
+                    value={landingPageUrl}
+                    onChange={(event) => setLandingPageUrl(event.target.value)}
+                    placeholder="https://my-store.com"
+                    dir="ltr"
+                  />
+                  <p className="text-[10.5px] text-muted-foreground">
+                    نقبل الطلبات القادمة من هذا الموقع فقط. يمكنك لصق رابط صفحة المنتج كاملًا.
+                  </p>
+                </div>
+
+                {landingPageTarget.landingPageEnabled && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span className="text-[12px] font-bold">
+                        الربط المباشر مفعّل لـ {landingPageTarget.allowedOrigin}
+                      </span>
+                    </div>
+                    <div className="rounded-[12px] border border-border overflow-hidden">
+                      <div className="flex items-center justify-between bg-muted px-3 py-2">
+                        <span className="inline-flex items-center gap-2 text-[11px] font-bold">
+                          <Code2 className="h-4 w-4" />
+                          الكود الجاهز
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const appOrigin =
+                              typeof window === 'undefined'
+                                ? 'https://orders-azure.vercel.app'
+                                : window.location.origin
+                            const snippet = `<form data-tflow-form>
+  <input name="customer_name" placeholder="الاسم الكامل" required>
+  <input name="phone" placeholder="رقم الهاتف" required>
+  <input name="wilaya" placeholder="الولاية">
+  <input name="baladiya" placeholder="البلدية">
+  <input name="address" placeholder="العنوان">
+  <input name="product" value="اسم المنتج" required>
+  <input name="price" value="3500" type="hidden">
+  <input name="quantity" value="1" type="number" min="1">
+  <button type="submit" data-loading-text="جاري الإرسال...">تأكيد الطلب</button>
+  <p data-tflow-message></p>
+</form>
+<script src="${appOrigin}${landingPageTarget.widgetPath}" defer></script>`
+                            copyText(snippet, 'تم نسخ كود Landing Page')
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          نسخ الكود
+                        </Button>
+                      </div>
+                      <pre
+                        className="bg-[#0d1117] text-gray-300 p-4 text-[10.5px] leading-5 overflow-auto max-h-[280px]"
+                        dir="ltr"
+                      >
+                        {`<form data-tflow-form>
+  <input name="customer_name" placeholder="الاسم الكامل" required>
+  <input name="phone" placeholder="رقم الهاتف" required>
+  <input name="wilaya" placeholder="الولاية">
+  <input name="baladiya" placeholder="البلدية">
+  <input name="address" placeholder="العنوان">
+  <input name="product" value="اسم المنتج" required>
+  <input name="price" value="3500" type="hidden">
+  <input name="quantity" value="1" type="number" min="1">
+  <button type="submit">تأكيد الطلب</button>
+  <p data-tflow-message></p>
+</form>
+<script src="https://orders-azure.vercel.app${landingPageTarget.widgetPath}" defer></script>`}
+                      </pre>
+                    </div>
+                    <div className="rounded-[11px] border border-blue-500/25 bg-blue-500/10 p-3 text-[11.5px] leading-5 text-blue-600 dark:text-blue-400">
+                      غيّر اسم المنتج والسعر داخل الكود، وحافظ على أسماء الحقول كما هي. لا يحتاج هذا
+                      الكود إلى المفتاح السري.
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <DialogFooter className="gap-2">
+              {landingPageTarget?.landingPageEnabled && (
+                <Button
+                  variant="outline"
+                  onClick={() => handleLandingPageSave(false)}
+                  disabled={updateLandingPage.isPending}
+                  className="text-destructive border-destructive/30"
+                >
+                  إيقاف الربط
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => setLandingPageTarget(null)}
+                disabled={updateLandingPage.isPending}
+              >
+                إغلاق
+              </Button>
+              <Button
+                onClick={() => handleLandingPageSave(true)}
+                disabled={updateLandingPage.isPending}
+              >
+                {updateLandingPage.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ShieldCheck className="h-4 w-4" />
+                )}
+                {landingPageTarget?.landingPageEnabled ? 'حفظ الرابط' : 'تفعيل وإنشاء الكود'}
               </Button>
             </DialogFooter>
           </DialogContent>

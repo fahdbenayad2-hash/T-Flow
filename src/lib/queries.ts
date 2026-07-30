@@ -17,6 +17,7 @@ import {
   getStoreConnections,
   rotateStoreConnectionSecret,
   setStoreConnectionActive,
+  updateStoreConnectionLandingPage,
 } from '~/server/store-connections'
 import { ORDER_CACHE_TTL_S, ORDER_GC_TIME_MS } from '~/config'
 
@@ -242,6 +243,17 @@ export function useDeleteStoreConnection() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => deleteStoreConnection({ data: { id } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['store-connections'] })
+    },
+  })
+}
+
+export function useUpdateStoreConnectionLandingPage() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { id: string; enabled: boolean; siteUrl: string }) =>
+      updateStoreConnectionLandingPage({ data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['store-connections'] })
     },

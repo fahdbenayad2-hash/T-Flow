@@ -26,7 +26,9 @@ import { Route as AuthenticatedCallCenterRouteImport } from './routes/_authentic
 import { Route as AuthenticatedOrdersRowRouteImport } from './routes/_authenticated/orders.$row'
 import { Route as AuthenticatedIntegrationTestIdRouteImport } from './routes/_authenticated/integration-test.$id'
 import { Route as AuthenticatedCustomersPhoneRouteImport } from './routes/_authenticated/customers.$phone'
+import { Route as ApiIntegrationsWidgetEndpointKeyRouteImport } from './routes/api/integrations/widget/$endpointKey'
 import { Route as ApiIntegrationsWebhookEndpointKeyRouteImport } from './routes/api/integrations/webhook/$endpointKey'
+import { Route as ApiIntegrationsPublicEndpointKeyRouteImport } from './routes/api/integrations/public/$endpointKey'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -115,10 +117,22 @@ const AuthenticatedCustomersPhoneRoute =
     path: '/$phone',
     getParentRoute: () => AuthenticatedCustomersRoute,
   } as any)
+const ApiIntegrationsWidgetEndpointKeyRoute =
+  ApiIntegrationsWidgetEndpointKeyRouteImport.update({
+    id: '/api/integrations/widget/$endpointKey',
+    path: '/api/integrations/widget/$endpointKey',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiIntegrationsWebhookEndpointKeyRoute =
   ApiIntegrationsWebhookEndpointKeyRouteImport.update({
     id: '/api/integrations/webhook/$endpointKey',
     path: '/api/integrations/webhook/$endpointKey',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiIntegrationsPublicEndpointKeyRoute =
+  ApiIntegrationsPublicEndpointKeyRouteImport.update({
+    id: '/api/integrations/public/$endpointKey',
+    path: '/api/integrations/public/$endpointKey',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -139,7 +153,9 @@ export interface FileRoutesByFullPath {
   '/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
   '/orders/$row': typeof AuthenticatedOrdersRowRoute
+  '/api/integrations/public/$endpointKey': typeof ApiIntegrationsPublicEndpointKeyRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
+  '/api/integrations/widget/$endpointKey': typeof ApiIntegrationsWidgetEndpointKeyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -158,7 +174,9 @@ export interface FileRoutesByTo {
   '/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
   '/orders/$row': typeof AuthenticatedOrdersRowRoute
+  '/api/integrations/public/$endpointKey': typeof ApiIntegrationsPublicEndpointKeyRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
+  '/api/integrations/widget/$endpointKey': typeof ApiIntegrationsWidgetEndpointKeyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -179,7 +197,9 @@ export interface FileRoutesById {
   '/_authenticated/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/_authenticated/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
   '/_authenticated/orders/$row': typeof AuthenticatedOrdersRowRoute
+  '/api/integrations/public/$endpointKey': typeof ApiIntegrationsPublicEndpointKeyRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
+  '/api/integrations/widget/$endpointKey': typeof ApiIntegrationsWidgetEndpointKeyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -200,7 +220,9 @@ export interface FileRouteTypes {
     | '/customers/$phone'
     | '/integration-test/$id'
     | '/orders/$row'
+    | '/api/integrations/public/$endpointKey'
     | '/api/integrations/webhook/$endpointKey'
+    | '/api/integrations/widget/$endpointKey'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -219,7 +241,9 @@ export interface FileRouteTypes {
     | '/customers/$phone'
     | '/integration-test/$id'
     | '/orders/$row'
+    | '/api/integrations/public/$endpointKey'
     | '/api/integrations/webhook/$endpointKey'
+    | '/api/integrations/widget/$endpointKey'
   id:
     | '__root__'
     | '/'
@@ -239,14 +263,18 @@ export interface FileRouteTypes {
     | '/_authenticated/customers/$phone'
     | '/_authenticated/integration-test/$id'
     | '/_authenticated/orders/$row'
+    | '/api/integrations/public/$endpointKey'
     | '/api/integrations/webhook/$endpointKey'
+    | '/api/integrations/widget/$endpointKey'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiIntegrationsPublicEndpointKeyRoute: typeof ApiIntegrationsPublicEndpointKeyRoute
   ApiIntegrationsWebhookEndpointKeyRoute: typeof ApiIntegrationsWebhookEndpointKeyRoute
+  ApiIntegrationsWidgetEndpointKeyRoute: typeof ApiIntegrationsWidgetEndpointKeyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -370,11 +398,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCustomersPhoneRouteImport
       parentRoute: typeof AuthenticatedCustomersRoute
     }
+    '/api/integrations/widget/$endpointKey': {
+      id: '/api/integrations/widget/$endpointKey'
+      path: '/api/integrations/widget/$endpointKey'
+      fullPath: '/api/integrations/widget/$endpointKey'
+      preLoaderRoute: typeof ApiIntegrationsWidgetEndpointKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/integrations/webhook/$endpointKey': {
       id: '/api/integrations/webhook/$endpointKey'
       path: '/api/integrations/webhook/$endpointKey'
       fullPath: '/api/integrations/webhook/$endpointKey'
       preLoaderRoute: typeof ApiIntegrationsWebhookEndpointKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/integrations/public/$endpointKey': {
+      id: '/api/integrations/public/$endpointKey'
+      path: '/api/integrations/public/$endpointKey'
+      fullPath: '/api/integrations/public/$endpointKey'
+      preLoaderRoute: typeof ApiIntegrationsPublicEndpointKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -442,8 +484,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiIntegrationsPublicEndpointKeyRoute: ApiIntegrationsPublicEndpointKeyRoute,
   ApiIntegrationsWebhookEndpointKeyRoute:
     ApiIntegrationsWebhookEndpointKeyRoute,
+  ApiIntegrationsWidgetEndpointKeyRoute: ApiIntegrationsWidgetEndpointKeyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
