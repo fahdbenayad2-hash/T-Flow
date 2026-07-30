@@ -1,6 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
-  GOOGLE_SHEET_FIELDS,
   mapGoogleSheetRow,
   validateGoogleSheetMapping,
   type GoogleSheetColumnMapping,
@@ -834,5 +833,3 @@ export const syncGoogleSheetConnection = createServerFn({ method: 'POST' })
       throw error
     }
   })
-
-export { GOOGLE_SHEET_FIELDS }
