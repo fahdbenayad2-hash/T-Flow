@@ -8,7 +8,7 @@ import { supabase } from '~/utils/supabase-client'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { setAuthCookie } from '~/utils/auth-cookie'
-import { LogIn, Store, UserPlus } from 'lucide-react'
+import { LogIn, Mail, Store, UserPlus } from 'lucide-react'
 
 export const Route = createFileRoute('/auth')({
   component: AuthPage,
@@ -24,6 +24,7 @@ function AuthPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [registrationMessage, setRegistrationMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
 
   // If a client-side session still exists (e.g. the SSR cookie expired but the
   // refresh token is valid), restore the cookie and go straight to the dashboard.
@@ -93,15 +94,58 @@ function AuthPage() {
       toast.success('تم تسجيل الدخول بنجاح')
       navigate({ to: '/dashboard' })
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : mode === 'register'
-            ? 'تعذر إنشاء الحساب'
-            : 'خطأ في تسجيل الدخول',
-      )
+      const message = error instanceof Error ? error.message : ''
+
+      if (/invalid login credentials/i.test(message)) {
+        toast.error('بيانات الدخول غير صحيحة، أو الحساب ما زال ينتظر تفعيل البريد')
+      } else if (/email not confirmed/i.test(message)) {
+        toast.error('فعّل حسابك من الرسالة، أو اضغط على إعادة إرسال رابط التفعيل')
+      } else if (/user already registered/i.test(message)) {
+        toast.error('هذا البريد مسجل من قبل. ادخل إلى حسابك أو أعد إرسال رابط التفعيل')
+      } else if (/rate limit/i.test(message)) {
+        toast.error('تم طلب رسائل كثيرة. انتظر دقيقة ثم حاول مجدداً')
+      } else {
+        toast.error(message || (mode === 'register' ? 'تعذر إنشاء الحساب' : 'خطأ في تسجيل الدخول'))
+      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleResendConfirmation = async () => {
+    const normalizedEmail = email.trim().toLowerCase()
+
+    if (!normalizedEmail) {
+      toast.error('اكتب بريدك الإلكتروني أولاً')
+      return
+    }
+
+    setResendLoading(true)
+
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: normalizedEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth`,
+        },
+      })
+
+      if (error) throw error
+
+      setRegistrationMessage(
+        `أعدنا إرسال رابط التفعيل إلى ${normalizedEmail}. راجع البريد غير المرغوب فيه أيضاً.`,
+      )
+      toast.success('تمت إعادة إرسال رابط التفعيل')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : ''
+      toast.error(
+        /rate limit/i.test(message)
+          ? 'تم طلب رسائل كثيرة. انتظر دقيقة ثم حاول مجدداً'
+          : message || 'تعذر إرسال رابط التفعيل',
+      )
+    } finally {
+      setResendLoading(false)
     }
   }
 
@@ -270,6 +314,18 @@ function AuthPage() {
                       ? 'إنشاء حسابي ومتجري'
                       : 'دخول'}
                 </Button>
+
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={handleResendConfirmation}
+                    disabled={resendLoading || !email.trim()}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Mail className="h-4 w-4" />
+                    {resendLoading ? 'جاري إعادة الإرسال...' : 'لم تصلك رسالة التفعيل؟ أعد إرسالها'}
+                  </button>
+                )}
               </form>
             </CardContent>
           </Card>
