@@ -29,6 +29,10 @@ let cache: {
 } | null = null
 const CACHE_TTL = ORDER_CACHE_TTL_S * 1000
 
+export function clearOrdersMemoryCache() {
+  cache = null
+}
+
 async function requireSuccessfulSheetMirror(response: Response, operation: string): Promise<void> {
   const responseBody = await response
     .clone()

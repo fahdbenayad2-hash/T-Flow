@@ -17,6 +17,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
 import { Route as AuthenticatedOrdersRouteImport } from './routes/_authenticated/orders'
+import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
 import { Route as AuthenticatedEarningsRouteImport } from './routes/_authenticated/earnings'
 import { Route as AuthenticatedDeliveryRouteImport } from './routes/_authenticated/delivery'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -24,6 +25,7 @@ import { Route as AuthenticatedCustomersRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCallCenterRouteImport } from './routes/_authenticated/call-center'
 import { Route as AuthenticatedOrdersRowRouteImport } from './routes/_authenticated/orders.$row'
 import { Route as AuthenticatedCustomersPhoneRouteImport } from './routes/_authenticated/customers.$phone'
+import { Route as ApiIntegrationsWebhookEndpointKeyRouteImport } from './routes/api/integrations/webhook/$endpointKey'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -64,6 +66,12 @@ const AuthenticatedOrdersRoute = AuthenticatedOrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIntegrationsRoute =
+  AuthenticatedIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedEarningsRoute = AuthenticatedEarningsRouteImport.update({
   id: '/earnings',
   path: '/earnings',
@@ -100,6 +108,12 @@ const AuthenticatedCustomersPhoneRoute =
     path: '/$phone',
     getParentRoute: () => AuthenticatedCustomersRoute,
   } as any)
+const ApiIntegrationsWebhookEndpointKeyRoute =
+  ApiIntegrationsWebhookEndpointKeyRouteImport.update({
+    id: '/api/integrations/webhook/$endpointKey',
+    path: '/api/integrations/webhook/$endpointKey',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -109,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/earnings': typeof AuthenticatedEarningsRoute
+  '/integrations': typeof AuthenticatedIntegrationsRoute
   '/orders': typeof AuthenticatedOrdersRouteWithChildren
   '/products': typeof AuthenticatedProductsRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -116,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof AuthenticatedUsersRoute
   '/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/orders/$row': typeof AuthenticatedOrdersRowRoute
+  '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -125,6 +141,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/earnings': typeof AuthenticatedEarningsRoute
+  '/integrations': typeof AuthenticatedIntegrationsRoute
   '/orders': typeof AuthenticatedOrdersRouteWithChildren
   '/products': typeof AuthenticatedProductsRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -132,6 +149,7 @@ export interface FileRoutesByTo {
   '/users': typeof AuthenticatedUsersRoute
   '/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/orders/$row': typeof AuthenticatedOrdersRowRoute
+  '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,6 +161,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/delivery': typeof AuthenticatedDeliveryRoute
   '/_authenticated/earnings': typeof AuthenticatedEarningsRoute
+  '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
   '/_authenticated/orders': typeof AuthenticatedOrdersRouteWithChildren
   '/_authenticated/products': typeof AuthenticatedProductsRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
@@ -150,6 +169,7 @@ export interface FileRoutesById {
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/_authenticated/orders/$row': typeof AuthenticatedOrdersRowRoute
+  '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,6 +181,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/delivery'
     | '/earnings'
+    | '/integrations'
     | '/orders'
     | '/products'
     | '/reports'
@@ -168,6 +189,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/customers/$phone'
     | '/orders/$row'
+    | '/api/integrations/webhook/$endpointKey'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -177,6 +199,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/delivery'
     | '/earnings'
+    | '/integrations'
     | '/orders'
     | '/products'
     | '/reports'
@@ -184,6 +207,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/customers/$phone'
     | '/orders/$row'
+    | '/api/integrations/webhook/$endpointKey'
   id:
     | '__root__'
     | '/'
@@ -194,6 +218,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/delivery'
     | '/_authenticated/earnings'
+    | '/_authenticated/integrations'
     | '/_authenticated/orders'
     | '/_authenticated/products'
     | '/_authenticated/reports'
@@ -201,12 +226,14 @@ export interface FileRouteTypes {
     | '/_authenticated/users'
     | '/_authenticated/customers/$phone'
     | '/_authenticated/orders/$row'
+    | '/api/integrations/webhook/$endpointKey'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiIntegrationsWebhookEndpointKeyRoute: typeof ApiIntegrationsWebhookEndpointKeyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -267,6 +294,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOrdersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/integrations': {
+      id: '/_authenticated/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof AuthenticatedIntegrationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/earnings': {
       id: '/_authenticated/earnings'
       path: '/earnings'
@@ -316,6 +350,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCustomersPhoneRouteImport
       parentRoute: typeof AuthenticatedCustomersRoute
     }
+    '/api/integrations/webhook/$endpointKey': {
+      id: '/api/integrations/webhook/$endpointKey'
+      path: '/api/integrations/webhook/$endpointKey'
+      fullPath: '/api/integrations/webhook/$endpointKey'
+      preLoaderRoute: typeof ApiIntegrationsWebhookEndpointKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -350,6 +391,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDeliveryRoute: typeof AuthenticatedDeliveryRoute
   AuthenticatedEarningsRoute: typeof AuthenticatedEarningsRoute
+  AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
   AuthenticatedOrdersRoute: typeof AuthenticatedOrdersRouteWithChildren
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
@@ -363,6 +405,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDeliveryRoute: AuthenticatedDeliveryRoute,
   AuthenticatedEarningsRoute: AuthenticatedEarningsRoute,
+  AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
   AuthenticatedOrdersRoute: AuthenticatedOrdersRouteWithChildren,
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
@@ -377,6 +420,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiIntegrationsWebhookEndpointKeyRoute:
+    ApiIntegrationsWebhookEndpointKeyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

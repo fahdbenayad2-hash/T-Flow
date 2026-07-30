@@ -14,6 +14,7 @@ import {
   Shield,
   Search,
   X,
+  Webhook,
 } from 'lucide-react'
 import { cn } from '~/lib/utils'
 import type { AppRole } from '~/lib/types'
@@ -44,6 +45,12 @@ const commands: CommandItem[] = [
     roles: ['admin', 'shipping_manager'],
   },
   { label: 'التقارير', icon: <BarChart3 className="h-4 w-4" />, to: '/reports', roles: ['admin'] },
+  {
+    label: 'ربط المتاجر',
+    icon: <Webhook className="h-4 w-4" />,
+    to: '/integrations',
+    roles: ['admin'],
+  },
   { label: 'الإعدادات', icon: <Settings className="h-4 w-4" />, to: '/settings', roles: ['admin'] },
   {
     label: 'إدارة المستخدمين',

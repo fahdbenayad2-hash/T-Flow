@@ -10,6 +10,12 @@ import {
 import { getCallLogs, recordCallLog } from '~/server/call-center'
 import type { CallLog } from '~/lib/types'
 import { getInventorySettings, updateInventorySetting } from '~/server/inventory'
+import {
+  createStoreConnection,
+  getStoreConnections,
+  rotateStoreConnectionSecret,
+  setStoreConnectionActive,
+} from '~/server/store-connections'
 import { ORDER_CACHE_TTL_S, ORDER_GC_TIME_MS } from '~/config'
 
 export const ordersQueryOptions = queryOptions({
@@ -162,6 +168,47 @@ export function useUpdateInventorySetting() {
     }) => updateInventorySetting({ data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-settings'] })
+    },
+  })
+}
+
+export const storeConnectionsQueryOptions = queryOptions({
+  queryKey: ['store-connections'],
+  queryFn: () => getStoreConnections(),
+  staleTime: 10_000,
+  refetchOnWindowFocus: true,
+})
+
+export function useStoreConnections() {
+  return useQuery(storeConnectionsQueryOptions)
+}
+
+export function useCreateStoreConnection() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (name: string) => createStoreConnection({ data: { name } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['store-connections'] })
+    },
+  })
+}
+
+export function useRotateStoreConnectionSecret() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => rotateStoreConnectionSecret({ data: { id } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['store-connections'] })
+    },
+  })
+}
+
+export function useSetStoreConnectionActive() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { id: string; isActive: boolean }) => setStoreConnectionActive({ data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['store-connections'] })
     },
   })
 }

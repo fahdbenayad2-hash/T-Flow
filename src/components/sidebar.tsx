@@ -10,6 +10,7 @@ import {
   Truck,
   BarChart3,
   Shield,
+  Webhook,
 } from 'lucide-react'
 import { cn } from '~/lib/utils'
 import { useRole, getRoleLabel } from '~/hooks/useRole'
@@ -38,6 +39,7 @@ export const navItems: NavItem[] = [
     roles: ['admin', 'shipping_manager'],
   },
   { to: '/reports', label: 'التقارير', icon: BarChart3, group: 'analytics', roles: ['admin'] },
+  { to: '/integrations', label: 'ربط المتاجر', icon: Webhook, group: 'system', roles: ['admin'] },
   { to: '/settings', label: 'الإعدادات', icon: Settings, group: 'system', roles: ['admin'] },
 ]
 
