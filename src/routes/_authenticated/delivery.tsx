@@ -174,9 +174,7 @@ function DeliveryPage() {
     })
   }, [filter, items, search])
 
-  const selectableItems = filteredItems.filter(
-    (item) => item.stage === 'ready' || item.stage === 'in_transit',
-  )
+  const selectableItems = filteredItems
   const selectedItems = items.filter((item) => selectedRows.has(item.order._row))
   const allVisibleSelected =
     selectableItems.length > 0 && selectableItems.every((item) => selectedRows.has(item.order._row))
@@ -433,7 +431,7 @@ function DeliveryPage() {
               disabled={selectableItems.length === 0}
             />
             <span className="text-[11px] font-bold text-muted-foreground">
-              تحديد كل الشحنات القابلة للتحديث ({selectableItems.length})
+              تحديد كل الشحنات الظاهرة ({selectableItems.length})
             </span>
           </div>
 
@@ -452,8 +450,6 @@ function DeliveryPage() {
                   const { order } = item
                   const stage = STAGE_META[item.stage]
                   const StageIcon = stage.icon
-                  const isSelectable = item.stage === 'ready' || item.stage === 'in_transit'
-
                   return (
                     <div
                       key={order.order_id}
@@ -469,7 +465,6 @@ function DeliveryPage() {
                           aria-label={`تحديد الطلب ${order.order_id}`}
                           checked={selectedRows.has(order._row)}
                           onCheckedChange={(checked) => toggleRow(order._row, checked === true)}
-                          disabled={!isSelectable}
                         />
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted">
                           <StageIcon className={cn('h-5 w-5', stage.className.split(' ').at(-1))} />
