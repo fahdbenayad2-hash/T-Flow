@@ -37,7 +37,7 @@ export interface CallLog {
   order_id: string
   agent_id: string
   outcome: 'answered' | 'no_answer' | 'postponed'
-  note: string
+  note: string | null
   follow_up_at: string | null
   created_at: string
 }

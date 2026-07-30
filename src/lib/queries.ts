@@ -7,6 +7,8 @@ import {
   getAuditLog,
   invalidateOrdersCache,
 } from '~/server/orders'
+import { getCallLogs, recordCallLog } from '~/server/call-center'
+import type { CallLog } from '~/lib/types'
 import { ORDER_CACHE_TTL_S, ORDER_GC_TIME_MS } from '~/config'
 
 export const ordersQueryOptions = queryOptions({
@@ -105,6 +107,34 @@ export function useInvalidateOrdersCache() {
     mutationFn: () => invalidateOrdersCache(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
+    },
+  })
+}
+
+export const callLogsQueryOptions = queryOptions({
+  queryKey: ['call-logs'],
+  queryFn: () => getCallLogs(),
+  staleTime: 15_000,
+  refetchOnWindowFocus: true,
+})
+
+export function useCallLogs() {
+  return useQuery(callLogsQueryOptions)
+}
+
+export function useRecordCallLog() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: {
+      orderId: string
+      outcome: CallLog['outcome']
+      note?: string
+      followUpAt?: string | null
+    }) => recordCallLog({ data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['call-logs'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },
   })
 }

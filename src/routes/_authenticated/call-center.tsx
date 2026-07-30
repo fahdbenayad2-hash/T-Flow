@@ -1,26 +1,73 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
-import { useOrders } from '~/lib/queries'
-import { Input } from '~/components/ui/input'
-import { Button } from '~/components/ui/button'
-import { Phone, PhoneOff, Clock, CheckCircle, MessageSquare } from 'lucide-react'
-import { STATUS } from '~/lib/sheet-mapping'
-import { formatCurrency } from '~/lib/utils'
-
-import { ErrorState, CallCenterEmptyState } from '~/components/empty-state'
+import {
+  BarChart3,
+  CalendarClock,
+  CheckCircle2,
+  ChevronLeft,
+  Clock,
+  Loader2,
+  MapPin,
+  MessageCircle,
+  MessageSquare,
+  Phone,
+  PhoneOff,
+  RotateCcw,
+  Search,
+} from 'lucide-react'
 import toast from 'react-hot-toast'
+import { Button } from '~/components/ui/button'
+import { Input } from '~/components/ui/input'
+import { CallCenterEmptyState, ErrorState } from '~/components/empty-state'
+import { buildCallQueue, getTodayCallStats, type QueueBucket } from '~/lib/call-center-insights'
+import { normalizeAlgerianPhone } from '~/lib/customer-insights'
+import { useCallLogs, useOrders, useRecordCallLog, useUpdateOrder } from '~/lib/queries'
+import { STATUS } from '~/lib/sheet-mapping'
+import type { CallLog } from '~/lib/types'
+import { cn, formatCurrency } from '~/lib/utils'
 
 export const Route = createFileRoute('/_authenticated/call-center')({
   component: CallCenterPage,
 })
 
 interface CallCardState {
-  [orderId: string]: {
-    outcome: 'answered' | 'no_answer' | 'postponed' | ''
-    note: string
-    followUpDate: string
-    followUpTime: string
-  }
+  outcome: CallLog['outcome'] | ''
+  note: string
+  followUpDate: string
+  followUpTime: string
+}
+
+type CallStates = Record<string, CallCardState>
+type QueueFilter = 'all' | QueueBucket
+
+const EMPTY_CALL_STATE: CallCardState = {
+  outcome: '',
+  note: '',
+  followUpDate: '',
+  followUpTime: '',
+}
+
+const BUCKET_META: Record<QueueBucket, { label: string; className: string; icon: typeof Clock }> = {
+  due: {
+    label: 'متابعة مستحقة',
+    className: 'bg-red-500/10 text-red-500 border-red-500/20',
+    icon: CalendarClock,
+  },
+  retry: {
+    label: 'إعادة محاولة',
+    className: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+    icon: RotateCcw,
+  },
+  new: {
+    label: 'اتصال جديد',
+    className: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
+    icon: Phone,
+  },
+  scheduled: {
+    label: 'موعد قادم',
+    className: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+    icon: Clock,
+  },
 }
 
 function getInitials(name: string) {
@@ -29,144 +76,210 @@ function getInitials(name: string) {
   return parts[0]?.slice(0, 2) || '??'
 }
 
+function formatFollowUp(value: string | null) {
+  if (!value) return ''
+  return new Intl.DateTimeFormat('ar-DZ', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
 function CallCenterSkeleton() {
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-[110px] rounded-[15px] skeleton-shimmer" />
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
+        {[...Array(4)].map((_, index) => (
+          <div key={index} className="h-[105px] rounded-[15px] skeleton-shimmer" />
         ))}
       </div>
-      <div className="flex gap-3">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-9 w-28 rounded-[11px] skeleton-shimmer" />
-        ))}
-      </div>
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="h-[140px] rounded-[15px] skeleton-shimmer" />
+      <div className="h-12 rounded-[13px] skeleton-shimmer" />
+      {[...Array(3)].map((_, index) => (
+        <div key={index} className="h-[190px] rounded-[15px] skeleton-shimmer" />
       ))}
     </div>
   )
 }
 
 function CallCenterPage() {
-  const { data, isLoading, isError, error, refetch } = useOrders()
-  const [callStates, setCallStates] = useState<CallCardState>({})
+  const ordersQuery = useOrders()
+  const callLogsQuery = useCallLogs()
+  const updateOrder = useUpdateOrder()
+  const recordCall = useRecordCallLog()
+  const [callStates, setCallStates] = useState<CallStates>({})
   const [activeTab, setActiveTab] = useState<'queue' | 'stats'>('queue')
+  const [filter, setFilter] = useState<QueueFilter>('all')
+  const [search, setSearch] = useState('')
+  const [submittingOrderId, setSubmittingOrderId] = useState<string | null>(null)
 
-  const orders = useMemo(() => data?.orders ?? [], [data])
+  const orders = useMemo(() => ordersQuery.data?.orders ?? [], [ordersQuery.data])
+  const callLogs = useMemo(() => callLogsQuery.data ?? [], [callLogsQuery.data])
+  const queue = useMemo(() => buildCallQueue(orders, callLogs), [orders, callLogs])
+  const todayStats = useMemo(() => getTodayCallStats(callLogs), [callLogs])
 
-  const queueOrders = useMemo(
-    () =>
-      orders.filter((o) => ([STATUS.PROCESSING, STATUS.PREPARING] as string[]).includes(o.status)),
-    [orders],
-  )
+  const filteredQueue = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return queue.filter((item) => {
+      const matchesFilter = filter === 'all' || item.bucket === filter
+      const matchesSearch =
+        !query ||
+        item.order.customerName.toLowerCase().includes(query) ||
+        String(item.order.phone).includes(query) ||
+        item.order.order_id.toLowerCase().includes(query)
+      return matchesFilter && matchesSearch
+    })
+  }, [filter, queue, search])
 
-  const todayStats = useMemo(() => {
-    const entries = Object.values(callStates)
-    return {
-      answered: entries.filter((e) => e.outcome === 'answered').length,
-      noAnswer: entries.filter((e) => e.outcome === 'no_answer').length,
-      postponed: entries.filter((e) => e.outcome === 'postponed').length,
-      total: entries.filter((e) => e.outcome !== '').length,
-    }
-  }, [callStates])
-
-  const updateCallState = (orderId: string, field: string, value: string) => {
-    setCallStates((prev) => ({
-      ...prev,
+  const updateCallState = (
+    orderId: string,
+    field: keyof CallCardState,
+    value: CallCardState[keyof CallCardState],
+  ) => {
+    setCallStates((previous) => ({
+      ...previous,
       [orderId]: {
-        ...prev[orderId],
-        outcome: prev[orderId]?.outcome || '',
-        note: prev[orderId]?.note || '',
-        followUpDate: prev[orderId]?.followUpDate || '',
-        followUpTime: prev[orderId]?.followUpTime || '',
+        ...(previous[orderId] || EMPTY_CALL_STATE),
         [field]: value,
       },
     }))
   }
 
-  const handleSubmitCall = (orderId: string) => {
-    const state = callStates[orderId]
+  const handleSubmitCall = async (item: (typeof queue)[number]) => {
+    const { order } = item
+    const state = callStates[order.order_id]
+
     if (!state?.outcome) {
       toast.error('اختر نتيجة المكالمة')
       return
     }
-    toast.success(
-      state.outcome === 'answered'
-        ? 'تم تسجيل الرد'
-        : state.outcome === 'no_answer'
-          ? 'تم تسجيل عدم الرد'
-          : 'تم التأجيل',
-    )
-    setCallStates((prev) => {
-      const next = { ...prev }
-      delete next[orderId]
-      return next
-    })
+
+    let followUpAt: string | null = null
+    if (state.outcome === 'postponed') {
+      if (!state.followUpDate || !state.followUpTime) {
+        toast.error('حدد تاريخ ووقت المتابعة')
+        return
+      }
+
+      const followUpDate = new Date(`${state.followUpDate}T${state.followUpTime}`)
+      // This check runs only after the user clicks save, not during rendering.
+      // eslint-disable-next-line react-hooks/purity
+      if (Number.isNaN(followUpDate.getTime()) || followUpDate.getTime() <= Date.now()) {
+        toast.error('موعد المتابعة يجب أن يكون في المستقبل')
+        return
+      }
+      followUpAt = followUpDate.toISOString()
+    }
+
+    setSubmittingOrderId(order.order_id)
+    try {
+      if (state.outcome !== 'postponed') {
+        await updateOrder.mutateAsync({
+          row: order._row,
+          updates: {
+            status: state.outcome === 'answered' ? STATUS.CONFIRMED : STATUS.NO_ANSWER,
+          },
+          lastModified: order.lastModified,
+          order_id: order.order_id,
+          phone: String(order.phone),
+          product: order.product,
+        })
+      }
+
+      await recordCall.mutateAsync({
+        orderId: order.order_id,
+        outcome: state.outcome,
+        note: state.note,
+        followUpAt,
+      })
+
+      toast.success(
+        state.outcome === 'answered'
+          ? 'تم تأكيد الطلب وتسجيل المكالمة'
+          : state.outcome === 'no_answer'
+            ? 'تم تسجيل عدم الرد'
+            : 'تم حفظ موعد المتابعة',
+      )
+      setCallStates((previous) => {
+        const next = { ...previous }
+        delete next[order.order_id]
+        return next
+      })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر حفظ نتيجة المكالمة')
+    } finally {
+      setSubmittingOrderId(null)
+    }
   }
 
-  if (isLoading) return <CallCenterSkeleton />
+  if (ordersQuery.isLoading || callLogsQuery.isLoading) return <CallCenterSkeleton />
 
-  if (isError) {
+  if (ordersQuery.isError || callLogsQuery.isError) {
+    const error = ordersQuery.error || callLogsQuery.error
     return (
       <ErrorState
         message={error instanceof Error ? error.message : undefined}
-        onRetry={() => refetch()}
+        onRetry={() => {
+          ordersQuery.refetch()
+          callLogsQuery.refetch()
+        }}
       />
     )
   }
 
+  const queueCounts: Record<QueueFilter, number> = {
+    all: queue.length,
+    due: queue.filter((item) => item.bucket === 'due').length,
+    retry: queue.filter((item) => item.bucket === 'retry').length,
+    new: queue.filter((item) => item.bucket === 'new').length,
+    scheduled: queue.filter((item) => item.bucket === 'scheduled').length,
+  }
+
   const kpis = [
     {
-      label: 'في الطابور',
-      value: queueOrders.length,
-      accent: '#e31e24',
-      iconBg: 'rgba(227,30,36,0.1)',
+      label: 'جاهز للاتصال',
+      value: queueCounts.due + queueCounts.retry + queueCounts.new,
+      color: '#e31e24',
     },
-    {
-      label: 'ردّ اليوم',
-      value: todayStats.answered,
-      accent: '#22c55e',
-      iconBg: 'rgba(34,197,94,0.12)',
-    },
-    {
-      label: 'ما ردّش',
-      value: todayStats.noAnswer,
-      accent: '#f97316',
-      iconBg: 'rgba(249,115,22,0.12)',
-    },
-    {
-      label: 'مؤجّل',
-      value: todayStats.postponed,
-      accent: '#f59e0b',
-      iconBg: 'rgba(245,158,11,0.12)',
-    },
+    { label: 'تم تأكيده اليوم', value: todayStats.answered, color: '#22c55e' },
+    { label: 'لم يرد اليوم', value: todayStats.noAnswer, color: '#f97316' },
+    { label: 'متابعة مجدولة', value: queueCounts.scheduled, color: '#f59e0b' },
   ]
 
-  const actionButtons = [
-    { key: 'answered', label: 'ردّ', icon: CheckCircle, color: '#22c55e' },
-    { key: 'no_answer', label: 'ما ردّش', icon: PhoneOff, color: '#f97316' },
-    { key: 'postponed', label: 'مؤجّل', icon: Clock, color: '#f59e0b' },
-  ] as const
+  const filters: Array<{ value: QueueFilter; label: string }> = [
+    { value: 'all', label: 'الكل' },
+    { value: 'due', label: 'مستحق الآن' },
+    { value: 'retry', label: 'إعادة محاولة' },
+    { value: 'new', label: 'جديد' },
+    { value: 'scheduled', label: 'مجدول' },
+  ]
+
+  const actions = [
+    { value: 'answered' as const, label: 'مؤكد', icon: CheckCircle2, color: '#22c55e' },
+    { value: 'no_answer' as const, label: 'ما ردّش', icon: PhoneOff, color: '#f97316' },
+    { value: 'postponed' as const, label: 'تأجيل', icon: Clock, color: '#f59e0b' },
+  ]
 
   return (
     <div className="flex flex-col gap-5" style={{ animation: 'tfUp 0.4s ease both' }}>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
         {kpis.map((kpi) => (
           <div
             key={kpi.label}
-            className="relative overflow-hidden bg-card p-[18px] kpi-accent"
+            className="relative overflow-hidden bg-card p-4 md:p-[18px] kpi-accent"
             style={{
               border: '1px solid var(--color-card-border)',
               borderRadius: 'var(--color-card-radius)',
-              ['--kpi-color' as string]: kpi.accent,
+              ['--kpi-color' as string]: kpi.color,
             }}
           >
-            <div className="text-[12.5px] text-muted-foreground font-medium">{kpi.label}</div>
+            <div className="text-[11.5px] md:text-[12.5px] text-muted-foreground font-medium">
+              {kpi.label}
+            </div>
             <div
-              className="font-mono text-[30px] font-bold mt-1.5 tracking-tight"
-              style={{ color: kpi.accent }}
+              className="font-mono text-[26px] md:text-[30px] font-bold mt-1.5 tracking-tight"
+              style={{ color: kpi.color }}
             >
               {kpi.value}
             </div>
@@ -174,217 +287,375 @@ function CallCenterPage() {
         ))}
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-[14.5px] font-extrabold">طابور التأكيد</h3>
-          <span className="inline-flex items-center h-5 px-2 rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
-            {queueOrders.length}
-          </span>
-        </div>
-        <div className="flex gap-2">
-          {(['queue', 'stats'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className="h-9 px-4 rounded-[11px] text-[12px] font-bold transition-all"
-              style={{
-                background: activeTab === tab ? 'var(--color-foreground)' : 'var(--color-card)',
-                color:
-                  activeTab === tab ? 'var(--color-background)' : 'var(--color-muted-foreground)',
-                border: '1px solid var(--color-card-border)',
-              }}
-            >
-              {tab === 'queue' ? `القائمة (${queueOrders.length})` : 'الإحصائيات'}
-            </button>
-          ))}
-        </div>
-      </div>
+      <div className="dc-card overflow-hidden">
+        <div className="p-4 md:p-5 border-b border-border/70">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-[15px] font-extrabold">مساحة عمل التأكيد</h3>
+                {queueCounts.due > 0 && (
+                  <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-500">
+                    {queueCounts.due} مستحق
+                  </span>
+                )}
+              </div>
+              <p className="text-[12px] text-muted-foreground mt-1">
+                مكالمات مرتبة حسب الأولوية مع سجل محفوظ في Supabase
+              </p>
+            </div>
 
-      {activeTab === 'queue' && (
-        <div className="flex flex-col gap-3">
-          {queueOrders.length === 0 ? (
-            <CallCenterEmptyState />
-          ) : (
-            queueOrders.map((order) => {
-              const state = callStates[order.order_id]
-              const selectedAction = actionButtons.find((a) => a.key === state?.outcome)
-              const borderColor = selectedAction ? selectedAction.color : undefined
+            <div className="flex rounded-xl border border-border bg-muted/40 p-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab('queue')}
+                className={cn(
+                  'inline-flex h-8 items-center gap-2 rounded-lg px-3 text-[11.5px] font-bold transition-colors',
+                  activeTab === 'queue'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground',
+                )}
+              >
+                <Phone className="h-3.5 w-3.5" />
+                الطابور
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('stats')}
+                className={cn(
+                  'inline-flex h-8 items-center gap-2 rounded-lg px-3 text-[11.5px] font-bold transition-colors',
+                  activeTab === 'stats'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground',
+                )}
+              >
+                <BarChart3 className="h-3.5 w-3.5" />
+                أداء اليوم
+              </button>
+            </div>
+          </div>
 
-              return (
-                <div
-                  key={order._row}
-                  className="dc-card p-4 transition-all duration-200"
-                  style={
-                    borderColor
-                      ? { borderColor: `${borderColor}40`, boxShadow: `0 0 0 3px ${borderColor}0a` }
-                      : undefined
-                  }
-                >
-                  <div className="flex flex-col md:flex-row md:items-start gap-4">
-                    <div className="flex items-start gap-3 flex-1">
-                      <div
-                        className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 font-bold text-white text-[14px]"
-                        style={{ background: 'linear-gradient(135deg, #e31e24, #7d1622)' }}
-                      >
-                        {getInitials(order.customerName)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-[14px]">{order.customerName}</h3>
-                          <span className="inline-flex items-center h-5 px-2 rounded-full bg-muted text-[10px] font-bold text-muted-foreground shrink-0">
-                            {order.status}
-                          </span>
-                        </div>
-                        <p className="text-[12.5px] text-muted-foreground mb-1">
-                          {order.product} — {order.color} — {order.size}
-                        </p>
-                        <div className="flex items-center gap-3 text-[11.5px] text-muted-foreground">
-                          <span dir="ltr" className="font-mono">
-                            <Phone className="inline h-3 w-3 ml-1" />
-                            {order.phone}
-                          </span>
-                          <span className="font-mono font-semibold text-foreground">
-                            {formatCurrency(Number(order.price) || 0)}
-                          </span>
-                        </div>
-                        {order.notes && (
-                          <p className="text-[11.5px] text-muted-foreground mt-1">
-                            <MessageSquare className="inline h-3 w-3 ml-1" />
-                            {order.notes}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+          {activeTab === 'queue' && (
+            <>
+              <div className="relative mt-4">
+                <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="ابحث بالاسم، الهاتف أو رقم الطلب..."
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  className="ps-10 h-11 rounded-xl border-border bg-muted/35"
+                />
+              </div>
 
-                    <div className="w-full md:w-72 space-y-3">
-                      <div className="flex gap-2">
-                        {actionButtons.map(({ key, label, icon: Icon, color }) => {
-                          const isActive = state?.outcome === key
-                          return (
-                            <button
-                              key={key}
-                              onClick={() => updateCallState(order.order_id, 'outcome', key)}
-                              className="flex-1 flex items-center justify-center gap-1 h-9 rounded-[11px] text-[12px] font-bold transition-all"
-                              style={{
-                                background: isActive ? color : 'transparent',
-                                color: isActive ? '#fff' : color,
-                                border: `1px solid ${color}`,
-                              }}
-                            >
-                              <Icon className="h-3.5 w-3.5" />
-                              {label}
-                            </button>
-                          )
-                        })}
-                      </div>
-
-                      <Input
-                        placeholder="ملاحظة..."
-                        value={state?.note || ''}
-                        onChange={(e) => updateCallState(order.order_id, 'note', e.target.value)}
-                        className="h-9 rounded-[11px] text-[12px]"
-                        style={borderColor ? { borderColor: `${borderColor}60` } : undefined}
-                      />
-
-                      {state?.outcome === 'postponed' && (
-                        <div className="flex gap-2">
-                          <Input
-                            type="date"
-                            value={state.followUpDate || ''}
-                            onChange={(e) =>
-                              updateCallState(order.order_id, 'followUpDate', e.target.value)
-                            }
-                            className="h-9 rounded-[11px] text-[12px]"
-                          />
-                          <Input
-                            type="time"
-                            value={state.followUpTime || ''}
-                            onChange={(e) =>
-                              updateCallState(order.order_id, 'followUpTime', e.target.value)
-                            }
-                            className="h-9 rounded-[11px] text-[12px]"
-                          />
-                        </div>
-                      )}
-
-                      {state?.outcome && (
-                        <Button
-                          size="sm"
-                          className="w-full h-9 rounded-[11px] font-bold text-[12px]"
-                          onClick={() => handleSubmitCall(order.order_id)}
-                        >
-                          تسجيل
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })
+              <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+                {filters.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setFilter(item.value)}
+                    className={cn(
+                      'inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-[11.5px] font-bold transition-colors',
+                      filter === item.value
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {item.label}
+                    <span className="font-mono text-[10px] opacity-75">
+                      {queueCounts[item.value]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
-      )}
 
-      {activeTab === 'stats' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="dc-card p-5">
-            <h3 className="text-[14.5px] font-extrabold mb-4">إحصائيات اليوم</h3>
-            <div className="flex flex-col gap-3.5">
-              {[
-                { label: 'إجمالي المكالمات', value: todayStats.total },
-                {
-                  label: 'نسبة الرد',
-                  value: `${todayStats.total > 0 ? Math.round((todayStats.answered / todayStats.total) * 100) : 0}%`,
-                  color: '#22c55e',
-                },
-                {
-                  label: 'نسبة عدم الرد',
-                  value: `${todayStats.total > 0 ? Math.round((todayStats.noAnswer / todayStats.total) * 100) : 0}%`,
-                  color: '#f97316',
-                },
-                {
-                  label: 'نسبة التأجيل',
-                  value: `${todayStats.total > 0 ? Math.round((todayStats.postponed / todayStats.total) * 100) : 0}%`,
-                  color: '#f59e0b',
-                },
-              ].map((item) => (
-                <div key={item.label} className="flex justify-between items-center">
-                  <span className="text-[12.5px] text-muted-foreground">{item.label}</span>
-                  <span
-                    className="font-mono text-[13px] font-bold"
-                    style={item.color ? { color: item.color } : undefined}
-                  >
-                    {item.value}
-                  </span>
+        {activeTab === 'queue' ? (
+          <div className="p-3 md:p-4">
+            {filteredQueue.length === 0 ? (
+              search || filter !== 'all' ? (
+                <div className="flex flex-col items-center justify-center py-14 text-center">
+                  <div className="rounded-2xl bg-muted p-5 mb-4">
+                    <Search className="h-7 w-7 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-semibold">لا توجد مكالمات مطابقة</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    جرّب تغيير البحث أو فئة الطابور
+                  </p>
                 </div>
-              ))}
-            </div>
-          </div>
+              ) : (
+                <CallCenterEmptyState />
+              )
+            ) : (
+              <div className="flex flex-col gap-3">
+                {filteredQueue.map((item) => {
+                  const { order } = item
+                  const state = callStates[order.order_id] || EMPTY_CALL_STATE
+                  const bucket = BUCKET_META[item.bucket]
+                  const BucketIcon = bucket.icon
+                  const normalizedPhone = normalizeAlgerianPhone(String(order.phone))
+                  const isSubmitting = submittingOrderId === order.order_id
 
-          <div className="dc-card p-5">
-            <h3 className="text-[14.5px] font-extrabold mb-4">ملخص الطابور</h3>
-            <div className="flex flex-col gap-3.5">
-              <div className="flex justify-between items-center">
-                <span className="text-[12.5px] text-muted-foreground">طلبات قيد المعالجة</span>
-                <span className="font-mono text-[13px] font-bold">{queueOrders.length}</span>
+                  return (
+                    <div
+                      key={order.order_id}
+                      className={cn(
+                        'rounded-2xl border bg-card p-4 transition-colors',
+                        item.bucket === 'due'
+                          ? 'border-red-500/25'
+                          : 'border-border/80 hover:border-border',
+                      )}
+                    >
+                      <div className="flex flex-col xl:flex-row gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
+                              style={{ background: 'linear-gradient(135deg, #e31e24, #7d1622)' }}
+                            >
+                              {getInitials(order.customerName)}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h4 className="font-extrabold text-[14px]">{order.customerName}</h4>
+                                <span
+                                  className={cn(
+                                    'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9.5px] font-bold',
+                                    bucket.className,
+                                  )}
+                                >
+                                  <BucketIcon className="h-3 w-3" />
+                                  {bucket.label}
+                                </span>
+                                {item.attempts > 0 && (
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {item.attempts} محاولة سابقة
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-[11.5px] text-muted-foreground">
+                                <span>{order.product}</span>
+                                <span>{formatCurrency(Number(order.price) || 0)}</span>
+                                <span className="inline-flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {order.wilaya}، {order.baladiya}
+                                </span>
+                              </div>
+
+                              {item.latestLog?.follow_up_at && (
+                                <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-500/8 px-2.5 py-1.5 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                                  <CalendarClock className="h-3.5 w-3.5" />
+                                  {formatFollowUp(item.latestLog.follow_up_at)}
+                                </div>
+                              )}
+
+                              {item.latestLog?.note && (
+                                <p className="mt-2 text-[11.5px] text-muted-foreground">
+                                  <MessageSquare className="me-1 inline h-3 w-3" />
+                                  آخر ملاحظة: {item.latestLog.note}
+                                </p>
+                              )}
+
+                              <div className="flex flex-wrap items-center gap-2 mt-3">
+                                <a
+                                  href={`tel:${normalizedPhone}`}
+                                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-3 text-[11.5px] font-bold text-primary-foreground"
+                                >
+                                  <Phone className="h-3.5 w-3.5" />
+                                  اتصال
+                                  <span dir="ltr" className="font-mono opacity-80">
+                                    {order.phone}
+                                  </span>
+                                </a>
+                                <a
+                                  href={`https://wa.me/${normalizedPhone.replace('+', '')}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-emerald-500/25 px-3 text-[11.5px] font-bold text-emerald-500"
+                                >
+                                  <MessageCircle className="h-3.5 w-3.5" />
+                                  واتساب
+                                </a>
+                                <Link
+                                  to="/orders/$row"
+                                  params={{ row: String(order._row) }}
+                                  className="inline-flex h-9 items-center gap-1 rounded-xl px-2 text-[11px] font-bold text-muted-foreground hover:bg-muted hover:text-foreground"
+                                >
+                                  تفاصيل الطلب
+                                  <ChevronLeft className="h-3.5 w-3.5" />
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="xl:w-[360px] rounded-2xl bg-muted/25 p-3">
+                          <p className="text-[10.5px] font-bold text-muted-foreground mb-2">
+                            نتيجة المكالمة
+                          </p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {actions.map((action) => {
+                              const Icon = action.icon
+                              const isActive = state.outcome === action.value
+                              return (
+                                <button
+                                  key={action.value}
+                                  type="button"
+                                  onClick={() =>
+                                    updateCallState(order.order_id, 'outcome', action.value)
+                                  }
+                                  className="flex h-9 items-center justify-center gap-1 rounded-xl text-[11px] font-bold transition-all"
+                                  style={{
+                                    color: isActive ? '#fff' : action.color,
+                                    background: isActive ? action.color : 'transparent',
+                                    border: `1px solid ${action.color}55`,
+                                  }}
+                                >
+                                  <Icon className="h-3.5 w-3.5" />
+                                  {action.label}
+                                </button>
+                              )
+                            })}
+                          </div>
+
+                          <Input
+                            placeholder="ملاحظة المكالمة..."
+                            value={state.note}
+                            onChange={(event) =>
+                              updateCallState(order.order_id, 'note', event.target.value)
+                            }
+                            className="h-9 mt-2 rounded-xl bg-background text-[11.5px]"
+                          />
+
+                          {state.outcome === 'postponed' && (
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                              <Input
+                                aria-label="تاريخ المتابعة"
+                                type="date"
+                                value={state.followUpDate}
+                                onChange={(event) =>
+                                  updateCallState(
+                                    order.order_id,
+                                    'followUpDate',
+                                    event.target.value,
+                                  )
+                                }
+                                className="h-9 rounded-xl bg-background text-[11px]"
+                              />
+                              <Input
+                                aria-label="وقت المتابعة"
+                                type="time"
+                                value={state.followUpTime}
+                                onChange={(event) =>
+                                  updateCallState(
+                                    order.order_id,
+                                    'followUpTime',
+                                    event.target.value,
+                                  )
+                                }
+                                className="h-9 rounded-xl bg-background text-[11px]"
+                              />
+                            </div>
+                          )}
+
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={!state.outcome || isSubmitting}
+                            onClick={() => handleSubmitCall(item)}
+                            className="w-full h-9 mt-2 rounded-xl text-[11.5px] font-bold"
+                          >
+                            {isSubmitting ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                جاري الحفظ...
+                              </>
+                            ) : (
+                              'حفظ النتيجة'
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[12.5px] text-muted-foreground">إجمالي الطلبات</span>
-                <span className="font-mono text-[13px] font-bold">{orders.length}</span>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 md:p-5">
+            <div className="rounded-2xl border border-border/80 p-4">
+              <h4 className="text-[13px] font-extrabold">نتائج اليوم</h4>
+              <div className="space-y-3 mt-4">
+                {[
+                  { label: 'إجمالي المكالمات', value: todayStats.total },
+                  { label: 'طلبات مؤكدة', value: todayStats.answered, color: '#22c55e' },
+                  { label: 'لم يرد', value: todayStats.noAnswer, color: '#f97316' },
+                  { label: 'متابعة مؤجلة', value: todayStats.postponed, color: '#f59e0b' },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center justify-between rounded-xl bg-muted/30 px-3 py-2.5"
+                  >
+                    <span className="text-[12px] text-muted-foreground">{item.label}</span>
+                    <span
+                      className="font-mono text-[14px] font-bold"
+                      style={item.color ? { color: item.color } : undefined}
+                    >
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[12.5px] text-muted-foreground">نسبة المعالجة</span>
-                <span className="font-mono text-[13px] font-bold">
-                  {orders.length > 0
-                    ? Math.round(((orders.length - queueOrders.length) / orders.length) * 100)
-                    : 0}
-                  %
-                </span>
+            </div>
+
+            <div className="rounded-2xl border border-border/80 p-4">
+              <h4 className="text-[13px] font-extrabold">مؤشرات الأداء</h4>
+              <div className="space-y-4 mt-4">
+                {[
+                  {
+                    label: 'نسبة التأكيد',
+                    value:
+                      todayStats.total > 0
+                        ? Math.round((todayStats.answered / todayStats.total) * 100)
+                        : 0,
+                    color: '#22c55e',
+                  },
+                  {
+                    label: 'نسبة عدم الرد',
+                    value:
+                      todayStats.total > 0
+                        ? Math.round((todayStats.noAnswer / todayStats.total) * 100)
+                        : 0,
+                    color: '#f97316',
+                  },
+                ].map((item) => (
+                  <div key={item.label}>
+                    <div className="flex items-center justify-between text-[11.5px]">
+                      <span className="text-muted-foreground">{item.label}</span>
+                      <span className="font-mono font-bold">{item.value}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-muted mt-2 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${item.value}%`, background: item.color }}
+                      />
+                    </div>
+                  </div>
+                ))}
+                <div className="pt-3 border-t border-border/70">
+                  <div className="flex items-center justify-between text-[11.5px]">
+                    <span className="text-muted-foreground">متبقي في الطابور</span>
+                    <span className="font-mono font-bold">{queue.length}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
