@@ -3,6 +3,7 @@ import { DEMO_MODE_SERVER as DEMO_MODE } from '~/config'
 import type { AppRole, CallLog } from '~/lib/types'
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
 import { fetchUserRoles, requireUser } from './auth'
+import { resolveDefaultStoreId } from './order-repository'
 
 export type CallOutcome = CallLog['outcome']
 
@@ -12,9 +13,11 @@ export const getCallLogs = createServerFn({ method: 'GET' }).handler(async () =>
 
   const roles = (await fetchUserRoles({ data: userId })) as AppRole[]
   const supabase = getSupabaseAdminClient()
+  const storeId = await resolveDefaultStoreId(userId, supabase)
   let query = supabase
     .from('call_logs')
     .select('id, order_id, agent_id, outcome, note, follow_up_at, created_at')
+    .eq('store_id', storeId)
     .order('created_at', { ascending: false })
     .limit(500)
 
@@ -58,9 +61,11 @@ export const recordCallLog = createServerFn({ method: 'POST' })
     }
 
     const supabase = getSupabaseAdminClient()
+    const storeId = await resolveDefaultStoreId(userId, supabase)
     const { data: log, error } = await supabase
       .from('call_logs')
       .insert({
+        store_id: storeId,
         order_id: data.orderId,
         agent_id: userId,
         outcome: data.outcome,

@@ -17,6 +17,7 @@ import {
   importOrdersToSupabase,
   ingestNewSheetOrdersToSupabase,
   listSupabaseOrders,
+  resolveDefaultStoreId,
   softDeleteSupabaseOrder,
   updateSupabaseOrder,
 } from './order-repository'
@@ -26,8 +27,10 @@ let cache: {
   data: Order[]
   fetchedAt: number
   mode: OrderStorageMode
+  userId: string
 } | null = null
 const CACHE_TTL = ORDER_CACHE_TTL_S * 1000
+const LEGACY_STORE_SLUG = process.env.DEFAULT_STORE_SLUG || 'main'
 
 export function clearOrdersMemoryCache() {
   cache = null
@@ -117,11 +120,24 @@ async function requireRole(allowedRoles: AppRole[]): Promise<string> {
   return userId
 }
 
+async function shouldMirrorLegacySheet(userId: string): Promise<boolean> {
+  const supabase = getSupabaseAdminClient()
+  const storeId = await resolveDefaultStoreId(userId, supabase)
+  const { data, error } = await supabase.from('stores').select('slug').eq('id', storeId).single()
+  if (error) throw error
+  return data.slug === LEGACY_STORE_SLUG
+}
+
 export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
   const userId = await requireUser()
   const mode = getOrderStorageMode()
 
-  if (cache && cache.mode === mode && Date.now() - cache.fetchedAt < CACHE_TTL) {
+  if (
+    cache &&
+    cache.userId === userId &&
+    cache.mode === mode &&
+    Date.now() - cache.fetchedAt < CACHE_TTL
+  ) {
     return { orders: cache.data, fromCache: true }
   }
 
@@ -129,13 +145,15 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
     let orders: Order[]
 
     if (mode === 'supabase') {
-      try {
-        const sheetOrders = await fetchSheetOrders()
-        await ingestNewSheetOrdersToSupabase(userId, sheetOrders)
-      } catch (error) {
-        // Sheets remains an inbound bridge for the external storefront only.
-        // Existing Supabase orders stay available if that bridge is offline.
-        console.warn('Sheet order intake failed (Supabase served):', error)
+      if (await shouldMirrorLegacySheet(userId)) {
+        try {
+          const sheetOrders = await fetchSheetOrders()
+          await ingestNewSheetOrdersToSupabase(userId, sheetOrders)
+        } catch (error) {
+          // Sheets remains an inbound bridge for the legacy store only.
+          // Existing Supabase orders stay available if that bridge is offline.
+          console.warn('Sheet order intake failed (Supabase served):', error)
+        }
       }
 
       orders = await listSupabaseOrders(userId)
@@ -143,7 +161,7 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
       orders = await fetchSheetOrders()
     }
 
-    if (mode === 'shadow') {
+    if (mode === 'shadow' && (await shouldMirrorLegacySheet(userId))) {
       try {
         // New orders can be written directly to Google Sheets by an external
         // storefront. Reconcile every fresh sheet snapshot so those inserts,
@@ -157,12 +175,12 @@ export const getOrders = createServerFn({ method: 'GET' }).handler(async () => {
     }
 
     const fetchedAt = Date.now()
-    cache = { data: orders, fetchedAt, mode }
+    cache = { data: orders, fetchedAt, mode, userId }
 
     return { orders, fromCache: false }
   } catch (error) {
     console.error('Failed to fetch orders:', error)
-    if (cache) {
+    if (cache?.userId === userId) {
       return { orders: cache.data, fromCache: true, stale: true }
     }
     throw error
@@ -200,6 +218,7 @@ export const updateOrder = createServerFn({ method: 'POST' })
       storageMode !== 'supabase' &&
       data.lastModified &&
       cache &&
+      cache.userId === actorUserId &&
       cache.fetchedAt > data.lastModified
     ) {
       return {
@@ -245,7 +264,9 @@ export const updateOrder = createServerFn({ method: 'POST' })
         if (!DEMO_MODE) {
           try {
             const supabase = getSupabaseAdminClient()
+            const storeId = await resolveDefaultStoreId(actorUserId, supabase)
             await supabase.from('audit_log').insert({
+              store_id: storeId,
               order_id: result.orderId || data.order_id || null,
               actor_id: actorUserId,
               action: 'update_order',
@@ -257,10 +278,12 @@ export const updateOrder = createServerFn({ method: 'POST' })
           }
         }
 
-        try {
-          await mirrorOrderUpdateToSheet(data)
-        } catch (error) {
-          console.warn('Sheet backup update failed (Supabase succeeded):', error)
+        if (await shouldMirrorLegacySheet(actorUserId)) {
+          try {
+            await mirrorOrderUpdateToSheet(data)
+          } catch (error) {
+            console.warn('Sheet backup update failed (Supabase succeeded):', error)
+          }
         }
 
         cache = null
@@ -371,6 +394,7 @@ export const updateOrder = createServerFn({ method: 'POST' })
     if (!DEMO_MODE) {
       try {
         const supabase = getSupabaseAdminClient()
+        const storeId = await resolveDefaultStoreId(actorUserId, supabase)
         const orderId =
           data.order_id ||
           generateOrderId(
@@ -379,6 +403,7 @@ export const updateOrder = createServerFn({ method: 'POST' })
             String(data.updates.product || ''),
           )
         await supabase.from('audit_log').insert({
+          store_id: storeId,
           order_id: orderId,
           actor_id: actorUserId,
           action: 'update_order',
@@ -439,8 +464,10 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
         if (!DEMO_MODE) {
           try {
             const supabase = getSupabaseAdminClient()
+            const storeId = await resolveDefaultStoreId(actorUserId, supabase)
             await supabase.from('audit_log').insert(
               data.updates.map((item) => ({
+                store_id: storeId,
                 order_id: item.order_id || null,
                 actor_id: actorUserId,
                 action: 'batch_update_order',
@@ -452,10 +479,12 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
           }
         }
 
-        try {
-          await mirrorBatchUpdateToSheet(data.updates)
-        } catch (error) {
-          console.warn('Sheet backup batch update failed (Supabase succeeded):', error)
+        if (await shouldMirrorLegacySheet(actorUserId)) {
+          try {
+            await mirrorBatchUpdateToSheet(data.updates)
+          } catch (error) {
+            console.warn('Sheet backup batch update failed (Supabase succeeded):', error)
+          }
         }
 
         cache = null
@@ -571,7 +600,9 @@ export const batchUpdateOrders = createServerFn({ method: 'POST' })
     if (!DEMO_MODE) {
       try {
         const supabase = getSupabaseAdminClient()
+        const storeId = await resolveDefaultStoreId(actorUserId, supabase)
         const entries = data.updates.map((u) => ({
+          store_id: storeId,
           order_id:
             u.order_id ||
             generateOrderId(
@@ -606,7 +637,9 @@ export const deleteOrder = createServerFn({ method: 'POST' })
     if (!DEMO_MODE && data.orderData) {
       try {
         const supabase = getSupabaseAdminClient()
+        const storeId = await resolveDefaultStoreId(actorUserId, supabase)
         await supabase.from('audit_log').insert({
+          store_id: storeId,
           order_id: data.order_id || null,
           actor_id: actorUserId,
           action: 'delete_order',
@@ -634,10 +667,12 @@ export const deleteOrder = createServerFn({ method: 'POST' })
           }
         }
 
-        try {
-          await mirrorOrderDeleteToSheet(data.row)
-        } catch (error) {
-          console.warn('Sheet backup delete failed (Supabase succeeded):', error)
+        if (await shouldMirrorLegacySheet(actorUserId)) {
+          try {
+            await mirrorOrderDeleteToSheet(data.row)
+          } catch (error) {
+            console.warn('Sheet backup delete failed (Supabase succeeded):', error)
+          }
         }
 
         cache = null
@@ -757,8 +792,10 @@ export const batchDeleteOrders = createServerFn({ method: 'POST' })
     if (!DEMO_MODE) {
       try {
         const supabase = getSupabaseAdminClient()
+        const storeId = await resolveDefaultStoreId(actorUserId, supabase)
         await supabase.from('audit_log').insert(
           orders.map((order) => ({
+            store_id: storeId,
             order_id: order.order_id || null,
             actor_id: actorUserId,
             action: 'delete_order',
@@ -785,11 +822,13 @@ export const batchDeleteOrders = createServerFn({ method: 'POST' })
           else missing += 1
         }
 
-        for (const order of orders.filter((item) => item.row >= 2)) {
-          try {
-            await mirrorOrderDeleteToSheet(order.row)
-          } catch (error) {
-            console.warn('Sheet backup delete failed (Supabase succeeded):', error)
+        if (await shouldMirrorLegacySheet(actorUserId)) {
+          for (const order of orders.filter((item) => item.row >= 2)) {
+            try {
+              await mirrorOrderDeleteToSheet(order.row)
+            } catch (error) {
+              console.warn('Sheet backup delete failed (Supabase succeeded):', error)
+            }
           }
         }
 
@@ -840,14 +879,16 @@ export const batchDeleteOrders = createServerFn({ method: 'POST' })
 export const getAuditLog = createServerFn({ method: 'GET' })
   .validator((data: { orderId: string }) => data)
   .handler(async ({ data }) => {
-    await requireUser()
+    const userId = await requireUser()
 
     if (DEMO_MODE) return []
 
     const supabase = getSupabaseAdminClient()
+    const storeId = await resolveDefaultStoreId(userId, supabase)
     const { data: logs, error } = await supabase
       .from('audit_log')
       .select('*')
+      .eq('store_id', storeId)
       .eq('order_id', data.orderId)
       .order('created_at', { ascending: false })
       .limit(50)

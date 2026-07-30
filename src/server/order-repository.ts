@@ -82,28 +82,9 @@ async function loadExistingSourceOrderIds(
   return existingIds
 }
 
-async function addExistingUsersToStore(supabase: SupabaseClient, storeId: string): Promise<void> {
-  const { data: roles, error } = await supabase.from('user_roles').select('user_id,role')
-
-  if (error) throw error
-  if (!roles?.length) return
-
-  const memberships = roles.map((entry) => ({
-    store_id: storeId,
-    user_id: entry.user_id,
-    role: entry.role,
-  }))
-
-  const { error: membershipError } = await supabase
-    .from('store_members')
-    .upsert(memberships, { onConflict: 'store_id,user_id,role', ignoreDuplicates: true })
-
-  if (membershipError) throw membershipError
-}
-
 /**
- * Resolves the caller's active store. Existing single-store installations are
- * bootstrapped lazily so deploying the code before the migration is harmless.
+ * Resolves the caller's active store. A seller may own a slug other than
+ * `main`, so memberships must never be limited to the legacy default store.
  */
 export async function resolveDefaultStoreId(
   userId: string,
@@ -111,15 +92,22 @@ export async function resolveDefaultStoreId(
 ): Promise<string> {
   const { data: memberships, error: membershipError } = await supabase
     .from('store_members')
-    .select('store_id,stores!inner(slug,is_active)')
+    .select('store_id,joined_at,stores!inner(slug,is_active)')
     .eq('user_id', userId)
     .eq('is_active', true)
-    .eq('stores.slug', DEFAULT_STORE_SLUG)
     .eq('stores.is_active', true)
-    .limit(1)
+    .order('joined_at', { ascending: true })
+    .limit(20)
 
   if (membershipError) throw membershipError
-  if (memberships?.[0]?.store_id) return memberships[0].store_id as string
+  if (memberships?.length) {
+    const preferred =
+      memberships.find((membership) => {
+        const store = Array.isArray(membership.stores) ? membership.stores[0] : membership.stores
+        return store?.slug === DEFAULT_STORE_SLUG
+      }) || memberships[0]
+    return preferred.store_id as string
+  }
 
   const { data: roles, error: roleError } = await supabase
     .from('user_roles')
@@ -129,52 +117,41 @@ export async function resolveDefaultStoreId(
   if (roleError) throw roleError
   const userRoles = (roles || []).map((entry) => entry.role)
 
-  const { data: existingStore, error: storeLookupError } = await supabase
-    .from('stores')
-    .select('id')
-    .eq('slug', DEFAULT_STORE_SLUG)
-    .maybeSingle()
-
-  if (storeLookupError) throw storeLookupError
-
-  let storeId = existingStore?.id as string | undefined
-  if (storeId && userRoles.length > 0) {
-    const { error: attachError } = await supabase.from('store_members').upsert(
-      userRoles.map((role) => ({
-        store_id: storeId,
-        user_id: userId,
-        role,
-      })),
-      {
-        onConflict: 'store_id,user_id,role',
-        ignoreDuplicates: true,
-      },
-    )
-    if (attachError) throw attachError
-    return storeId
-  }
-
   if (!userRoles.includes('admin')) {
     throw new Error('STORE_MEMBERSHIP_REQUIRED')
   }
 
+  // Recover legacy owners without ever attaching an unrelated seller to the
+  // shared main store.
+  const { data: ownedStore, error: storeLookupError } = await supabase
+    .from('stores')
+    .select('id')
+    .eq('owner_id', userId)
+    .eq('is_active', true)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (storeLookupError) throw storeLookupError
+
+  let storeId = ownedStore?.id as string | undefined
   if (!storeId) {
+    const personalSlug = `store-${userId.replaceAll('-', '')}`
     const { data: createdStore, error: createError } = await supabase
       .from('stores')
       .insert({
         owner_id: userId,
-        name: 'T-Flow Main Store',
-        slug: DEFAULT_STORE_SLUG,
+        name: 'متجري',
+        slug: personalSlug,
       })
       .select('id')
       .single()
 
     if (createError) {
-      // A concurrent request may have created the same slug.
       const { data: racedStore, error: racedError } = await supabase
         .from('stores')
         .select('id')
-        .eq('slug', DEFAULT_STORE_SLUG)
+        .eq('slug', personalSlug)
         .single()
       if (racedError) throw createError
       storeId = racedStore.id as string
@@ -183,7 +160,20 @@ export async function resolveDefaultStoreId(
     }
   }
 
-  await addExistingUsersToStore(supabase, storeId)
+  const { error: attachError } = await supabase.from('store_members').upsert(
+    userRoles.map((role) => ({
+      store_id: storeId,
+      user_id: userId,
+      role,
+      is_active: true,
+    })),
+    {
+      onConflict: 'store_id,user_id,role',
+      ignoreDuplicates: false,
+    },
+  )
+  if (attachError) throw attachError
+
   return storeId
 }
 
