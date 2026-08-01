@@ -15,6 +15,7 @@ import {
   Search,
   X,
   Webhook,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { cn } from '~/lib/utils'
 import type { AppRole } from '~/lib/types'
@@ -49,6 +50,12 @@ const commands: CommandItem[] = [
     label: 'ربط المتاجر',
     icon: <Webhook className="h-4 w-4" />,
     to: '/integrations',
+    roles: ['admin'],
+  },
+  {
+    label: 'ربط Google Sheets',
+    icon: <FileSpreadsheet className="h-4 w-4" />,
+    to: '/google-sheets',
     roles: ['admin'],
   },
   { label: 'الإعدادات', icon: <Settings className="h-4 w-4" />, to: '/settings', roles: ['admin'] },
@@ -86,6 +93,12 @@ export function CommandPalette() {
     },
     [navigate],
   )
+
+  useEffect(() => {
+    const openSearch = () => setOpen(true)
+    window.addEventListener('tflow:open-quick-search', openSearch)
+    return () => window.removeEventListener('tflow:open-quick-search', openSearch)
+  }, [])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

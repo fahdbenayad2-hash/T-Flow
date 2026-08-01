@@ -7,6 +7,8 @@ import { PageTransition } from '~/components/page-transition'
 import { RoleProvider } from '~/hooks/useRole'
 import { navItems } from '~/components/sidebar'
 import { fetchUser } from '~/server/auth'
+import { CommandPalette } from '~/components/command-palette'
+import { GoogleSheetsAutoSync } from '~/components/google-sheets-auto-sync'
 
 const allNavRoutes = [
   ...navItems,
@@ -46,6 +48,8 @@ function AuthenticatedLayout() {
             </main>
           </div>
           <BottomNav />
+          <CommandPalette />
+          <GoogleSheetsAutoSync />
         </ErrorBoundary>
       </div>
     </RoleProvider>

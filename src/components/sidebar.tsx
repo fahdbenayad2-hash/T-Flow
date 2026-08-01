@@ -1,4 +1,4 @@
-import { Link, useLocation } from '@tanstack/react-router'
+import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -11,10 +11,13 @@ import {
   BarChart3,
   Shield,
   Webhook,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '~/lib/utils'
 import { useRole, getRoleLabel } from '~/hooks/useRole'
 import type { AppRole } from '~/lib/types'
+import { Button } from '~/components/ui/button'
+import { supabase } from '~/utils/supabase-client'
 
 export interface NavItem {
   to: string
@@ -93,7 +96,13 @@ function NavGroup({
 
 export function Sidebar() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { roles, isAdmin } = useRole()
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    navigate({ to: '/auth' })
+  }
 
   const visibleNavItems = navItems.filter((item) => {
     if (!item.roles) return true
@@ -168,7 +177,7 @@ export function Sidebar() {
       </nav>
 
       {/* User section at bottom */}
-      <div className="p-3 border-t border-white/[0.07]">
+      <div className="space-y-2 p-3 border-t border-white/[0.07]">
         <div className="flex items-center gap-2.5 rounded-[11px] bg-white/[0.04] p-2.5">
           <div
             className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] text-[13px] font-bold text-white"
@@ -188,6 +197,16 @@ export function Sidebar() {
           </div>
           <span className="text-white/40 text-base">⌄</span>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleLogout}
+          className="w-full justify-center gap-2 text-white/60 hover:bg-primary/10 hover:text-primary"
+        >
+          <LogOut className="h-4 w-4" />
+          خروج
+        </Button>
       </div>
     </aside>
   )

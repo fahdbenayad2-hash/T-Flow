@@ -1,4 +1,4 @@
-import { Menu, X, LogOut, Moon, Sun, Shield } from 'lucide-react'
+import { Menu, X, LogOut, Moon, Sun, Search, Shield } from 'lucide-react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
@@ -77,6 +77,10 @@ export function Header({ title }: HeaderProps) {
     navigate({ to: '/' })
   }
 
+  const openQuickSearch = () => {
+    window.dispatchEvent(new Event('tflow:open-quick-search'))
+  }
+
   const [currentTitle, currentSubtitle] = pageMeta[location.pathname] || [title, '']
 
   return (
@@ -106,15 +110,17 @@ export function Header({ title }: HeaderProps) {
 
         {/* Search bar */}
         <div className="relative hidden sm:block w-[260px] max-w-[32vw]">
-          <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-            ⌕
-          </span>
-          <input
-            placeholder="بحث سريع…"
-            className="w-full h-[38px] border border-border rounded-[10px] bg-muted ps-9 pe-14 font-sans text-[13px] text-foreground outline-none focus:border-primary focus:bg-card transition-colors"
-          />
+          <button
+            type="button"
+            onClick={openQuickSearch}
+            className="flex w-full h-[38px] items-center border border-border rounded-[10px] bg-muted ps-3 pe-14 font-sans text-[13px] text-muted-foreground outline-none hover:border-primary hover:bg-card transition-colors"
+            aria-label="فتح البحث السريع"
+          >
+            <Search className="me-2 h-4 w-4" />
+            بحث سريع…
+          </button>
           <span className="absolute end-2.5 top-1/2 -translate-y-1/2 font-mono text-[10px] text-muted-foreground border border-border rounded-md px-1.5 py-0.5">
-            ⌘K
+            Ctrl K
           </span>
         </div>
 

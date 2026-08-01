@@ -4,7 +4,12 @@ import {
   validateGoogleSheetMapping,
   type GoogleSheetColumnMapping,
 } from '~/lib/google-sheet-mapping'
-import { parseOrderDate, parseOrderPrice, parseOrderQuantity } from '~/lib/order-record'
+import {
+  formatAlgiersDate,
+  parseOrderDate,
+  parseOrderPrice,
+  parseOrderQuantity,
+} from '~/lib/order-record'
 import { ALL_STATUSES, STATUS } from '~/lib/sheet-mapping'
 import { generateOrderId } from '~/lib/utils'
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
@@ -689,6 +694,9 @@ export const syncGoogleSheetConnection = createServerFn({ method: 'POST' })
     const missing = validateGoogleSheetMapping(config.columnMapping)
     if (missing.length) throw new Error(`المطابقة ناقصة: ${missing.join('، ')}`)
     const account = await loadAccount(config.googleAccountId, storeId)
+    const syncStartedAt = new Date()
+    const syncStartedAtIso = syncStartedAt.toISOString()
+    const syncDateText = formatAlgiersDate(syncStartedAt)
 
     const range = encodeURIComponent(
       `${a1SheetName(config.sheetTitle)}!A${config.startRow}:ZZ${config.startRow + MAX_IMPORT_ROWS - 1}`,
@@ -714,6 +722,7 @@ export const syncGoogleSheetConnection = createServerFn({ method: 'POST' })
 
     try {
       const sourceRows: Array<Record<string, unknown>> = []
+      const missingDateSourceIds = new Set<string>()
       let skipped = 0
       for (let index = 0; index < values.length; index += 1) {
         const mapped = mapGoogleSheetRow(values[index], config.columnMapping)
@@ -734,6 +743,9 @@ export const syncGoogleSheetConnection = createServerFn({ method: 'POST' })
         const displayOrderId =
           providedOrderId || generateOrderId(phone, String(mapped.date || ''), product)
         const stablePart = providedOrderId ? `order:${providedOrderId}` : `row:${sheetRow}`
+        const sourceOrderId = `gsh:${connection.id}:${stablePart}`
+        const sourceDateText = String(mapped.date || '').trim()
+        if (!sourceDateText) missingDateSourceIds.add(sourceOrderId)
         const suppliedStatus = String(mapped.status || '').trim()
         const status = ALL_STATUSES.includes(suppliedStatus as (typeof ALL_STATUSES)[number])
           ? suppliedStatus
@@ -741,7 +753,7 @@ export const syncGoogleSheetConnection = createServerFn({ method: 'POST' })
         sourceRows.push({
           store_id: storeId,
           source: 'google_oauth',
-          source_order_id: `gsh:${connection.id}:${stablePart}`,
+          source_order_id: sourceOrderId,
           sheet_row: null,
           customer_name: customerName,
           phone,
@@ -755,8 +767,8 @@ export const syncGoogleSheetConnection = createServerFn({ method: 'POST' })
           price: parseOrderPrice(mapped.price),
           quantity: Math.max(parseOrderQuantity(mapped.quantity), 1),
           delivery_type: String(mapped.deliveryType || '').trim(),
-          ordered_at: parseOrderDate(mapped.date),
-          ordered_at_text: String(mapped.date || '').trim(),
+          ordered_at: parseOrderDate(sourceDateText) || (!sourceDateText ? syncStartedAtIso : null),
+          ordered_at_text: sourceDateText || syncDateText,
           status,
           raw_data: {
             importedFrom: GOOGLE_PROVIDER,
@@ -773,16 +785,35 @@ export const syncGoogleSheetConnection = createServerFn({ method: 'POST' })
 
       const sourceIds = sourceRows.map((row) => String(row.source_order_id))
       const existingIds = new Set<string>()
+      const existingDateBySourceId = new Map<
+        string,
+        { ordered_at: string | null; ordered_at_text: string; created_at: string }
+      >()
       for (let index = 0; index < sourceIds.length; index += 250) {
         const group = sourceIds.slice(index, index + 250)
         const { data: existing, error } = await supabase
           .from('orders')
-          .select('source_order_id')
+          .select('source_order_id,ordered_at,ordered_at_text,created_at')
           .eq('store_id', storeId)
           .eq('source', 'google_oauth')
           .in('source_order_id', group)
         if (error) throw error
-        for (const row of existing || []) existingIds.add(row.source_order_id)
+        for (const row of existing || []) {
+          existingIds.add(row.source_order_id)
+          existingDateBySourceId.set(row.source_order_id, row)
+        }
+      }
+
+      for (const row of sourceRows) {
+        const sourceOrderId = String(row.source_order_id)
+        if (!missingDateSourceIds.has(sourceOrderId)) continue
+        const existing = existingDateBySourceId.get(sourceOrderId)
+        if (!existing) continue
+
+        const fallbackIso = existing.ordered_at || existing.created_at || syncStartedAtIso
+        row.ordered_at = fallbackIso
+        row.ordered_at_text =
+          existing.ordered_at_text?.trim() || formatAlgiersDate(new Date(fallbackIso))
       }
 
       for (let index = 0; index < sourceRows.length; index += 250) {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   databaseRowToOrder,
+  formatAlgiersDate,
   orderToDatabaseInsert,
   parseOrderDate,
   parseOrderPrice,
@@ -56,6 +57,10 @@ describe('order database mapping', () => {
     expect(parseOrderDate('20‏/7‏/2026، 12:05:22 م')).toBe('2026-07-20T11:05:22.000Z')
     expect(parseOrderDate('٢٠/٧/٢٠٢٦، ١٢:٠٥:٢٢ ص')).toBe('2026-07-19T23:05:22.000Z')
     expect(parseOrderDate('not a date')).toBeNull()
+  })
+
+  it('uses the Algeria calendar day for missing sheet dates', () => {
+    expect(formatAlgiersDate(new Date('2026-07-30T23:30:00.000Z'))).toBe('2026-07-31')
   })
 
   it('maps a sheet order to an upsert-safe database record', () => {
