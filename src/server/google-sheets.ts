@@ -674,183 +674,211 @@ export const deleteGoogleAccount = createServerFn({ method: 'POST' })
     return { success: true }
   })
 
-export const syncGoogleSheetConnection = createServerFn({ method: 'POST' })
-  .validator((data: { id: string }) => data)
-  .handler(async ({ data }) => {
-    const userId = await requireAdmin()
-    const supabase = getSupabaseAdminClient()
-    const storeId = await resolveDefaultStoreId(userId, supabase)
-    const { data: connection, error: connectionError } = await supabase
-      .from('store_integrations')
-      .select('id,config,is_active')
-      .eq('id', data.id)
-      .eq('store_id', storeId)
-      .eq('provider', GOOGLE_PROVIDER)
-      .maybeSingle()
-    if (connectionError) throw connectionError
-    if (!connection) throw new Error('ربط Google Sheet غير موجود')
-    if (!connection.is_active) throw new Error('فعّل الربط قبل المزامنة')
-    const config = connection.config as GoogleSheetConfig
-    const missing = validateGoogleSheetMapping(config.columnMapping)
-    if (missing.length) throw new Error(`المطابقة ناقصة: ${missing.join('، ')}`)
-    const account = await loadAccount(config.googleAccountId, storeId)
-    const syncStartedAt = new Date()
-    const syncStartedAtIso = syncStartedAt.toISOString()
-    const syncDateText = formatAlgiersDate(syncStartedAt)
+export interface GoogleSheetSyncResult {
+  scanned: number
+  inserted: number
+  updated: number
+  skipped: number
+  alreadyRunning: boolean
+}
 
-    const range = encodeURIComponent(
-      `${a1SheetName(config.sheetTitle)}!A${config.startRow}:ZZ${config.startRow + MAX_IMPORT_ROWS - 1}`,
-    )
-    const result = await googleJson<{ values?: unknown[][] }>(
-      account,
-      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(config.spreadsheetId)}/values/${range}?majorDimension=ROWS`,
-    )
-    const values = result.values || []
-    const { data: syncRun, error: runError } = await supabase
-      .from('order_sync_runs')
-      .insert({
+async function syncGoogleSheetConnectionInternal({
+  id,
+  storeId,
+  startedBy,
+}: {
+  id: string
+  storeId: string
+  startedBy: string | null
+}): Promise<GoogleSheetSyncResult> {
+  const supabase = getSupabaseAdminClient()
+  const { data: connection, error: connectionError } = await supabase
+    .from('store_integrations')
+    .select('id,config,is_active,last_synced_at')
+    .eq('id', id)
+    .eq('store_id', storeId)
+    .eq('provider', GOOGLE_PROVIDER)
+    .maybeSingle()
+  if (connectionError) throw connectionError
+  if (!connection) throw new Error('ربط Google Sheet غير موجود')
+  if (!connection.is_active) throw new Error('فعّل الربط قبل المزامنة')
+  const previousSyncAt = connection.last_synced_at as string | null
+  if (previousSyncAt && Date.now() - Date.parse(previousSyncAt) < 30_000) {
+    return { scanned: 0, inserted: 0, updated: 0, skipped: 0, alreadyRunning: true }
+  }
+  const config = connection.config as GoogleSheetConfig
+  const missing = validateGoogleSheetMapping(config.columnMapping)
+  if (missing.length) throw new Error(`المطابقة ناقصة: ${missing.join('، ')}`)
+  const account = await loadAccount(config.googleAccountId, storeId)
+  const syncStartedAt = new Date()
+  const syncStartedAtIso = syncStartedAt.toISOString()
+  const syncDateText = formatAlgiersDate(syncStartedAt)
+
+  let claim = supabase
+    .from('store_integrations')
+    .update({ last_synced_at: syncStartedAtIso })
+    .eq('id', connection.id)
+    .eq('store_id', storeId)
+    .eq('provider', GOOGLE_PROVIDER)
+  claim = previousSyncAt
+    ? claim.eq('last_synced_at', previousSyncAt)
+    : claim.is('last_synced_at', null)
+  const { data: claimed, error: claimError } = await claim.select('id').maybeSingle()
+  if (claimError) throw claimError
+  if (!claimed) {
+    return { scanned: 0, inserted: 0, updated: 0, skipped: 0, alreadyRunning: true }
+  }
+
+  const range = encodeURIComponent(
+    `${a1SheetName(config.sheetTitle)}!A${config.startRow}:ZZ${config.startRow + MAX_IMPORT_ROWS - 1}`,
+  )
+  const result = await googleJson<{ values?: unknown[][] }>(
+    account,
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(config.spreadsheetId)}/values/${range}?majorDimension=ROWS`,
+  )
+  const values = result.values || []
+  const { data: syncRun, error: runError } = await supabase
+    .from('order_sync_runs')
+    .insert({
+      store_id: storeId,
+      provider: GOOGLE_PROVIDER,
+      direction: 'import',
+      status: 'running',
+      scanned_count: values.length,
+      started_by: startedBy,
+    })
+    .select('id')
+    .single()
+  if (runError) throw runError
+
+  try {
+    const sourceRows: Array<Record<string, unknown>> = []
+    const missingDateSourceIds = new Set<string>()
+    let skipped = 0
+    for (let index = 0; index < values.length; index += 1) {
+      const mapped = mapGoogleSheetRow(values[index], config.columnMapping)
+      const customerName = String(mapped.customerName || '').trim()
+      const phone = String(mapped.phone || '').trim()
+      let product = String(mapped.product || '').trim()
+      const color = String(mapped.color || '').trim()
+      const size = String(mapped.size || '').trim()
+      if (!customerName || !phone || !product) {
+        skipped += 1
+        continue
+      }
+      if (config.mergeVariantProduct) {
+        product = [product, color, size].filter(Boolean).join(' - ')
+      }
+      const sheetRow = config.startRow + index
+      const providedOrderId = String(mapped.orderId || '').trim()
+      const displayOrderId =
+        providedOrderId || generateOrderId(phone, String(mapped.date || ''), product)
+      const stablePart = providedOrderId ? `order:${providedOrderId}` : `row:${sheetRow}`
+      const sourceOrderId = `gsh:${connection.id}:${stablePart}`
+      const sourceDateText = String(mapped.date || '').trim()
+      if (!sourceDateText) missingDateSourceIds.add(sourceOrderId)
+      const suppliedStatus = String(mapped.status || '').trim()
+      const status = ALL_STATUSES.includes(suppliedStatus as (typeof ALL_STATUSES)[number])
+        ? suppliedStatus
+        : STATUS.PROCESSING
+      sourceRows.push({
         store_id: storeId,
-        provider: GOOGLE_PROVIDER,
-        direction: 'import',
-        status: 'running',
-        scanned_count: values.length,
-        started_by: userId,
+        source: 'google_oauth',
+        source_order_id: sourceOrderId,
+        sheet_row: null,
+        customer_name: customerName,
+        phone,
+        wilaya: String(mapped.wilaya || '').trim(),
+        baladiya: String(mapped.baladiya || '').trim(),
+        address: String(mapped.address || '').trim(),
+        notes: String(mapped.notes || '').trim(),
+        product,
+        color,
+        size,
+        price: parseOrderPrice(mapped.price),
+        quantity: Math.max(parseOrderQuantity(mapped.quantity), 1),
+        delivery_type: String(mapped.deliveryType || '').trim(),
+        ordered_at: parseOrderDate(sourceDateText) || (!sourceDateText ? syncStartedAtIso : null),
+        ordered_at_text: sourceDateText || syncDateText,
+        status,
+        raw_data: {
+          importedFrom: GOOGLE_PROVIDER,
+          integrationId: connection.id,
+          spreadsheetId: config.spreadsheetId,
+          sheetId: config.sheetId,
+          sheetRow,
+          displayOrderId,
+        },
+        last_synced_at: new Date().toISOString(),
+        deleted_at: null,
       })
-      .select('id')
-      .single()
-    if (runError) throw runError
+    }
 
-    try {
-      const sourceRows: Array<Record<string, unknown>> = []
-      const missingDateSourceIds = new Set<string>()
-      let skipped = 0
-      for (let index = 0; index < values.length; index += 1) {
-        const mapped = mapGoogleSheetRow(values[index], config.columnMapping)
-        const customerName = String(mapped.customerName || '').trim()
-        const phone = String(mapped.phone || '').trim()
-        let product = String(mapped.product || '').trim()
-        const color = String(mapped.color || '').trim()
-        const size = String(mapped.size || '').trim()
-        if (!customerName || !phone || !product) {
-          skipped += 1
-          continue
-        }
-        if (config.mergeVariantProduct) {
-          product = [product, color, size].filter(Boolean).join(' - ')
-        }
-        const sheetRow = config.startRow + index
-        const providedOrderId = String(mapped.orderId || '').trim()
-        const displayOrderId =
-          providedOrderId || generateOrderId(phone, String(mapped.date || ''), product)
-        const stablePart = providedOrderId ? `order:${providedOrderId}` : `row:${sheetRow}`
-        const sourceOrderId = `gsh:${connection.id}:${stablePart}`
-        const sourceDateText = String(mapped.date || '').trim()
-        if (!sourceDateText) missingDateSourceIds.add(sourceOrderId)
-        const suppliedStatus = String(mapped.status || '').trim()
-        const status = ALL_STATUSES.includes(suppliedStatus as (typeof ALL_STATUSES)[number])
-          ? suppliedStatus
-          : STATUS.PROCESSING
-        sourceRows.push({
-          store_id: storeId,
-          source: 'google_oauth',
-          source_order_id: sourceOrderId,
-          sheet_row: null,
-          customer_name: customerName,
-          phone,
-          wilaya: String(mapped.wilaya || '').trim(),
-          baladiya: String(mapped.baladiya || '').trim(),
-          address: String(mapped.address || '').trim(),
-          notes: String(mapped.notes || '').trim(),
-          product,
-          color,
-          size,
-          price: parseOrderPrice(mapped.price),
-          quantity: Math.max(parseOrderQuantity(mapped.quantity), 1),
-          delivery_type: String(mapped.deliveryType || '').trim(),
-          ordered_at: parseOrderDate(sourceDateText) || (!sourceDateText ? syncStartedAtIso : null),
-          ordered_at_text: sourceDateText || syncDateText,
-          status,
-          raw_data: {
-            importedFrom: GOOGLE_PROVIDER,
-            integrationId: connection.id,
-            spreadsheetId: config.spreadsheetId,
-            sheetId: config.sheetId,
-            sheetRow,
-            displayOrderId,
-          },
-          last_synced_at: new Date().toISOString(),
-          deleted_at: null,
+    const sourceIds = sourceRows.map((row) => String(row.source_order_id))
+    const existingIds = new Set<string>()
+    const existingDateBySourceId = new Map<
+      string,
+      { ordered_at: string | null; ordered_at_text: string; created_at: string }
+    >()
+    for (let index = 0; index < sourceIds.length; index += 250) {
+      const group = sourceIds.slice(index, index + 250)
+      const { data: existing, error } = await supabase
+        .from('orders')
+        .select('source_order_id,ordered_at,ordered_at_text,created_at')
+        .eq('store_id', storeId)
+        .eq('source', 'google_oauth')
+        .in('source_order_id', group)
+      if (error) throw error
+      for (const row of existing || []) {
+        existingIds.add(row.source_order_id)
+        existingDateBySourceId.set(row.source_order_id, row)
+      }
+    }
+
+    for (const row of sourceRows) {
+      const sourceOrderId = String(row.source_order_id)
+      if (!missingDateSourceIds.has(sourceOrderId)) continue
+      const existing = existingDateBySourceId.get(sourceOrderId)
+      if (!existing) continue
+
+      const fallbackIso = existing.ordered_at || existing.created_at || syncStartedAtIso
+      row.ordered_at = fallbackIso
+      row.ordered_at_text =
+        existing.ordered_at_text?.trim() || formatAlgiersDate(new Date(fallbackIso))
+    }
+
+    for (let index = 0; index < sourceRows.length; index += 250) {
+      const { error } = await supabase.from('orders').upsert(sourceRows.slice(index, index + 250), {
+        onConflict: 'store_id,source,source_order_id',
+      })
+      if (error) throw error
+    }
+    const updated = sourceRows.filter((row) => existingIds.has(String(row.source_order_id))).length
+    const inserted = sourceRows.length - updated
+    const now = new Date().toISOString()
+    const [{ error: integrationUpdateError }, { error: runUpdateError }] = await Promise.all([
+      supabase
+        .from('store_integrations')
+        .update({ last_synced_at: now })
+        .eq('id', connection.id)
+        .eq('store_id', storeId),
+      supabase
+        .from('order_sync_runs')
+        .update({
+          status: 'completed',
+          inserted_count: inserted,
+          updated_count: updated,
+          skipped_count: skipped,
+          finished_at: now,
         })
-      }
-
-      const sourceIds = sourceRows.map((row) => String(row.source_order_id))
-      const existingIds = new Set<string>()
-      const existingDateBySourceId = new Map<
-        string,
-        { ordered_at: string | null; ordered_at_text: string; created_at: string }
-      >()
-      for (let index = 0; index < sourceIds.length; index += 250) {
-        const group = sourceIds.slice(index, index + 250)
-        const { data: existing, error } = await supabase
-          .from('orders')
-          .select('source_order_id,ordered_at,ordered_at_text,created_at')
-          .eq('store_id', storeId)
-          .eq('source', 'google_oauth')
-          .in('source_order_id', group)
-        if (error) throw error
-        for (const row of existing || []) {
-          existingIds.add(row.source_order_id)
-          existingDateBySourceId.set(row.source_order_id, row)
-        }
-      }
-
-      for (const row of sourceRows) {
-        const sourceOrderId = String(row.source_order_id)
-        if (!missingDateSourceIds.has(sourceOrderId)) continue
-        const existing = existingDateBySourceId.get(sourceOrderId)
-        if (!existing) continue
-
-        const fallbackIso = existing.ordered_at || existing.created_at || syncStartedAtIso
-        row.ordered_at = fallbackIso
-        row.ordered_at_text =
-          existing.ordered_at_text?.trim() || formatAlgiersDate(new Date(fallbackIso))
-      }
-
-      for (let index = 0; index < sourceRows.length; index += 250) {
-        const { error } = await supabase
-          .from('orders')
-          .upsert(sourceRows.slice(index, index + 250), {
-            onConflict: 'store_id,source,source_order_id',
-          })
-        if (error) throw error
-      }
-      const updated = sourceRows.filter((row) =>
-        existingIds.has(String(row.source_order_id)),
-      ).length
-      const inserted = sourceRows.length - updated
-      const now = new Date().toISOString()
-      const [{ error: integrationUpdateError }, { error: runUpdateError }] = await Promise.all([
-        supabase
-          .from('store_integrations')
-          .update({ last_synced_at: now })
-          .eq('id', connection.id)
-          .eq('store_id', storeId),
-        supabase
-          .from('order_sync_runs')
-          .update({
-            status: 'completed',
-            inserted_count: inserted,
-            updated_count: updated,
-            skipped_count: skipped,
-            finished_at: now,
-          })
-          .eq('id', syncRun.id),
-      ])
-      if (integrationUpdateError) throw integrationUpdateError
-      if (runUpdateError) throw runUpdateError
-      return { scanned: values.length, inserted, updated, skipped }
-    } catch (error) {
-      await supabase
+        .eq('id', syncRun.id),
+    ])
+    if (integrationUpdateError) throw integrationUpdateError
+    if (runUpdateError) throw runUpdateError
+    return { scanned: values.length, inserted, updated, skipped, alreadyRunning: false }
+  } catch (error) {
+    await Promise.all([
+      supabase
         .from('order_sync_runs')
         .update({
           status: 'failed',
@@ -860,7 +888,68 @@ export const syncGoogleSheetConnection = createServerFn({ method: 'POST' })
           ],
           finished_at: new Date().toISOString(),
         })
-        .eq('id', syncRun.id)
-      throw error
+        .eq('id', syncRun.id),
+      previousSyncAt
+        ? supabase
+            .from('store_integrations')
+            .update({ last_synced_at: previousSyncAt })
+            .eq('id', connection.id)
+            .eq('store_id', storeId)
+            .eq('last_synced_at', syncStartedAtIso)
+        : supabase
+            .from('store_integrations')
+            .update({ last_synced_at: null })
+            .eq('id', connection.id)
+            .eq('store_id', storeId)
+            .eq('last_synced_at', syncStartedAtIso),
+    ])
+    throw error
+  }
+}
+
+export async function syncActiveGoogleSheetsInBackground() {
+  const supabase = getSupabaseAdminClient()
+  const staleBefore = new Date(Date.now() - 4 * 60_000).toISOString()
+  const { data: connections, error } = await supabase
+    .from('store_integrations')
+    .select('id,store_id,last_synced_at')
+    .eq('provider', GOOGLE_PROVIDER)
+    .eq('is_active', true)
+    .or(`last_synced_at.is.null,last_synced_at.lt.${staleBefore}`)
+    .order('last_synced_at', { ascending: true, nullsFirst: true })
+    .limit(20)
+  if (error) throw error
+
+  const results = []
+  for (const connection of connections || []) {
+    try {
+      const result = await syncGoogleSheetConnectionInternal({
+        id: connection.id,
+        storeId: connection.store_id,
+        startedBy: null,
+      })
+      results.push({ id: connection.id, ok: true, ...result })
+    } catch (syncError) {
+      results.push({
+        id: connection.id,
+        ok: false,
+        error: syncError instanceof Error ? syncError.message : 'Google Sheets sync failed',
+      })
     }
+  }
+
+  return {
+    checkedAt: new Date().toISOString(),
+    connections: connections?.length || 0,
+    results,
+  }
+}
+
+export const syncGoogleSheetConnection = createServerFn({ method: 'POST' })
+  .validator((data: { id: string }) => data)
+  .handler(async ({ data }) => {
+    const userId = await requireAdmin()
+    const supabase = getSupabaseAdminClient()
+    const storeId = await resolveDefaultStoreId(userId, supabase)
+    return syncGoogleSheetConnectionInternal({ id: data.id, storeId, startedBy: userId })
   })

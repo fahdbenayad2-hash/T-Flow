@@ -321,6 +321,10 @@ function GoogleSheetsPage() {
   const handleSync = async (connection: SheetConnection) => {
     try {
       const result = await syncConnection.mutateAsync(connection.id)
+      if (result.alreadyRunning) {
+        toast('المزامنة تعمل الآن في الخلفية')
+        return
+      }
       toast.success(
         `تمت المزامنة: ${result.inserted} جديد، ${result.updated} محدّث، ${result.skipped} متجاوز`,
       )

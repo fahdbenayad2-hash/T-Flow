@@ -24,6 +24,7 @@ import { Route as AuthenticatedDeliveryRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
 import { Route as AuthenticatedCallCenterRouteImport } from './routes/_authenticated/call-center'
+import { Route as ApiCronGoogleSheetsRouteImport } from './routes/api/cron/google-sheets'
 import { Route as AuthenticatedOrdersRowRouteImport } from './routes/_authenticated/orders.$row'
 import { Route as AuthenticatedIntegrationTestIdRouteImport } from './routes/_authenticated/integration-test.$id'
 import { Route as AuthenticatedCustomersPhoneRouteImport } from './routes/_authenticated/customers.$phone'
@@ -108,6 +109,11 @@ const AuthenticatedCallCenterRoute = AuthenticatedCallCenterRouteImport.update({
   path: '/call-center',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiCronGoogleSheetsRoute = ApiCronGoogleSheetsRouteImport.update({
+  id: '/api/cron/google-sheets',
+  path: '/api/cron/google-sheets',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedOrdersRowRoute = AuthenticatedOrdersRowRouteImport.update({
   id: '/$row',
   path: '/$row',
@@ -168,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
   '/orders/$row': typeof AuthenticatedOrdersRowRoute
+  '/api/cron/google-sheets': typeof ApiCronGoogleSheetsRoute
   '/api/integrations/google/callback': typeof ApiIntegrationsGoogleCallbackRoute
   '/api/integrations/public/$endpointKey': typeof ApiIntegrationsPublicEndpointKeyRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByTo {
   '/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
   '/orders/$row': typeof AuthenticatedOrdersRowRoute
+  '/api/cron/google-sheets': typeof ApiCronGoogleSheetsRoute
   '/api/integrations/google/callback': typeof ApiIntegrationsGoogleCallbackRoute
   '/api/integrations/public/$endpointKey': typeof ApiIntegrationsPublicEndpointKeyRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/_authenticated/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/_authenticated/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
   '/_authenticated/orders/$row': typeof AuthenticatedOrdersRowRoute
+  '/api/cron/google-sheets': typeof ApiCronGoogleSheetsRoute
   '/api/integrations/google/callback': typeof ApiIntegrationsGoogleCallbackRoute
   '/api/integrations/public/$endpointKey': typeof ApiIntegrationsPublicEndpointKeyRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
     | '/customers/$phone'
     | '/integration-test/$id'
     | '/orders/$row'
+    | '/api/cron/google-sheets'
     | '/api/integrations/google/callback'
     | '/api/integrations/public/$endpointKey'
     | '/api/integrations/webhook/$endpointKey'
@@ -264,6 +274,7 @@ export interface FileRouteTypes {
     | '/customers/$phone'
     | '/integration-test/$id'
     | '/orders/$row'
+    | '/api/cron/google-sheets'
     | '/api/integrations/google/callback'
     | '/api/integrations/public/$endpointKey'
     | '/api/integrations/webhook/$endpointKey'
@@ -288,6 +299,7 @@ export interface FileRouteTypes {
     | '/_authenticated/customers/$phone'
     | '/_authenticated/integration-test/$id'
     | '/_authenticated/orders/$row'
+    | '/api/cron/google-sheets'
     | '/api/integrations/google/callback'
     | '/api/integrations/public/$endpointKey'
     | '/api/integrations/webhook/$endpointKey'
@@ -298,6 +310,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiCronGoogleSheetsRoute: typeof ApiCronGoogleSheetsRoute
   ApiIntegrationsGoogleCallbackRoute: typeof ApiIntegrationsGoogleCallbackRoute
   ApiIntegrationsPublicEndpointKeyRoute: typeof ApiIntegrationsPublicEndpointKeyRoute
   ApiIntegrationsWebhookEndpointKeyRoute: typeof ApiIntegrationsWebhookEndpointKeyRoute
@@ -410,6 +423,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/call-center'
       preLoaderRoute: typeof AuthenticatedCallCenterRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/cron/google-sheets': {
+      id: '/api/cron/google-sheets'
+      path: '/api/cron/google-sheets'
+      fullPath: '/api/cron/google-sheets'
+      preLoaderRoute: typeof ApiCronGoogleSheetsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/orders/$row': {
       id: '/_authenticated/orders/$row'
@@ -527,6 +547,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiCronGoogleSheetsRoute: ApiCronGoogleSheetsRoute,
   ApiIntegrationsGoogleCallbackRoute: ApiIntegrationsGoogleCallbackRoute,
   ApiIntegrationsPublicEndpointKeyRoute: ApiIntegrationsPublicEndpointKeyRoute,
   ApiIntegrationsWebhookEndpointKeyRoute:
