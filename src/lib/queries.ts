@@ -11,6 +11,7 @@ import {
 import { getCallLogs, recordCallLog } from '~/server/call-center'
 import type { CallLog } from '~/lib/types'
 import { getInventorySettings, updateInventorySetting } from '~/server/inventory'
+import { createDeliveryBatch, getDeliveryShipments } from '~/server/delivery'
 import {
   createStoreConnection,
   deleteStoreConnection,
@@ -103,6 +104,28 @@ export function useBulkUpdateOrders() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  })
+}
+
+export function useDeliveryShipments() {
+  const tenantId = useTenantId()
+  return useQuery({
+    queryKey: ['delivery-shipments', tenantId],
+    queryFn: () => getDeliveryShipments(),
+  })
+}
+
+export function useCreateDeliveryBatch() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      carrier: string
+      notes?: string
+      orders: Array<{ sourceOrderId?: string; sheetRow?: number }>
+    }) => createDeliveryBatch({ data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['delivery-shipments'] })
     },
   })
 }

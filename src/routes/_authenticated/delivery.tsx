@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ClipboardCheck,
+  Download,
   Loader2,
   MapPin,
   PackageCheck,
@@ -32,7 +33,17 @@ import {
   type DeliveryItem,
   type DeliveryStage,
 } from '~/lib/delivery-operations'
-import { useBulkUpdateOrders, useOrders } from '~/lib/queries'
+import {
+  buildShipmentCsv,
+  DELIVERY_CARRIERS,
+  type DeliveryShipmentAssignment,
+} from '~/lib/delivery-shipment'
+import {
+  useBulkUpdateOrders,
+  useCreateDeliveryBatch,
+  useDeliveryShipments,
+  useOrders,
+} from '~/lib/queries'
 import { STATUS } from '~/lib/sheet-mapping'
 import { cn, formatCurrency } from '~/lib/utils'
 
@@ -82,7 +93,13 @@ function DeliverySkeleton() {
   )
 }
 
-function ShipmentLabel({ item }: { item: DeliveryItem }) {
+function ShipmentLabel({
+  item,
+  shipment,
+}: {
+  item: DeliveryItem
+  shipment?: DeliveryShipmentAssignment
+}) {
   const { order } = item
   return (
     <article className="shipment-print-label rounded-2xl border-2 border-foreground bg-white p-5 text-black">
@@ -98,6 +115,13 @@ function ShipmentLabel({ item }: { item: DeliveryItem }) {
         <div className="text-left">
           <p className="text-[10px] font-bold text-gray-500">مرجع الشحنة</p>
           <p className="font-mono text-lg font-black">{order.order_id}</p>
+          {shipment && (
+            <>
+              <p className="mt-1 text-[10px] font-bold">{shipment.carrier}</p>
+              <p className="font-mono text-[10px]">{shipment.batchReference}</p>
+              <p className="font-mono text-[11px] font-bold">{shipment.trackingNumber}</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -150,15 +174,39 @@ function ShipmentLabel({ item }: { item: DeliveryItem }) {
 
 function DeliveryPage() {
   const ordersQuery = useOrders()
+  const shipmentsQuery = useDeliveryShipments()
+  const createBatch = useCreateDeliveryBatch()
   const bulkUpdate = useBulkUpdateOrders()
   const [filter, setFilter] = useState<DeliveryFilter>('all')
   const [search, setSearch] = useState('')
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [printDialogOpen, setPrintDialogOpen] = useState(false)
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false)
+  const [carrier, setCarrier] = useState<(typeof DELIVERY_CARRIERS)[number]>('Yalidine')
+  const [customCarrier, setCustomCarrier] = useState('')
+  const [batchNotes, setBatchNotes] = useState('')
 
   const orders = useMemo(() => ordersQuery.data?.orders ?? [], [ordersQuery.data])
   const items = useMemo(() => buildDeliveryItems(orders), [orders])
   const stats = useMemo(() => getDeliveryStats(items), [items])
+  const shipments = useMemo(() => shipmentsQuery.data ?? [], [shipmentsQuery.data])
+  const shipmentsBySource = useMemo(
+    () => new Map(shipments.map((shipment) => [shipment.sourceOrderId, shipment])),
+    [shipments],
+  )
+  const shipmentsByRow = useMemo(
+    () =>
+      new Map(
+        shipments
+          .filter((shipment) => shipment.sheetRow)
+          .map((shipment) => [shipment.sheetRow, shipment]),
+      ),
+    [shipments],
+  )
+
+  const shipmentFor = (item: DeliveryItem) =>
+    shipmentsBySource.get(item.order._sourceOrderId || item.order.order_id) ||
+    shipmentsByRow.get(item.order._row)
 
   const filteredItems = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -228,6 +276,46 @@ function DeliveryPage() {
       return
     }
     setPrintDialogOpen(true)
+  }
+
+  const handleCreateBatch = async () => {
+    const resolvedCarrier = carrier === 'شركة أخرى' ? customCarrier.trim() : carrier
+    if (!resolvedCarrier) {
+      toast.error('اكتب اسم شركة التوصيل')
+      return
+    }
+    try {
+      const result = await createBatch.mutateAsync({
+        carrier: resolvedCarrier,
+        notes: batchNotes,
+        orders: selectedItems.map(({ order }) => ({
+          sourceOrderId: order._sourceOrderId || order.order_id,
+          sheetRow: order._row,
+        })),
+      })
+      toast.success(`تم إنشاء الدفعة ${result.reference} وربط ${result.count} شحنة`)
+      setAssignDialogOpen(false)
+      setBatchNotes('')
+      setSelectedRows(new Set())
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر إنشاء دفعة الشحن')
+    }
+  }
+
+  const exportSelectedShipments = () => {
+    if (!selectedItems.length) {
+      toast.error('حدد طلباً واحداً على الأقل للتصدير')
+      return
+    }
+    const csv = buildShipmentCsv(
+      selectedItems.map((item) => ({ order: item.order, shipment: shipmentFor(item) })),
+    )
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `tflow-shipments-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   if (ordersQuery.isLoading) return <DeliverySkeleton />
@@ -344,6 +432,27 @@ function DeliveryPage() {
                 <Button
                   type="button"
                   size="sm"
+                  onClick={() => setAssignDialogOpen(true)}
+                  disabled={selectedItems.length === 0 || createBatch.isPending}
+                  className="h-9 rounded-xl"
+                >
+                  <Truck className="h-4 w-4" />
+                  إسناد شركة التوصيل
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={exportSelectedShipments}
+                  disabled={selectedItems.length === 0}
+                  className="h-9 rounded-xl"
+                >
+                  <Download className="h-4 w-4" />
+                  تصدير CSV
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
                   variant="outline"
                   onClick={openPrintPreview}
                   disabled={selectedItems.length === 0}
@@ -448,6 +557,7 @@ function DeliveryPage() {
               <div className="flex flex-col gap-2">
                 {filteredItems.map((item) => {
                   const { order } = item
+                  const shipment = shipmentFor(item)
                   const stage = STAGE_META[item.stage]
                   const StageIcon = stage.icon
                   return (
@@ -495,6 +605,11 @@ function DeliveryPage() {
                               {order.wilaya}، {order.baladiya}
                             </span>
                             <span>{item.isHomeDelivery ? 'منزل' : 'مكتب'}</span>
+                            {shipment && (
+                              <span className="font-semibold text-primary">
+                                {shipment.carrier} · {shipment.trackingNumber}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -577,7 +692,7 @@ function DeliveryPage() {
 
           <div className="shipment-print-root space-y-4 bg-muted/25 p-2">
             {selectedItems.map((item) => (
-              <ShipmentLabel key={item.order.order_id} item={item} />
+              <ShipmentLabel key={item.order.order_id} item={item} shipment={shipmentFor(item)} />
             ))}
           </div>
 
@@ -588,6 +703,83 @@ function DeliveryPage() {
             <Button type="button" onClick={() => window.print()}>
               <Printer className="h-4 w-4" />
               طباعة {selectedItems.length} ملصق
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent className="sm:max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>إنشاء دفعة شحن</DialogTitle>
+            <DialogDescription>
+              سيتم ربط {selectedItems.length} طلب بشركة التوصيل وإنشاء رقم تتبع داخلي لكل شحنة.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <label className="block space-y-1.5 text-[12px] font-bold">
+              شركة التوصيل
+              <select
+                value={carrier}
+                onChange={(event) =>
+                  setCarrier(event.target.value as (typeof DELIVERY_CARRIERS)[number])
+                }
+                className="h-10 w-full rounded-[10px] border border-input bg-background px-3 text-[12px]"
+              >
+                {DELIVERY_CARRIERS.map((company) => (
+                  <option key={company} value={company}>
+                    {company}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {carrier === 'شركة أخرى' && (
+              <label className="block space-y-1.5 text-[12px] font-bold">
+                اسم الشركة
+                <Input
+                  value={customCarrier}
+                  onChange={(event) => setCustomCarrier(event.target.value)}
+                  placeholder="اكتب اسم شركة التوصيل"
+                />
+              </label>
+            )}
+
+            <label className="block space-y-1.5 text-[12px] font-bold">
+              ملاحظة الدفعة
+              <Input
+                value={batchNotes}
+                onChange={(event) => setBatchNotes(event.target.value)}
+                placeholder="اختياري: اسم السائق أو نقطة التجميع"
+              />
+            </label>
+
+            <div className="grid grid-cols-2 gap-3 rounded-xl bg-muted/50 p-3 text-[11px]">
+              <div>
+                <p className="text-muted-foreground">عدد الشحنات</p>
+                <p className="mt-1 font-mono text-lg font-bold">{selectedItems.length}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">مبلغ التحصيل</p>
+                <p className="mt-1 font-mono text-lg font-bold">
+                  {formatCurrency(selectedItems.reduce((sum, item) => sum + item.amount, 0))}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button onClick={handleCreateBatch} disabled={createBatch.isPending}>
+              {createBatch.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Truck className="h-4 w-4" />
+              )}
+              إنشاء الدفعة
             </Button>
           </DialogFooter>
         </DialogContent>
