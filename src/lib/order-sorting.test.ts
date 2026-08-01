@@ -55,6 +55,16 @@ describe('order sorting', () => {
     ])
   })
 
+  it('uses the OAuth source row when the database sheet row is empty', () => {
+    const olderRow = makeOrder({ _row: 0, _sourceRow: 208, order_id: '208' })
+    const newerRow = makeOrder({ _row: 0, _sourceRow: 233, order_id: '233' })
+
+    expect([olderRow, newerRow].sort((a, b) => compareOrders(a, b, 'date', 'desc'))).toEqual([
+      newerRow,
+      olderRow,
+    ])
+  })
+
   it('sorts customer names independently from Sheet row numbers', () => {
     const zed = makeOrder({ _row: 100, customerName: 'Zed' })
     const alice = makeOrder({ _row: 2, customerName: 'Alice' })

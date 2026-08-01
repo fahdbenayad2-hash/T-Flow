@@ -25,6 +25,10 @@ export function getOrderTimestamp(order: Order): number {
   return Number.isFinite(lastModified) ? lastModified : Number.NEGATIVE_INFINITY
 }
 
+function getOrderSourceRow(order: Order): number {
+  return order._sourceRow ?? order._row
+}
+
 /**
  * Keeps the order list deterministic even when several Sheet rows share the
  * same day. Newer dates come first by default, then the latest Sheet row.
@@ -46,7 +50,7 @@ export function compareOrders(
 
   if (primary !== 0) return direction === 'asc' ? primary : -primary
 
-  const rowTieBreak = compareNumbers(b._row, a._row)
+  const rowTieBreak = compareNumbers(getOrderSourceRow(b), getOrderSourceRow(a))
   if (rowTieBreak !== 0) return rowTieBreak
 
   const modifiedTieBreak = compareNumbers(Number(b.lastModified) || 0, Number(a.lastModified) || 0)

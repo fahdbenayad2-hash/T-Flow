@@ -176,10 +176,12 @@ export function databaseRowToOrder(row: DatabaseOrderRow): Order {
     typeof row.raw_data?.displayOrderId === 'string'
       ? row.raw_data.displayOrderId
       : row.source_order_id
+  const sourceRow = Number(row.raw_data?.sheetRow)
 
   return {
     _row: row.sheet_row ?? 0,
     _sourceOrderId: row.source_order_id,
+    _sourceRow: Number.isFinite(sourceRow) && sourceRow >= 2 ? sourceRow : undefined,
     _orderedAt: row.ordered_at || undefined,
     order_id: displayOrderId,
     customerName: row.customer_name,
