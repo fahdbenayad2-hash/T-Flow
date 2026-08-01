@@ -188,7 +188,10 @@ export async function listSupabaseOrders(userId: string): Promise<Order[]> {
       .select('*')
       .eq('store_id', storeId)
       .is('deleted_at', null)
-      .order('sheet_row', { ascending: true, nullsFirst: false })
+      .order('ordered_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .order('sheet_row', { ascending: false, nullsFirst: false })
+      .order('id', { ascending: false })
       .range(from, from + PAGE_SIZE - 1)
 
     if (error) throw error

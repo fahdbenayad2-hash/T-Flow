@@ -3,6 +3,7 @@ import type { OrderStatus } from './sheet-mapping'
 export interface Order {
   _row: number
   _sourceOrderId?: string
+  _orderedAt?: string
   order_id: string
   customerName: string
   phone: number | string

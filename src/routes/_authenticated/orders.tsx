@@ -32,6 +32,7 @@ import * as XLSX from 'xlsx'
 import { motion } from 'framer-motion'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { StatusBadge } from '~/components/status-badge'
+import { compareOrders, type OrderSortDirection, type OrderSortField } from '~/lib/order-sorting'
 
 export const Route = createFileRoute('/_authenticated/orders')({
   component: OrdersRoute,
@@ -89,8 +90,8 @@ function OrdersPage() {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
   const [bulkStatus, setBulkStatus] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [sortField, setSortField] = useState<'_row' | 'date' | 'status'>('_row')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [sortField, setSortField] = useState<OrderSortField>('date')
+  const [sortDir, setSortDir] = useState<OrderSortDirection>('desc')
 
   const orders = useMemo(() => data?.orders ?? [], [data])
 
@@ -138,25 +139,23 @@ function OrdersPage() {
       result = result.filter((o) => o.product === productFilter)
     }
 
-    result.sort((a, b) => {
-      let aVal: string | number = ''
-      let bVal: string | number = ''
-      if (sortField === '_row') {
-        aVal = a._row
-        bVal = b._row
-      } else if (sortField === 'date') {
-        aVal = a.date
-        bVal = b.date
-      } else if (sortField === 'status') {
-        aVal = a.status
-        bVal = b.status
-      }
-      if (sortDir === 'asc') return aVal > bVal ? 1 : -1
-      return aVal < bVal ? 1 : -1
-    })
+    result.sort((a, b) => compareOrders(a, b, sortField, sortDir))
 
     return result
   }, [orders, search, statusFilter, wilayaFilter, productFilter, sortField, sortDir])
+
+  const changeSort = useCallback(
+    (field: OrderSortField) => {
+      if (field === sortField) {
+        setSortDir((direction) => (direction === 'asc' ? 'desc' : 'asc'))
+        return
+      }
+
+      setSortField(field)
+      setSortDir(field === 'customer' || field === 'status' ? 'asc' : 'desc')
+    },
+    [sortField],
+  )
 
   const selectionKey = useCallback(
     (order: (typeof orders)[number]) => `${order._row}:${order._sourceOrderId || order.order_id}`,
@@ -486,8 +485,7 @@ function OrdersPage() {
               <div
                 className="px-2 py-3 flex-1 min-w-[130px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => {
-                  setSortField('_row')
-                  setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+                  changeSort('customer')
                 }}
               >
                 <span className="flex items-center gap-1">
@@ -502,8 +500,7 @@ function OrdersPage() {
               <div
                 className="px-2 py-3 w-[118px] shrink-0 cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => {
-                  setSortField('status')
-                  setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+                  changeSort('status')
                 }}
               >
                 <span className="flex items-center gap-1">
@@ -514,8 +511,7 @@ function OrdersPage() {
               <div
                 className="px-2 py-3 w-20 shrink-0 cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => {
-                  setSortField('date')
-                  setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+                  changeSort('date')
                 }}
               >
                 <span className="flex items-center gap-1">
