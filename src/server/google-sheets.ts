@@ -5,6 +5,10 @@ import {
   type GoogleSheetColumnMapping,
 } from '~/lib/google-sheet-mapping'
 import {
+  buildGoogleSheetWriteData,
+  type GoogleSheetWritePayload,
+} from '~/lib/google-sheet-writeback'
+import {
   formatAlgiersDate,
   parseOrderDate,
   parseOrderPrice,
@@ -23,8 +27,9 @@ const GOOGLE_SCOPES = [
   'openid',
   'email',
   'https://www.googleapis.com/auth/drive.metadata.readonly',
-  'https://www.googleapis.com/auth/spreadsheets.readonly',
+  'https://www.googleapis.com/auth/spreadsheets',
 ]
+const GOOGLE_SHEETS_WRITE_SCOPE = 'https://www.googleapis.com/auth/spreadsheets'
 
 interface GoogleAccountRow {
   id: string
@@ -250,12 +255,19 @@ async function refreshAccessToken(account: GoogleAccountRow) {
   return result.access_token
 }
 
-async function googleJson<T>(account: GoogleAccountRow, url: string): Promise<T> {
+async function googleJson<T>(
+  account: GoogleAccountRow,
+  url: string,
+  init: RequestInit = {},
+): Promise<T> {
   const token = await refreshAccessToken(account)
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+  const headers = new Headers(init.headers)
+  headers.set('Authorization', `Bearer ${token}`)
+  if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+  const response = await fetch(url, { ...init, headers })
   const result = (await response.json()) as T & { error?: { message?: string } }
   if (!response.ok) {
-    throw new Error(result.error?.message || 'تعذر قراءة البيانات من Google')
+    throw new Error(result.error?.message || 'تعذر الاتصال بـ Google')
   }
   return result
 }
@@ -287,7 +299,7 @@ export const getGoogleSheetsOverview = createServerFn({ method: 'GET' }).handler
     await Promise.all([
       supabase
         .from('google_accounts')
-        .select('id,email,is_active,created_at')
+        .select('id,email,scopes,is_active,created_at')
         .eq('store_id', storeId)
         .order('created_at', { ascending: false }),
       supabase
@@ -307,6 +319,7 @@ export const getGoogleSheetsOverview = createServerFn({ method: 'GET' }).handler
       id: account.id,
       email: account.email,
       isActive: account.is_active,
+      canWrite: Array.isArray(account.scopes) && account.scopes.includes(GOOGLE_SHEETS_WRITE_SCOPE),
       createdAt: account.created_at,
     })),
     connections: ((connections || []) as GoogleSheetIntegrationRow[]).map(toConnection),
@@ -674,11 +687,118 @@ export const deleteGoogleAccount = createServerFn({ method: 'POST' })
     return { success: true }
   })
 
+interface GoogleSheetWriteQueueRow {
+  id: string
+  payload: GoogleSheetWritePayload
+  attempts: number
+}
+
+async function failGoogleSheetWriteJobs(jobs: GoogleSheetWriteQueueRow[], error: unknown) {
+  const supabase = getSupabaseAdminClient()
+  const message = (
+    error instanceof Error ? error.message : 'Google Sheets write-back failed'
+  ).slice(0, 1_000)
+
+  await Promise.all(
+    jobs.map((job) => {
+      const attempts = Number(job.attempts || 0) + 1
+      const retryMinutes = Math.min(2 ** Math.min(attempts, 6), 60)
+      return supabase
+        .from('integration_write_queue')
+        .update({
+          status: 'failed',
+          attempts,
+          last_error: message,
+          next_attempt_at: new Date(Date.now() + retryMinutes * 60_000).toISOString(),
+        })
+        .eq('id', job.id)
+    }),
+  )
+}
+
+async function flushGoogleSheetWriteQueue({
+  connectionId,
+  storeId,
+  config,
+}: {
+  connectionId: string
+  storeId: string
+  config: GoogleSheetConfig
+}): Promise<number> {
+  const supabase = getSupabaseAdminClient()
+  const { data: readyJobs, error: jobsError } = await supabase
+    .from('integration_write_queue')
+    .select('id,payload,attempts')
+    .eq('store_id', storeId)
+    .eq('integration_id', connectionId)
+    .in('status', ['pending', 'failed'])
+    .lte('next_attempt_at', new Date().toISOString())
+    .order('created_at', { ascending: true })
+    .limit(100)
+  if (jobsError) throw jobsError
+  if (!readyJobs?.length) return 0
+
+  const jobIds = readyJobs.map((job) => job.id)
+  const { data: claimedJobs, error: claimError } = await supabase
+    .from('integration_write_queue')
+    .update({ status: 'processing' })
+    .in('id', jobIds)
+    .in('status', ['pending', 'failed'])
+    .select('id,payload,attempts')
+  if (claimError) throw claimError
+  const jobs = (claimedJobs || []) as GoogleSheetWriteQueueRow[]
+  if (!jobs.length) return 0
+
+  try {
+    const updates = jobs.flatMap((job) =>
+      buildGoogleSheetWriteData(config.sheetTitle, config.columnMapping, job.payload),
+    )
+
+    if (updates.length) {
+      const account = await loadAccount(config.googleAccountId, storeId)
+      if (!account.scopes?.includes(GOOGLE_SHEETS_WRITE_SCOPE)) {
+        throw new Error('أعد ربط حساب Google لمنح صلاحية تحديث الحالات والملاحظات في الشيت')
+      }
+
+      await googleJson<Record<string, unknown>>(
+        account,
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(config.spreadsheetId)}/values:batchUpdate`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            valueInputOption: 'USER_ENTERED',
+            includeValuesInResponse: false,
+            data: updates,
+          }),
+        },
+      )
+    }
+
+    const { error: completeError } = await supabase
+      .from('integration_write_queue')
+      .update({
+        status: 'completed',
+        last_error: null,
+        next_attempt_at: new Date().toISOString(),
+      })
+      .in(
+        'id',
+        jobs.map((job) => job.id),
+      )
+    if (completeError) throw completeError
+    return jobs.length
+  } catch (error) {
+    await failGoogleSheetWriteJobs(jobs, error)
+    throw error
+  }
+}
+
 export interface GoogleSheetSyncResult {
   scanned: number
   inserted: number
   updated: number
   skipped: number
+  exported: number
   alreadyRunning: boolean
 }
 
@@ -704,7 +824,14 @@ async function syncGoogleSheetConnectionInternal({
   if (!connection.is_active) throw new Error('فعّل الربط قبل المزامنة')
   const previousSyncAt = connection.last_synced_at as string | null
   if (previousSyncAt && Date.now() - Date.parse(previousSyncAt) < 30_000) {
-    return { scanned: 0, inserted: 0, updated: 0, skipped: 0, alreadyRunning: true }
+    return {
+      scanned: 0,
+      inserted: 0,
+      updated: 0,
+      skipped: 0,
+      exported: 0,
+      alreadyRunning: true,
+    }
   }
   const config = connection.config as GoogleSheetConfig
   const missing = validateGoogleSheetMapping(config.columnMapping)
@@ -726,32 +853,80 @@ async function syncGoogleSheetConnectionInternal({
   const { data: claimed, error: claimError } = await claim.select('id').maybeSingle()
   if (claimError) throw claimError
   if (!claimed) {
-    return { scanned: 0, inserted: 0, updated: 0, skipped: 0, alreadyRunning: true }
+    return {
+      scanned: 0,
+      inserted: 0,
+      updated: 0,
+      skipped: 0,
+      exported: 0,
+      alreadyRunning: true,
+    }
+  }
+
+  let exported: number
+  try {
+    exported = await flushGoogleSheetWriteQueue({
+      connectionId: connection.id,
+      storeId,
+      config,
+    })
+  } catch (error) {
+    const restore = previousSyncAt
+      ? supabase
+          .from('store_integrations')
+          .update({ last_synced_at: previousSyncAt })
+          .eq('id', connection.id)
+          .eq('store_id', storeId)
+          .eq('last_synced_at', syncStartedAtIso)
+      : supabase
+          .from('store_integrations')
+          .update({ last_synced_at: null })
+          .eq('id', connection.id)
+          .eq('store_id', storeId)
+          .eq('last_synced_at', syncStartedAtIso)
+    await restore
+    throw error
   }
 
   const range = encodeURIComponent(
     `${a1SheetName(config.sheetTitle)}!A${config.startRow}:ZZ${config.startRow + MAX_IMPORT_ROWS - 1}`,
   )
-  const result = await googleJson<{ values?: unknown[][] }>(
-    account,
-    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(config.spreadsheetId)}/values/${range}?majorDimension=ROWS`,
-  )
-  const values = result.values || []
   const { data: syncRun, error: runError } = await supabase
     .from('order_sync_runs')
     .insert({
       store_id: storeId,
       provider: GOOGLE_PROVIDER,
-      direction: 'import',
+      direction: exported > 0 ? 'bidirectional' : 'import',
       status: 'running',
-      scanned_count: values.length,
+      scanned_count: 0,
       started_by: startedBy,
     })
     .select('id')
     .single()
-  if (runError) throw runError
+  if (runError) {
+    const restore = previousSyncAt
+      ? supabase
+          .from('store_integrations')
+          .update({ last_synced_at: previousSyncAt })
+          .eq('id', connection.id)
+          .eq('store_id', storeId)
+          .eq('last_synced_at', syncStartedAtIso)
+      : supabase
+          .from('store_integrations')
+          .update({ last_synced_at: null })
+          .eq('id', connection.id)
+          .eq('store_id', storeId)
+          .eq('last_synced_at', syncStartedAtIso)
+    await restore
+    throw runError
+  }
 
   try {
+    const result = await googleJson<{ values?: unknown[][] }>(
+      account,
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(config.spreadsheetId)}/values/${range}?majorDimension=ROWS`,
+    )
+    const values = result.values || []
     const sourceRows: Array<Record<string, unknown>> = []
     const missingDateSourceIds = new Set<string>()
     let skipped = 0
@@ -816,45 +991,139 @@ async function syncGoogleSheetConnectionInternal({
 
     const sourceIds = sourceRows.map((row) => String(row.source_order_id))
     const existingIds = new Set<string>()
-    const existingDateBySourceId = new Map<
+    const existingBySourceId = new Map<
       string,
-      { ordered_at: string | null; ordered_at_text: string; created_at: string }
+      {
+        source_order_id: string
+        customer_name: string
+        phone: string
+        wilaya: string
+        baladiya: string
+        address: string
+        notes: string
+        product: string
+        color: string
+        size: string
+        price: number | string
+        quantity: number | string
+        delivery_type: string
+        ordered_at: string | null
+        ordered_at_text: string
+        status: string
+        raw_data: Record<string, unknown> | null
+        created_at: string
+        updated_at: string
+      }
     >()
     for (let index = 0; index < sourceIds.length; index += 250) {
       const group = sourceIds.slice(index, index + 250)
       const { data: existing, error } = await supabase
         .from('orders')
-        .select('source_order_id,ordered_at,ordered_at_text,created_at')
+        .select(
+          'source_order_id,customer_name,phone,wilaya,baladiya,address,notes,product,color,size,price,quantity,delivery_type,ordered_at,ordered_at_text,status,raw_data,created_at,updated_at',
+        )
         .eq('store_id', storeId)
         .eq('source', 'google_oauth')
         .in('source_order_id', group)
       if (error) throw error
       for (const row of existing || []) {
         existingIds.add(row.source_order_id)
-        existingDateBySourceId.set(row.source_order_id, row)
+        existingBySourceId.set(row.source_order_id, row)
       }
     }
 
     for (const row of sourceRows) {
       const sourceOrderId = String(row.source_order_id)
-      if (!missingDateSourceIds.has(sourceOrderId)) continue
-      const existing = existingDateBySourceId.get(sourceOrderId)
+      const existing = existingBySourceId.get(sourceOrderId)
       if (!existing) continue
 
-      const fallbackIso = existing.ordered_at || existing.created_at || syncStartedAtIso
-      row.ordered_at = fallbackIso
-      row.ordered_at_text =
-        existing.ordered_at_text?.trim() || formatAlgiersDate(new Date(fallbackIso))
+      if (missingDateSourceIds.has(sourceOrderId)) {
+        const fallbackIso = existing.ordered_at || existing.created_at || syncStartedAtIso
+        row.ordered_at = fallbackIso
+        row.ordered_at_text =
+          existing.ordered_at_text?.trim() || formatAlgiersDate(new Date(fallbackIso))
+      }
+
+      const preserveUnmapped = (
+        field: keyof GoogleSheetColumnMapping,
+        databaseColumn: keyof typeof existing,
+      ) => {
+        if (!Number.isInteger(config.columnMapping[field])) {
+          row[databaseColumn] = existing[databaseColumn]
+        }
+      }
+      preserveUnmapped('wilaya', 'wilaya')
+      preserveUnmapped('baladiya', 'baladiya')
+      preserveUnmapped('address', 'address')
+      preserveUnmapped('notes', 'notes')
+      preserveUnmapped('color', 'color')
+      preserveUnmapped('size', 'size')
+      preserveUnmapped('price', 'price')
+      preserveUnmapped('quantity', 'quantity')
+      preserveUnmapped('deliveryType', 'delivery_type')
+      preserveUnmapped('status', 'status')
+
+      if (!Number.isInteger(config.columnMapping.orderId) && existing.raw_data) {
+        row.raw_data = {
+          ...(row.raw_data as Record<string, unknown>),
+          displayOrderId: existing.raw_data.displayOrderId,
+        }
+      }
+
+      // A T-Flow update that happened during this import always wins.
+      if (Date.parse(existing.updated_at) > syncStartedAt.getTime()) {
+        row.status = existing.status
+        row.notes = existing.notes
+      }
     }
 
-    for (let index = 0; index < sourceRows.length; index += 250) {
-      const { error } = await supabase.from('orders').upsert(sourceRows.slice(index, index + 250), {
-        onConflict: 'store_id,source,source_order_id',
-      })
+    const textColumns = [
+      'customer_name',
+      'phone',
+      'wilaya',
+      'baladiya',
+      'address',
+      'notes',
+      'product',
+      'color',
+      'size',
+      'delivery_type',
+      'ordered_at',
+      'ordered_at_text',
+      'status',
+    ] as const
+    const sourceRowsToUpsert = sourceRows.filter((row) => {
+      const existing = existingBySourceId.get(String(row.source_order_id))
+      if (!existing) return true
+      if (
+        textColumns.some((column) => String(row[column] ?? '') !== String(existing[column] ?? ''))
+      ) {
+        return true
+      }
+      if (Number(row.price) !== Number(existing.price)) return true
+      if (Number(row.quantity) !== Number(existing.quantity)) return true
+
+      const rawData = row.raw_data as Record<string, unknown>
+      return (
+        String(rawData.displayOrderId ?? '') !== String(existing.raw_data?.displayOrderId ?? '') ||
+        Number(rawData.sheetRow) !== Number(existing.raw_data?.sheetRow)
+      )
+    })
+
+    for (let index = 0; index < sourceRowsToUpsert.length; index += 250) {
+      const { error } = await supabase
+        .from('orders')
+        .upsert(sourceRowsToUpsert.slice(index, index + 250), {
+          onConflict: 'store_id,source,source_order_id',
+        })
       if (error) throw error
     }
-    const updated = sourceRows.filter((row) => existingIds.has(String(row.source_order_id))).length
-    const inserted = sourceRows.length - updated
+    const updated = sourceRowsToUpsert.filter((row) =>
+      existingIds.has(String(row.source_order_id)),
+    ).length
+    const inserted = sourceRowsToUpsert.filter(
+      (row) => !existingIds.has(String(row.source_order_id)),
+    ).length
     const now = new Date().toISOString()
     const [{ error: integrationUpdateError }, { error: runUpdateError }] = await Promise.all([
       supabase
@@ -866,6 +1135,7 @@ async function syncGoogleSheetConnectionInternal({
         .from('order_sync_runs')
         .update({
           status: 'completed',
+          scanned_count: values.length,
           inserted_count: inserted,
           updated_count: updated,
           skipped_count: skipped,
@@ -875,7 +1145,14 @@ async function syncGoogleSheetConnectionInternal({
     ])
     if (integrationUpdateError) throw integrationUpdateError
     if (runUpdateError) throw runUpdateError
-    return { scanned: values.length, inserted, updated, skipped, alreadyRunning: false }
+    return {
+      scanned: values.length,
+      inserted,
+      updated,
+      skipped,
+      exported,
+      alreadyRunning: false,
+    }
   } catch (error) {
     await Promise.all([
       supabase

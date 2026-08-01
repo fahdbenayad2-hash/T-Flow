@@ -326,7 +326,7 @@ function GoogleSheetsPage() {
         return
       }
       toast.success(
-        `تمت المزامنة: ${result.inserted} جديد، ${result.updated} محدّث، ${result.skipped} متجاوز`,
+        `تمت المزامنة: ${result.inserted} جديد، ${result.updated} محدّث، ${result.exported} مُرسل للشيت، ${result.skipped} متجاوز`,
       )
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'فشلت المزامنة')
@@ -409,6 +409,33 @@ function GoogleSheetsPage() {
           </section>
         )}
 
+        {accounts.some((account) => !account.canWrite) && (
+          <section className="rounded-[14px] border border-amber-500/30 bg-amber-500/10 p-4">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+                <div>
+                  <h3 className="text-[13px] font-extrabold text-amber-500">
+                    فعّل المزامنة ثنائية الاتجاه
+                  </h3>
+                  <p className="mt-1 text-[11.5px] leading-5 text-muted-foreground">
+                    أعد ربط حساب Google مرة واحدة حتى يتمكن T‑Flow من إرسال الحالات والملاحظات إلى
+                    الشيت. روابط الملفات الحالية لن تُحذف.
+                  </p>
+                </div>
+              </div>
+              <Button onClick={connectGoogle} disabled={beginOAuth.isPending}>
+                {beginOAuth.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <GoogleMark />
+                )}
+                تحديث صلاحيات Google
+              </Button>
+            </div>
+          </section>
+        )}
+
         <section className="dc-card p-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
@@ -444,9 +471,14 @@ function GoogleSheetsPage() {
                       <p className="truncate text-[12.5px] font-bold" dir="ltr">
                         {account.email}
                       </p>
-                      <p className="mt-0.5 text-[10.5px] text-emerald-500">
+                      <p
+                        className={cn(
+                          'mt-0.5 text-[10.5px]',
+                          account.canWrite ? 'text-emerald-500' : 'text-amber-500',
+                        )}
+                      >
                         <CheckCircle2 className="ml-1 inline h-3 w-3" />
-                        متصل
+                        {account.canWrite ? 'قراءة وكتابة' : 'قراءة فقط — أعد الربط'}
                       </p>
                     </div>
                   </div>
