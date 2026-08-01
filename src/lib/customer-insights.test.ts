@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { aggregateCustomers, getCustomerInsight, normalizeAlgerianPhone } from './customer-insights'
+import {
+  aggregateCustomers,
+  getCustomerInsight,
+  getCustomerValueSummary,
+  normalizeAlgerianPhone,
+} from './customer-insights'
 import { STATUS } from './sheet-mapping'
 import type { Order } from './types'
 
@@ -26,18 +31,34 @@ function order(overrides: Partial<Order>): Order {
 }
 
 describe('customer insights', () => {
-  it('aggregates customer value and sorts by spending', () => {
+  it('counts only delivered orders as customer spending', () => {
     const customers = aggregateCustomers([
       order({ phone: '0550000000', price: 1000, quantity: 2 }),
       order({ phone: '0550000000', price: 500, status: STATUS.DELIVERED }),
-      order({ phone: '0660000000', customerName: 'عميل آخر', price: 1200 }),
+      order({
+        phone: '0660000000',
+        customerName: 'عميل آخر',
+        price: 1200,
+        status: STATUS.DELIVERED,
+      }),
     ])
 
     expect(customers[0]).toMatchObject({
-      phone: '0550000000',
-      totalOrders: 2,
-      totalSpent: 1500,
+      phone: '0660000000',
+      totalOrders: 1,
+      totalSpent: 1200,
     })
+    expect(customers[1].totalSpent).toBe(500)
+  })
+
+  it('separates delivered, active, and failed order value', () => {
+    expect(
+      getCustomerValueSummary([
+        order({ price: 2500, status: STATUS.DELIVERED }),
+        order({ price: 1800, status: STATUS.CONFIRMED }),
+        order({ price: 900, status: STATUS.CANCELLED }),
+      ]),
+    ).toEqual({ spent: 2500, active: 1800, lost: 900 })
   })
 
   it('marks a successful repeat customer as loyal', () => {

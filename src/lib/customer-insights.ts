@@ -13,6 +13,28 @@ export interface CustomerInsight {
   segmentHint: string
 }
 
+export interface CustomerValueSummary {
+  spent: number
+  active: number
+  lost: number
+}
+
+export function getCustomerValueSummary(orders: Order[]): CustomerValueSummary {
+  return orders.reduce<CustomerValueSummary>(
+    (summary, order) => {
+      const value = getOrderTotal(order)
+      if (order.status === STATUS.DELIVERED) summary.spent += value
+      else if (order.status === STATUS.CANCELLED || order.status === STATUS.NO_ANSWER) {
+        summary.lost += value
+      } else {
+        summary.active += value
+      }
+      return summary
+    },
+    { spent: 0, active: 0, lost: 0 },
+  )
+}
+
 export function aggregateCustomers(orders: Order[]): Customer[] {
   const customers = new Map<string, Customer>()
 
@@ -37,7 +59,7 @@ export function aggregateCustomers(orders: Order[]): Customer[] {
     const customer = customers.get(phone)!
     customer.orders.push(order)
     customer.totalOrders += 1
-    customer.totalSpent += getOrderTotal(order)
+    if (order.status === STATUS.DELIVERED) customer.totalSpent += getOrderTotal(order)
 
     if (order.status === STATUS.CANCELLED) customer.cancelledCount += 1
     if (order.status === STATUS.NO_ANSWER) customer.noAnswerCount += 1

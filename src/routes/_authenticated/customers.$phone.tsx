@@ -22,9 +22,9 @@ import { StatusBadge } from '~/components/status-badge'
 import {
   aggregateCustomers,
   getCustomerInsight,
+  getCustomerValueSummary,
   normalizeAlgerianPhone,
 } from '~/lib/customer-insights'
-import { getOrderTotal } from '~/lib/order-record'
 
 export const Route = createFileRoute('/_authenticated/customers/$phone')({
   component: CustomerDetailPage,
@@ -65,7 +65,7 @@ function CustomerDetailPage() {
   }
 
   const firstOrder = customerOrders[0]
-  const totalSpent = customerOrders.reduce((sum, order) => sum + getOrderTotal(order), 0)
+  const customerValue = getCustomerValueSummary(customerOrders)
   const cancelledCount = customerOrders.filter((o) => o.status === STATUS.CANCELLED).length
   const noAnswerCount = customerOrders.filter((o) => o.status === STATUS.NO_ANSWER).length
   const deliveredCount = customerOrders.filter((o) => o.status === STATUS.DELIVERED).length
@@ -195,9 +195,12 @@ function CustomerDetailPage() {
           <Card className="overflow-hidden hover:shadow-md transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs text-muted-foreground">الإنفاق</span>
+                <span className="text-xs text-muted-foreground">الإنفاق الفعلي</span>
               </div>
-              <p className="text-2xl font-bold font-mono">{formatCurrency(totalSpent)}</p>
+              <p className="text-2xl font-bold font-mono">{formatCurrency(customerValue.spent)}</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                الطلبات المسلّمة فقط · قيد المعالجة {formatCurrency(customerValue.active)}
+              </p>
             </CardContent>
           </Card>
         </StaggerItem>

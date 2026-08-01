@@ -105,7 +105,7 @@ function CustomersPage() {
   const kpis = [
     { label: 'إجمالي العملاء', value: customers.length, icon: UsersRound, tone: 'text-sky-500' },
     {
-      label: 'قيمة الطلبات',
+      label: 'إيراد الطلبات المسلّمة',
       value: formatCurrency(totalRevenue),
       icon: Sparkles,
       tone: 'text-amber-500',
@@ -179,7 +179,7 @@ function CustomersPage() {
                 سجل موحّد يساعدك على معرفة العميل قبل الاتصال
               </p>
             </div>
-            <span className="text-[11px] text-muted-foreground">مرتّبة حسب قيمة الطلبات</span>
+            <span className="text-[11px] text-muted-foreground">مرتّبة حسب الإنفاق الفعلي</span>
           </div>
 
           <div className="relative mt-4">
