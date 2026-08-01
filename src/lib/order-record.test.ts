@@ -63,6 +63,11 @@ describe('order database mapping', () => {
     expect(formatAlgiersDate(new Date('2026-07-30T23:30:00.000Z'))).toBe('2026-07-31')
   })
 
+  it('adds one quantity per line instead of joining the digits', () => {
+    expect(parseOrderQuantity('1\n1')).toBe(2)
+    expect(parseOrderQuantity('2\r\n1')).toBe(3)
+  })
+
   it('maps a sheet order to an upsert-safe database record', () => {
     const row = orderToDatabaseInsert(order, 'store-1')
     expect(row).toMatchObject({

@@ -7,6 +7,7 @@ import { formatCurrency } from '~/lib/utils'
 import { ErrorState } from '~/components/empty-state'
 import { useRole, getRoleLabel } from '~/hooks/useRole'
 import { StatusBadge } from '~/components/status-badge'
+import { getOrderTotal } from '~/lib/order-record'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   component: DashboardPage,
@@ -62,10 +63,7 @@ function DashboardPage() {
 
   const confirmRate = n ? Math.round((confirmed.length / n) * 100) : 0
   const deliveryRate = n ? Math.round((delivered.length / n) * 100) : 0
-  const totalRevenue = delivered.reduce(
-    (sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1),
-    0,
-  )
+  const totalRevenue = delivered.reduce((sum, order) => sum + getOrderTotal(order), 0)
   const avgOrderValue = delivered.length > 0 ? Math.round(totalRevenue / delivered.length) : 0
 
   const statusCounts: Record<string, number> = {}

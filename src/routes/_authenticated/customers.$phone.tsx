@@ -24,6 +24,7 @@ import {
   getCustomerInsight,
   normalizeAlgerianPhone,
 } from '~/lib/customer-insights'
+import { getOrderTotal } from '~/lib/order-record'
 
 export const Route = createFileRoute('/_authenticated/customers/$phone')({
   component: CustomerDetailPage,
@@ -64,10 +65,7 @@ function CustomerDetailPage() {
   }
 
   const firstOrder = customerOrders[0]
-  const totalSpent = customerOrders.reduce(
-    (sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1),
-    0,
-  )
+  const totalSpent = customerOrders.reduce((sum, order) => sum + getOrderTotal(order), 0)
   const cancelledCount = customerOrders.filter((o) => o.status === STATUS.CANCELLED).length
   const noAnswerCount = customerOrders.filter((o) => o.status === STATUS.NO_ANSWER).length
   const deliveredCount = customerOrders.filter((o) => o.status === STATUS.DELIVERED).length

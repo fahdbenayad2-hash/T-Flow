@@ -1,5 +1,6 @@
 import { STATUS } from './sheet-mapping'
 import type { Order } from './types'
+import { getOrderTotal } from './order-record'
 
 export interface InventorySetting {
   productName: string
@@ -75,7 +76,7 @@ export function aggregateProductInventory(
     const quantity = Math.max(Number(order.quantity) || 1, 0)
     product.totalOrders += 1
     product.orderedUnits += quantity
-    product.totalRevenue += (Number(order.price) || 0) * quantity
+    product.totalRevenue += getOrderTotal(order)
 
     if (order.status === STATUS.DELIVERED) product.deliveredUnits += quantity
     if (RESERVED_STATUSES.has(order.status)) product.reservedUnits += quantity

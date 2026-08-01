@@ -1,5 +1,6 @@
 import { STATUS } from './sheet-mapping'
 import type { Order } from './types'
+import { getOrderTotal } from './order-record'
 
 export type DeliveryStage = 'ready' | 'in_transit' | 'delivered' | 'exception'
 
@@ -39,7 +40,7 @@ export function buildDeliveryItems(orders: Order[]): DeliveryItem[] {
       return {
         order,
         stage,
-        amount: (Number(order.price) || 0) * (Number(order.quantity) || 1),
+        amount: getOrderTotal(order),
         isHomeDelivery: isHomeDeliveryType(order.deliveryType),
       }
     })

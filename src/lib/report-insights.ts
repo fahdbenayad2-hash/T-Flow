@@ -1,4 +1,4 @@
-import { parseOrderDate, parseOrderPrice, parseOrderQuantity } from './order-record'
+import { getOrderTotal, parseOrderDate, parseOrderQuantity } from './order-record'
 import { ALL_STATUSES, STATUS } from './sheet-mapping'
 import type { Order } from './types'
 
@@ -74,7 +74,7 @@ function aggregateBreakdown(orders: Order[], key: (order: Order) => string) {
     current.orders += 1
     if (order.status === STATUS.DELIVERED) {
       current.delivered += 1
-      current.revenue += parseOrderPrice(order.price) * parseOrderQuantity(order.quantity)
+      current.revenue += getOrderTotal(order)
     }
     map.set(label, current)
   }
@@ -97,10 +97,7 @@ function toLocalDateKey(date: Date) {
 
 export function buildReportInsights(orders: Order[]) {
   const delivered = orders.filter((order) => order.status === STATUS.DELIVERED)
-  const totalRevenue = delivered.reduce(
-    (sum, order) => sum + parseOrderPrice(order.price) * parseOrderQuantity(order.quantity),
-    0,
-  )
+  const totalRevenue = delivered.reduce((sum, order) => sum + getOrderTotal(order), 0)
   const totalUnits = orders.reduce((sum, order) => sum + parseOrderQuantity(order.quantity), 0)
   const uniqueCustomers = new Set(orders.map((order) => String(order.phone).trim()).filter(Boolean))
     .size
@@ -134,7 +131,7 @@ export function buildReportInsights(orders: Order[]) {
     current.orders += 1
     if (order.status === STATUS.DELIVERED) {
       current.delivered += 1
-      current.revenue += parseOrderPrice(order.price) * parseOrderQuantity(order.quantity)
+      current.revenue += getOrderTotal(order)
     }
     dailyMap.set(key, current)
   }

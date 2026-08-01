@@ -6,6 +6,7 @@ import { STATUS } from '~/lib/sheet-mapping'
 import { formatCurrency } from '~/lib/utils'
 import { ErrorState, EmptyState } from '~/components/empty-state'
 import { RoleGuard } from '~/components/role-guard'
+import { getOrderTotal } from '~/lib/order-record'
 
 export const Route = createFileRoute('/_authenticated/earnings')({
   component: EarningsPage,
@@ -33,10 +34,7 @@ function EarningsPage() {
   const stats = useMemo(() => {
     const delivered = orders.filter((o) => o.status === STATUS.DELIVERED)
 
-    const totalRevenue = delivered.reduce(
-      (sum, o) => sum + (Number(o.price) || 0) * (Number(o.quantity) || 1),
-      0,
-    )
+    const totalRevenue = delivered.reduce((sum, order) => sum + getOrderTotal(order), 0)
     const avgOrderValue = delivered.length > 0 ? Math.round(totalRevenue / delivered.length) : 0
 
     // Monthly trend — last 6 months
@@ -44,7 +42,7 @@ function EarningsPage() {
     for (const o of delivered) {
       const month = o.date?.slice(0, 7) || 'غير معروف'
       const existing = monthlyMap.get(month) || { revenue: 0, orders: 0 }
-      existing.revenue += (Number(o.price) || 0) * (Number(o.quantity) || 1)
+      existing.revenue += getOrderTotal(o)
       existing.orders++
       monthlyMap.set(month, existing)
     }
@@ -57,7 +55,7 @@ function EarningsPage() {
     for (const o of delivered) {
       const product = o.product || 'غير معروف'
       const existing = byProduct.get(product) || { revenue: 0, orders: 0 }
-      existing.revenue += (Number(o.price) || 0) * (Number(o.quantity) || 1)
+      existing.revenue += getOrderTotal(o)
       existing.orders++
       byProduct.set(product, existing)
     }

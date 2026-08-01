@@ -58,8 +58,29 @@ export function parseOrderPrice(value: unknown): number {
 }
 
 export function parseOrderQuantity(value: unknown): number {
-  const parsed = Number.parseInt(cleanNumericText(value), 10)
+  const text = String(value ?? '').trim()
+  const lines = text.split(/\r?\n+/).filter((line) => line.trim())
+
+  // Multi-product Google Sheet cells commonly contain one quantity per line.
+  // Joining whitespace would turn `1\n1` into 11 instead of two units.
+  if (lines.length > 1) {
+    const total = lines.reduce((sum, line) => {
+      const quantity = Number.parseInt(cleanNumericText(line), 10)
+      return sum + (Number.isFinite(quantity) && quantity >= 0 ? quantity : 0)
+    }, 0)
+    return total || 1
+  }
+
+  const parsed = Number.parseInt(cleanNumericText(text), 10)
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 1
+}
+
+/**
+ * `price` is the final amount of the order in T-Flow. Quantity is tracked
+ * separately for inventory and must not multiply financial totals again.
+ */
+export function getOrderTotal(order: Pick<Order, 'price'>): number {
+  return parseOrderPrice(order.price)
 }
 
 /**

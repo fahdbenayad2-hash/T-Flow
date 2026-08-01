@@ -72,7 +72,7 @@ export async function ingestStorefrontOrder({
           customerName: order.customerName,
           phone: order.phone,
           product: order.product,
-          total: order.price * order.quantity,
+          total: order.price,
         },
       },
       status: 200,

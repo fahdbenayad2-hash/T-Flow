@@ -1,5 +1,6 @@
 import { STATUS } from './sheet-mapping'
 import type { Customer, Order } from './types'
+import { getOrderTotal } from './order-record'
 
 export type CustomerSegment = 'new' | 'loyal' | 'needs_follow_up'
 
@@ -36,7 +37,7 @@ export function aggregateCustomers(orders: Order[]): Customer[] {
     const customer = customers.get(phone)!
     customer.orders.push(order)
     customer.totalOrders += 1
-    customer.totalSpent += (Number(order.price) || 0) * (Number(order.quantity) || 1)
+    customer.totalSpent += getOrderTotal(order)
 
     if (order.status === STATUS.CANCELLED) customer.cancelledCount += 1
     if (order.status === STATUS.NO_ANSWER) customer.noAnswerCount += 1

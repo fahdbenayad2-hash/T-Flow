@@ -36,7 +36,7 @@ describe('customer insights', () => {
     expect(customers[0]).toMatchObject({
       phone: '0550000000',
       totalOrders: 2,
-      totalSpent: 2500,
+      totalSpent: 1500,
     })
   })
 
