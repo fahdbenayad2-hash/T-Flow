@@ -9,6 +9,7 @@ import { navItems } from '~/components/sidebar'
 import { fetchUser } from '~/server/auth'
 import { CommandPalette } from '~/components/command-palette'
 import { GoogleSheetsAutoSync } from '~/components/google-sheets-auto-sync'
+import { TenantScopeProvider } from '~/hooks/useTenantScope'
 
 const allNavRoutes = [
   ...navItems,
@@ -33,25 +34,27 @@ function AuthenticatedLayout() {
   const title = allNavRoutes.find((item) => pathname.startsWith(item.to))?.label || 'لوحة التحكم'
 
   return (
-    <RoleProvider userId={user?.id || null}>
-      <div className="min-h-screen bg-background">
-        <ErrorBoundary>
-          <Sidebar />
-          <div className="md:pr-[264px]">
-            <Header title={title} />
-            <main className="p-5 md:p-7 pb-20 md:pb-10 max-w-[1360px] w-full">
-              <ErrorBoundary>
-                <PageTransition>
-                  <Outlet />
-                </PageTransition>
-              </ErrorBoundary>
-            </main>
-          </div>
-          <BottomNav />
-          <CommandPalette />
-          <GoogleSheetsAutoSync />
-        </ErrorBoundary>
-      </div>
-    </RoleProvider>
+    <TenantScopeProvider userId={user.id}>
+      <RoleProvider userId={user.id}>
+        <div className="min-h-screen bg-background">
+          <ErrorBoundary>
+            <Sidebar />
+            <div className="md:pr-[264px]">
+              <Header title={title} />
+              <main className="p-5 md:p-7 pb-20 md:pb-10 max-w-[1360px] w-full">
+                <ErrorBoundary>
+                  <PageTransition>
+                    <Outlet />
+                  </PageTransition>
+                </ErrorBoundary>
+              </main>
+            </div>
+            <BottomNav />
+            <CommandPalette />
+            <GoogleSheetsAutoSync />
+          </ErrorBoundary>
+        </div>
+      </RoleProvider>
+    </TenantScopeProvider>
   )
 }

@@ -10,6 +10,8 @@ import { supabase } from '~/utils/supabase-client'
 import { cn } from '~/lib/utils'
 import { navItems } from '~/components/sidebar'
 import type { AppRole } from '~/lib/types'
+import { useQueryClient } from '@tanstack/react-query'
+import { clearAuthCookie } from '~/utils/auth-cookie'
 
 const pageMeta: Record<string, [string, string]> = {
   '/dashboard': ['لوحة التحكم', 'نظرة عامة على أداء متجرك اليوم'],
@@ -35,6 +37,7 @@ export function Header({ title }: HeaderProps) {
   const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
   const { roles, isAdmin } = useRole()
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     setMobileMenuOpen(false)
@@ -73,8 +76,13 @@ export function Header({ title }: HeaderProps) {
 
   const handleLogout = async () => {
     setMobileMenuOpen(false)
-    await supabase.auth.signOut()
-    navigate({ to: '/' })
+    try {
+      await supabase.auth.signOut()
+    } finally {
+      clearAuthCookie()
+      queryClient.clear()
+      navigate({ to: '/auth' })
+    }
   }
 
   const openQuickSearch = () => {

@@ -17,6 +17,7 @@ import { RoleGuard } from '~/components/role-guard'
 import { getRoleLabel } from '~/hooks/useRole'
 import toast from 'react-hot-toast'
 import type { AppRole } from '~/lib/types'
+import { useTenantId } from '~/hooks/useTenantScope'
 
 export const Route = createFileRoute('/_authenticated/users')({
   component: UsersPage,
@@ -41,6 +42,7 @@ function UsersSkeleton() {
 
 function UsersPage() {
   const queryClient = useQueryClient()
+  const tenantId = useTenantId()
 
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -49,7 +51,7 @@ function UsersPage() {
   const [showForm, setShowForm] = useState(false)
 
   const { data: users = [], isLoading } = useQuery({
-    queryKey: ['admin-users'],
+    queryKey: ['admin-users', tenantId],
     queryFn: () => listUsers(),
     staleTime: 30_000,
   })

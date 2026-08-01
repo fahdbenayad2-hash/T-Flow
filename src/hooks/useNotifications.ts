@@ -4,6 +4,7 @@ import { useOrders } from '~/lib/queries'
 import { supabase } from '~/utils/supabase-client'
 import { STATUS } from '~/lib/sheet-mapping'
 import type { Notification } from '~/lib/types'
+import { useTenantId } from '~/hooks/useTenantScope'
 
 function isPendingOver48h(dateStr: string): boolean {
   if (!dateStr) return false
@@ -33,6 +34,7 @@ function isPendingOver48h(dateStr: string): boolean {
 }
 
 export function useNotifications() {
+  const tenantId = useTenantId()
   const { data } = useOrders()
   const queryClient = useQueryClient()
   const [realtimeEnabled, setRealtimeEnabled] = useState(false)
@@ -66,7 +68,7 @@ export function useNotifications() {
   }, [queryClient])
 
   const query = useQuery({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', tenantId],
     queryFn: async () => {
       const notifications: Notification[] = []
 

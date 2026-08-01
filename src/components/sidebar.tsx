@@ -18,6 +18,8 @@ import { useRole, getRoleLabel } from '~/hooks/useRole'
 import type { AppRole } from '~/lib/types'
 import { Button } from '~/components/ui/button'
 import { supabase } from '~/utils/supabase-client'
+import { useQueryClient } from '@tanstack/react-query'
+import { clearAuthCookie } from '~/utils/auth-cookie'
 
 export interface NavItem {
   to: string
@@ -98,10 +100,16 @@ export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { roles, isAdmin } = useRole()
+  const queryClient = useQueryClient()
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    navigate({ to: '/auth' })
+    try {
+      await supabase.auth.signOut()
+    } finally {
+      clearAuthCookie()
+      queryClient.clear()
+      navigate({ to: '/auth' })
+    }
   }
 
   const visibleNavItems = navItems.filter((item) => {

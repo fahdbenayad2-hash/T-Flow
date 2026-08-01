@@ -33,17 +33,20 @@ import {
 } from '~/server/google-sheets'
 import type { GoogleSheetColumnMapping } from '~/lib/google-sheet-mapping'
 import { ORDER_CACHE_TTL_S, ORDER_GC_TIME_MS } from '~/config'
+import { useTenantId } from '~/hooks/useTenantScope'
 
-export const ordersQueryOptions = queryOptions({
-  queryKey: ['orders'],
-  queryFn: () => getOrders(),
-  staleTime: ORDER_CACHE_TTL_S * 1000,
-  gcTime: ORDER_GC_TIME_MS,
-  refetchOnWindowFocus: false,
-})
+export const ordersQueryOptions = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['orders', tenantId],
+    queryFn: () => getOrders(),
+    staleTime: ORDER_CACHE_TTL_S * 1000,
+    gcTime: ORDER_GC_TIME_MS,
+    refetchOnWindowFocus: false,
+  })
 
 export function useOrders() {
-  return useQuery(ordersQueryOptions)
+  const tenantId = useTenantId()
+  return useQuery(ordersQueryOptions(tenantId))
 }
 
 export function useUpdateOrder() {
@@ -71,8 +74,9 @@ export function useUpdateOrder() {
 }
 
 export function useAuditLog(orderId: string) {
+  const tenantId = useTenantId()
   return useQuery({
-    queryKey: ['audit-log', orderId],
+    queryKey: ['audit-log', tenantId, orderId],
     queryFn: () => getAuditLog({ data: { orderId } }),
     enabled: !!orderId,
   })
@@ -157,15 +161,17 @@ export function useInvalidateOrdersCache() {
   })
 }
 
-export const callLogsQueryOptions = queryOptions({
-  queryKey: ['call-logs'],
-  queryFn: () => getCallLogs(),
-  staleTime: 15_000,
-  refetchOnWindowFocus: true,
-})
+export const callLogsQueryOptions = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['call-logs', tenantId],
+    queryFn: () => getCallLogs(),
+    staleTime: 15_000,
+    refetchOnWindowFocus: true,
+  })
 
 export function useCallLogs() {
-  return useQuery(callLogsQueryOptions)
+  const tenantId = useTenantId()
+  return useQuery(callLogsQueryOptions(tenantId))
 }
 
 export function useRecordCallLog() {
@@ -185,14 +191,16 @@ export function useRecordCallLog() {
   })
 }
 
-export const inventorySettingsQueryOptions = queryOptions({
-  queryKey: ['inventory-settings'],
-  queryFn: () => getInventorySettings(),
-  staleTime: 30_000,
-})
+export const inventorySettingsQueryOptions = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['inventory-settings', tenantId],
+    queryFn: () => getInventorySettings(),
+    staleTime: 30_000,
+  })
 
 export function useInventorySettings() {
-  return useQuery(inventorySettingsQueryOptions)
+  const tenantId = useTenantId()
+  return useQuery(inventorySettingsQueryOptions(tenantId))
 }
 
 export function useUpdateInventorySetting() {
@@ -211,15 +219,17 @@ export function useUpdateInventorySetting() {
   })
 }
 
-export const storeConnectionsQueryOptions = queryOptions({
-  queryKey: ['store-connections'],
-  queryFn: () => getStoreConnections(),
-  staleTime: 10_000,
-  refetchOnWindowFocus: true,
-})
+export const storeConnectionsQueryOptions = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['store-connections', tenantId],
+    queryFn: () => getStoreConnections(),
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
+  })
 
 export function useStoreConnections() {
-  return useQuery(storeConnectionsQueryOptions)
+  const tenantId = useTenantId()
+  return useQuery(storeConnectionsQueryOptions(tenantId))
 }
 
 export function useCreateStoreConnection() {
@@ -273,15 +283,17 @@ export function useUpdateStoreConnectionLandingPage() {
   })
 }
 
-export const googleSheetsOverviewQueryOptions = queryOptions({
-  queryKey: ['google-sheets-overview'],
-  queryFn: () => getGoogleSheetsOverview(),
-  staleTime: 10_000,
-  refetchOnWindowFocus: true,
-})
+export const googleSheetsOverviewQueryOptions = (tenantId: string) =>
+  queryOptions({
+    queryKey: ['google-sheets-overview', tenantId],
+    queryFn: () => getGoogleSheetsOverview(),
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
+  })
 
 export function useGoogleSheetsOverview() {
-  return useQuery(googleSheetsOverviewQueryOptions)
+  const tenantId = useTenantId()
+  return useQuery(googleSheetsOverviewQueryOptions(tenantId))
 }
 
 function useInvalidateGoogleSheetsMutation<TVariables, TResult>(

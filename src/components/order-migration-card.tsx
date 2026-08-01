@@ -3,6 +3,7 @@ import { Database, RefreshCw, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '~/components/ui/button'
 import { previewOrderMigration, runOrderMigration } from '~/server/order-migration'
+import { useTenantId } from '~/hooks/useTenantScope'
 
 function CountCell({ label, value }: { label: string; value: number | undefined }) {
   return (
@@ -16,8 +17,9 @@ function CountCell({ label, value }: { label: string; value: number | undefined 
 }
 
 export function OrderMigrationCard() {
+  const tenantId = useTenantId()
   const preview = useQuery({
-    queryKey: ['order-migration-preview'],
+    queryKey: ['order-migration-preview', tenantId],
     queryFn: () => previewOrderMigration(),
     retry: false,
   })

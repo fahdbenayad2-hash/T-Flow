@@ -9,6 +9,7 @@ import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { setAuthCookie } from '~/utils/auth-cookie'
 import { LogIn, Mail, Store, UserPlus } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 
 export const Route = createFileRoute('/auth')({
   component: AuthPage,
@@ -16,6 +17,7 @@ export const Route = createFileRoute('/auth')({
 
 function AuthPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [fullName, setFullName] = useState('')
   const [storeName, setStoreName] = useState('')
@@ -31,11 +33,12 @@ function AuthPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
+        queryClient.clear()
         setAuthCookie(data.session.access_token, data.session.expires_in)
         navigate({ to: '/dashboard' })
       }
     })
-  }, [navigate])
+  }, [navigate, queryClient])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -66,6 +69,7 @@ function AuthPage() {
         if (error) throw error
 
         if (data.session) {
+          queryClient.clear()
           setAuthCookie(data.session.access_token, data.session.expires_in)
           toast.success('تم إنشاء حسابك ومتجرك بنجاح')
           navigate({ to: '/dashboard' })
@@ -90,6 +94,7 @@ function AuthPage() {
       if (error) throw error
       if (!data.session) throw new Error('تعذر بدء جلسة الدخول')
 
+      queryClient.clear()
       setAuthCookie(data.session.access_token, data.session.expires_in)
       toast.success('تم تسجيل الدخول بنجاح')
       navigate({ to: '/dashboard' })
