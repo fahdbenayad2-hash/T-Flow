@@ -116,7 +116,7 @@ export function Sidebar() {
     } finally {
       clearAuthCookie()
       queryClient.clear()
-      navigate({ to: '/auth' })
+      navigate({ to: '/' })
     }
   }
 

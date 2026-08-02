@@ -81,7 +81,7 @@ export function Header({ title }: HeaderProps) {
     } finally {
       clearAuthCookie()
       queryClient.clear()
-      navigate({ to: '/auth' })
+      navigate({ to: '/' })
     }
   }
 

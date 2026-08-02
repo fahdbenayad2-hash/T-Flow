@@ -7,6 +7,7 @@ import { FeatureList } from '~/components/landing/feature-list'
 import { HowItWorks } from '~/components/landing/how-it-works'
 import { Specs } from '~/components/landing/specs'
 import { Cta } from '~/components/landing/cta'
+import { Pricing } from '~/components/landing/pricing'
 
 function RaceBar() {
   useEffect(() => {
@@ -49,6 +50,7 @@ function Header() {
         <div className="lp-nav-links">
           <a href="#features">المميزات</a>
           <a href="#how">كيف يعمل</a>
+          <a href="#pricing">الباقات</a>
           <a href="#specs">المواصفات</a>
         </div>
         <Link to="/auth" className="lp-btn lp-btn-primary">
@@ -91,6 +93,7 @@ export function LandingPage() {
         <Marquee />
         <FeatureList />
         <HowItWorks />
+        <Pricing />
         <Specs />
         <Cta />
       </main>
