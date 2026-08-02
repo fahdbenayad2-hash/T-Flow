@@ -11,6 +11,7 @@ import {
   Printer,
   Search,
   Send,
+  TestTubeDiagonal,
   Truck,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -38,11 +39,13 @@ import {
   DELIVERY_CARRIERS,
   type DeliveryShipmentAssignment,
 } from '~/lib/delivery-shipment'
+import { TEST_DELIVERY_CARRIER, type SimulationOutcome } from '~/lib/delivery-simulator'
 import {
   useBulkUpdateOrders,
   useCreateDeliveryBatch,
   useDeliveryShipments,
   useOrders,
+  useSimulateDeliveryShipments,
 } from '~/lib/queries'
 import { STATUS } from '~/lib/sheet-mapping'
 import { cn, formatCurrency } from '~/lib/utils'
@@ -176,19 +179,20 @@ function DeliveryPage() {
   const ordersQuery = useOrders()
   const shipmentsQuery = useDeliveryShipments()
   const createBatch = useCreateDeliveryBatch()
+  const simulateShipments = useSimulateDeliveryShipments()
   const bulkUpdate = useBulkUpdateOrders()
   const [filter, setFilter] = useState<DeliveryFilter>('all')
   const [search, setSearch] = useState('')
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [printDialogOpen, setPrintDialogOpen] = useState(false)
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
-  const [carrier, setCarrier] = useState<(typeof DELIVERY_CARRIERS)[number]>('Yalidine')
+  const [simulationDialogOpen, setSimulationDialogOpen] = useState(false)
+  const [carrier, setCarrier] = useState<(typeof DELIVERY_CARRIERS)[number]>(TEST_DELIVERY_CARRIER)
   const [customCarrier, setCustomCarrier] = useState('')
   const [batchNotes, setBatchNotes] = useState('')
 
   const orders = useMemo(() => ordersQuery.data?.orders ?? [], [ordersQuery.data])
-  const items = useMemo(() => buildDeliveryItems(orders), [orders])
-  const stats = useMemo(() => getDeliveryStats(items), [items])
+  const baseItems = useMemo(() => buildDeliveryItems(orders), [orders])
   const shipments = useMemo(() => shipmentsQuery.data ?? [], [shipmentsQuery.data])
   const shipmentsBySource = useMemo(
     () => new Map(shipments.map((shipment) => [shipment.sourceOrderId, shipment])),
@@ -203,6 +207,18 @@ function DeliveryPage() {
       ),
     [shipments],
   )
+
+  const items = useMemo(
+    () =>
+      baseItems.map((item) => {
+        const shipment =
+          shipmentsBySource.get(item.order._sourceOrderId || item.order.order_id) ||
+          shipmentsByRow.get(item.order._row)
+        return shipment ? { ...item, stage: shipment.status } : item
+      }),
+    [baseItems, shipmentsByRow, shipmentsBySource],
+  )
+  const stats = useMemo(() => getDeliveryStats(items), [items])
 
   const shipmentFor = (item: DeliveryItem) =>
     shipmentsBySource.get(item.order._sourceOrderId || item.order.order_id) ||
@@ -224,6 +240,11 @@ function DeliveryPage() {
 
   const selectableItems = filteredItems
   const selectedItems = items.filter((item) => selectedRows.has(item.order._row))
+  const selectedTestShipments = selectedItems
+    .map((item) => shipmentFor(item))
+    .filter((shipment): shipment is DeliveryShipmentAssignment =>
+      Boolean(shipment && shipment.carrier === TEST_DELIVERY_CARRIER),
+    )
   const allVisibleSelected =
     selectableItems.length > 0 && selectableItems.every((item) => selectedRows.has(item.order._row))
 
@@ -299,6 +320,68 @@ function DeliveryPage() {
       setSelectedRows(new Set())
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'تعذر إنشاء دفعة الشحن')
+    }
+  }
+
+  const openSimulation = () => {
+    if (!selectedItems.length) {
+      toast.error('حدد شحنة واحدة على الأقل')
+      return
+    }
+    if (selectedTestShipments.length !== selectedItems.length) {
+      toast.error(`المحاكاة تعمل فقط مع ${TEST_DELIVERY_CARRIER}`)
+      return
+    }
+    if (
+      selectedTestShipments.some(
+        (shipment) => shipment.status === 'delivered' || shipment.status === 'exception',
+      )
+    ) {
+      toast.error('ألغ تحديد الشحنات التي وصلت إلى حالة نهائية')
+      return
+    }
+    setSimulationDialogOpen(true)
+  }
+
+  const handleSimulation = async (outcome: SimulationOutcome) => {
+    try {
+      const transitions = await simulateShipments.mutateAsync({
+        shipmentIds: selectedTestShipments.map((shipment) => shipment.id),
+        outcome,
+      })
+      const statusByShipment = new Map(
+        transitions.map((transition) => [transition.shipmentId, transition.status]),
+      )
+      await bulkUpdate.mutateAsync(
+        selectedItems.map(({ order }) => {
+          const shipment =
+            shipmentsBySource.get(order._sourceOrderId || order.order_id) ||
+            shipmentsByRow.get(order._row)
+          const simulatedStatus = shipment ? statusByShipment.get(shipment.id) : undefined
+          const status =
+            simulatedStatus === 'delivered'
+              ? STATUS.DELIVERED
+              : simulatedStatus === 'exception'
+                ? STATUS.CANCELLED
+                : STATUS.SHIPPED
+          return {
+            row: order._row,
+            order_id: order._sourceOrderId || order.order_id,
+            phone: String(order.phone),
+            product: order.product,
+            updates: { status },
+          }
+        }),
+      )
+      toast.success(
+        outcome === 'exception'
+          ? `تم تسجيل استثناء لـ ${transitions.length} شحنة تجريبية`
+          : `تم تحريك ${transitions.length} شحنة إلى المرحلة التالية`,
+      )
+      setSimulationDialogOpen(false)
+      setSelectedRows(new Set())
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر تشغيل المحاكاة')
     }
   }
 
@@ -438,6 +521,21 @@ function DeliveryPage() {
                 >
                   <Truck className="h-4 w-4" />
                   إسناد شركة التوصيل
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={openSimulation}
+                  disabled={selectedItems.length === 0 || simulateShipments.isPending}
+                  className="h-9 rounded-xl border-cyan-500/30 text-cyan-500 hover:bg-cyan-500/10"
+                >
+                  {simulateShipments.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <TestTubeDiagonal className="h-4 w-4" />
+                  )}
+                  محاكي التوصيل
                 </Button>
                 <Button
                   type="button"
@@ -755,6 +853,13 @@ function DeliveryPage() {
               />
             </label>
 
+            {carrier === TEST_DELIVERY_CARRIER && (
+              <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/10 p-3 text-[11.5px] text-cyan-600 dark:text-cyan-300">
+                هذا اتصال تجريبي داخلي. لا يرسل أي بيانات إلى شركة خارجية ويمكنك تغيير حالته من زر
+                محاكي التوصيل.
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3 rounded-xl bg-muted/50 p-3 text-[11px]">
               <div>
                 <p className="text-muted-foreground">عدد الشحنات</p>
@@ -780,6 +885,49 @@ function DeliveryPage() {
                 <Truck className="h-4 w-4" />
               )}
               إنشاء الدفعة
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={simulationDialogOpen} onOpenChange={setSimulationDialogOpen}>
+        <DialogContent className="sm:max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>محاكي شركة التوصيل</DialogTitle>
+            <DialogDescription>
+              اختبر دورة {selectedTestShipments.length} شحنة بدون إرسال أي بيانات خارج T-Flow.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-xl border border-border bg-muted/25 p-4 text-[12px] leading-6">
+            <p className="font-bold">المرحلة التالية</p>
+            <p className="text-muted-foreground">جاهزة ← قيد النقل ← تم التسليم</p>
+            <p className="mt-3 font-bold">استثناء تجريبي</p>
+            <p className="text-muted-foreground">يسجل فشل التوصيل ويحدّث حالة الطلب.</p>
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-start">
+            <Button
+              type="button"
+              onClick={() => handleSimulation('advance')}
+              disabled={simulateShipments.isPending || bulkUpdate.isPending}
+            >
+              {simulateShipments.isPending || bulkUpdate.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Truck className="h-4 w-4" />
+              )}
+              الانتقال للمرحلة التالية
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-red-500/30 text-red-500 hover:bg-red-500/10"
+              onClick={() => handleSimulation('exception')}
+              disabled={simulateShipments.isPending || bulkUpdate.isPending}
+            >
+              <AlertTriangle className="h-4 w-4" />
+              محاكاة استثناء
             </Button>
           </DialogFooter>
         </DialogContent>

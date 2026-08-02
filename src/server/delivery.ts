@@ -2,6 +2,13 @@ import { createServerFn } from '@tanstack/react-start'
 import { DEMO_MODE_SERVER as DEMO_MODE } from '~/config'
 import type { AppRole } from '~/lib/types'
 import type { DeliveryShipmentAssignment } from '~/lib/delivery-shipment'
+import {
+  nextSimulatedShipmentStatus,
+  simulatedStatusDescription,
+  TEST_DELIVERY_CARRIER,
+  type SimulationOutcome,
+  type ShipmentStatus,
+} from '~/lib/delivery-simulator'
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
 import { requireUser } from './auth'
 import { resolveDefaultStoreId } from './order-repository'
@@ -38,8 +45,9 @@ function makeBatchReference() {
   return `TFB-${date}-${suffix}`
 }
 
-function makeTrackingNumber(sourceOrderId: string) {
-  return `TF-${sourceOrderId}`.replace(/\s+/g, '-').slice(0, 120)
+function makeTrackingNumber(sourceOrderId: string, carrier: string) {
+  const prefix = carrier === TEST_DELIVERY_CARRIER ? 'TFT' : 'TF'
+  return `${prefix}-${sourceOrderId}`.replace(/\s+/g, '-').slice(0, 120)
 }
 
 export const getDeliveryShipments = createServerFn({ method: 'GET' }).handler(async () => {
@@ -139,15 +147,33 @@ export const createDeliveryBatch = createServerFn({ method: 'POST' })
       store_id: storeId,
       batch_id: batch.id,
       order_id: order.id,
-      tracking_number: makeTrackingNumber(order.source_order_id),
+      tracking_number: makeTrackingNumber(order.source_order_id, carrier),
       status: 'ready',
     }))
-    const { error: shipmentError } = await supabase.from('delivery_shipments').upsert(shipments, {
-      onConflict: 'store_id,order_id',
-    })
+    const { data: savedShipments, error: shipmentError } = await supabase
+      .from('delivery_shipments')
+      .upsert(shipments, {
+        onConflict: 'store_id,order_id',
+      })
+      .select('id')
     if (shipmentError) {
       await supabase.from('delivery_batches').delete().eq('id', batch.id).eq('store_id', storeId)
       throw shipmentError
+    }
+
+    if (carrier === TEST_DELIVERY_CARRIER && savedShipments?.length) {
+      const { error: eventError } = await supabase.from('delivery_shipment_events').insert(
+        savedShipments.map((shipment) => ({
+          store_id: storeId,
+          shipment_id: shipment.id,
+          status: 'ready',
+          source: 'simulator',
+          description: simulatedStatusDescription('ready'),
+          metadata: { batchReference: reference },
+          created_by: userId,
+        })),
+      )
+      if (eventError) throw eventError
     }
 
     await supabase.from('audit_log').insert({
@@ -158,4 +184,81 @@ export const createDeliveryBatch = createServerFn({ method: 'POST' })
     })
 
     return { id: batch.id, reference: batch.reference, count: shipments.length }
+  })
+
+export const simulateDeliveryShipments = createServerFn({ method: 'POST' })
+  .validator((data: { shipmentIds: string[]; outcome: SimulationOutcome }) => data)
+  .handler(async ({ data }) => {
+    const shipmentIds = [...new Set(data.shipmentIds.map((id) => id.trim()).filter(Boolean))]
+    if (!shipmentIds.length) throw new Error('حدد شحنة تجريبية واحدة على الأقل')
+    if (shipmentIds.length > 100) throw new Error('الحد الأقصى للمحاكاة هو 100 شحنة')
+    if (data.outcome !== 'advance' && data.outcome !== 'exception') {
+      throw new Error('نتيجة المحاكاة غير صالحة')
+    }
+
+    const { userId, storeId } = await requireDeliveryOperator()
+    if (DEMO_MODE) {
+      return shipmentIds.map((shipmentId) => ({
+        shipmentId,
+        status: data.outcome === 'exception' ? 'exception' : 'in_transit',
+      }))
+    }
+
+    const supabase = getSupabaseAdminClient()
+    const { data: rows, error } = await supabase
+      .from('delivery_shipments')
+      .select('id,status,delivery_batches!inner(carrier)')
+      .eq('store_id', storeId)
+      .in('id', shipmentIds)
+    if (error) throw error
+    if ((rows || []).length !== shipmentIds.length) throw new Error('بعض الشحنات غير موجودة')
+
+    const transitions = (rows || []).map((row) => {
+      const batch = row.delivery_batches as unknown as { carrier: string }
+      if (batch.carrier !== TEST_DELIVERY_CARRIER) {
+        throw new Error('المحاكاة متاحة فقط لشحنات T-Flow Test')
+      }
+      return {
+        shipmentId: row.id,
+        status: nextSimulatedShipmentStatus(row.status as ShipmentStatus, data.outcome),
+      }
+    })
+
+    for (const status of ['in_transit', 'delivered', 'exception'] as const) {
+      const ids = transitions
+        .filter((item) => item.status === status)
+        .map((item) => item.shipmentId)
+      if (!ids.length) continue
+      const updates: Record<string, unknown> = { status }
+      if (status === 'in_transit') updates.shipped_at = new Date().toISOString()
+      if (status === 'delivered') updates.delivered_at = new Date().toISOString()
+      const { error: updateError } = await supabase
+        .from('delivery_shipments')
+        .update(updates)
+        .eq('store_id', storeId)
+        .in('id', ids)
+      if (updateError) throw updateError
+    }
+
+    const { error: eventsError } = await supabase.from('delivery_shipment_events').insert(
+      transitions.map((transition) => ({
+        store_id: storeId,
+        shipment_id: transition.shipmentId,
+        status: transition.status,
+        source: 'simulator',
+        description: simulatedStatusDescription(transition.status),
+        metadata: { outcome: data.outcome },
+        created_by: userId,
+      })),
+    )
+    if (eventsError) throw eventsError
+
+    await supabase.from('audit_log').insert({
+      store_id: storeId,
+      actor_id: userId,
+      action: 'simulate_delivery_status',
+      new_value: { outcome: data.outcome, count: transitions.length },
+    })
+
+    return transitions
   })

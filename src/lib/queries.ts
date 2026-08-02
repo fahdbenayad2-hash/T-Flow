@@ -11,7 +11,12 @@ import {
 import { getCallLogs, recordCallLog } from '~/server/call-center'
 import type { CallLog } from '~/lib/types'
 import { getInventorySettings, updateInventorySetting } from '~/server/inventory'
-import { createDeliveryBatch, getDeliveryShipments } from '~/server/delivery'
+import {
+  createDeliveryBatch,
+  getDeliveryShipments,
+  simulateDeliveryShipments,
+} from '~/server/delivery'
+import type { SimulationOutcome } from '~/lib/delivery-simulator'
 import {
   deleteYalidineConnection,
   getDeliveryCarrierConnection,
@@ -130,6 +135,17 @@ export function useCreateDeliveryBatch() {
       notes?: string
       orders: Array<{ sourceOrderId?: string; sheetRow?: number }>
     }) => createDeliveryBatch({ data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['delivery-shipments'] })
+    },
+  })
+}
+
+export function useSimulateDeliveryShipments() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { shipmentIds: string[]; outcome: SimulationOutcome }) =>
+      simulateDeliveryShipments({ data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['delivery-shipments'] })
     },

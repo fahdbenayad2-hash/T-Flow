@@ -1,7 +1,9 @@
 import type { Order } from './types'
 import { getOrderTotal } from './order-record'
+import { TEST_DELIVERY_CARRIER } from './delivery-simulator'
 
 export const DELIVERY_CARRIERS = [
+  TEST_DELIVERY_CARRIER,
   'Yalidine',
   'ZR Express',
   'Maystro Delivery',
