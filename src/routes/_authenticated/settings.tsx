@@ -5,6 +5,7 @@ import { Input } from '~/components/ui/input'
 import { Globe, Shield, Save, RefreshCw, CheckCircle, Trash2, Moon, Bell, Copy } from 'lucide-react'
 import { RoleGuard } from '~/components/role-guard'
 import { OrderMigrationCard } from '~/components/order-migration-card'
+import { DeliveryCarrierSettings } from '~/components/delivery-carrier-settings'
 import toast from 'react-hot-toast'
 
 export const Route = createFileRoute('/_authenticated/settings')({
@@ -156,6 +157,9 @@ function SettingsPage() {
             </div>
           )}
         </div>
+
+        {/* Delivery carrier */}
+        <DeliveryCarrierSettings />
 
         {/* Appearance */}
         <div className="dc-card p-5">

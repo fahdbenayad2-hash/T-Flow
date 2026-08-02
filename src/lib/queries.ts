@@ -13,6 +13,12 @@ import type { CallLog } from '~/lib/types'
 import { getInventorySettings, updateInventorySetting } from '~/server/inventory'
 import { createDeliveryBatch, getDeliveryShipments } from '~/server/delivery'
 import {
+  deleteYalidineConnection,
+  getDeliveryCarrierConnection,
+  saveYalidineConnection,
+  testSavedYalidineConnection,
+} from '~/server/delivery-carriers'
+import {
   createStoreConnection,
   deleteStoreConnection,
   getStoreConnections,
@@ -128,6 +134,40 @@ export function useCreateDeliveryBatch() {
       queryClient.invalidateQueries({ queryKey: ['delivery-shipments'] })
     },
   })
+}
+
+export function useDeliveryCarrierConnection() {
+  const tenantId = useTenantId()
+  return useQuery({
+    queryKey: ['delivery-carrier-connection', tenantId],
+    queryFn: () => getDeliveryCarrierConnection(),
+    staleTime: 15_000,
+  })
+}
+
+function useInvalidateCarrierMutation<TVariables, TResult>(
+  mutationFn: (variables: TVariables) => Promise<TResult>,
+) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['delivery-carrier-connection'] }),
+  })
+}
+
+export function useSaveYalidineConnection() {
+  return useInvalidateCarrierMutation(
+    (data: { accountLabel?: string; apiId: string; apiToken: string }) =>
+      saveYalidineConnection({ data }),
+  )
+}
+
+export function useTestYalidineConnection() {
+  return useInvalidateCarrierMutation(() => testSavedYalidineConnection())
+}
+
+export function useDeleteYalidineConnection() {
+  return useInvalidateCarrierMutation(() => deleteYalidineConnection())
 }
 
 export function useDeleteOrder() {
