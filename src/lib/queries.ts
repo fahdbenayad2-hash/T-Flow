@@ -294,6 +294,7 @@ export function useUpdateInventorySetting() {
     }) => updateInventorySetting({ data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-settings'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },
   })
 }

@@ -65,8 +65,19 @@ export interface UserProfile {
 export type AppRole = 'admin' | 'confirmation_agent' | 'shipping_manager'
 
 export interface Notification {
-  type: 'pending_order' | 'postponed_call' | 'duplicate_order'
+  id: string
+  type:
+    | 'pending_order'
+    | 'postponed_call'
+    | 'duplicate_order'
+    | 'no_answer'
+    | 'low_stock'
+    | 'out_of_stock'
+    | 'missing_cost'
+  severity: 'info' | 'warning' | 'critical'
+  title: string
   message: string
+  destination: '/orders' | '/call-center' | '/products' | '/customers'
   orderId?: string
   createdAt?: string
 }

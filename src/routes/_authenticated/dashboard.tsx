@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useOrders } from '~/lib/queries'
 import { Skeleton } from '~/components/ui/skeleton'
-import { ShoppingCart } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, CircleAlert, Info, ShoppingCart } from 'lucide-react'
 import { STATUS_MAP, STATUS } from '~/lib/sheet-mapping'
 import { formatCurrency } from '~/lib/utils'
 import { ErrorState } from '~/components/empty-state'
 import { useRole, getRoleLabel } from '~/hooks/useRole'
 import { StatusBadge } from '~/components/status-badge'
 import { getOrderTotal } from '~/lib/order-record'
+import { useNotifications } from '~/hooks/useNotifications'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   component: DashboardPage,
@@ -37,6 +38,7 @@ function DashboardSkeleton() {
 
 function DashboardPage() {
   const { data, isLoading, isError, error, refetch } = useOrders()
+  const notificationsQuery = useNotifications({ realtime: false })
   const { roles } = useRole()
 
   if (isLoading) return <DashboardSkeleton />
@@ -84,6 +86,8 @@ function DashboardPage() {
     })
 
   const roleLabel = roles.length > 0 ? getRoleLabel(roles[0]) : 'مستخدم'
+  const alerts = notificationsQuery.data ?? []
+  const criticalAlerts = alerts.filter((alert) => alert.severity === 'critical').length
 
   const primaryKpis = [
     {
@@ -92,8 +96,8 @@ function DashboardPage() {
       iconColor: '#e31e24',
       iconBg: 'rgba(227,30,36,0.1)',
       accent: '#e31e24',
-      trend: '+12.4%',
-      trendLabel: 'مقابل الأسبوع الماضي',
+      trend: `${delivered.length} مسلّم`,
+      trendLabel: 'ضمن سجل المتجر الحالي',
       alert: false,
     },
     {
@@ -103,8 +107,8 @@ function DashboardPage() {
       iconColor: '#3b82f6',
       iconBg: 'rgba(59,130,246,0.12)',
       accent: '#3b82f6',
-      trend: '+4.1%',
-      trendLabel: `${confirmed.length} طلب مؤكد`,
+      trend: `${confirmed.length} طلب`,
+      trendLabel: 'وصل إلى التأكيد أو ما بعده',
       alert: false,
     },
     {
@@ -114,8 +118,8 @@ function DashboardPage() {
       iconColor: '#22c55e',
       iconBg: 'rgba(34,197,94,0.12)',
       accent: '#22c55e',
-      trend: '+6.8%',
-      trendLabel: `${delivered.length} تم تسليمه`,
+      trend: `${delivered.length} طلب`,
+      trendLabel: 'تم تسليمه بنجاح',
       alert: false,
     },
     {
@@ -170,7 +174,8 @@ function DashboardPage() {
               style={{ color: 'rgba(255,255,255,0.6)' }}
             >
               لديك <b className="text-white">{pending.length}</b> طلبات بحاجة للتأكيد و{' '}
-              <b className="text-white">{noAnswer.length}</b> بدون رد. أداء التسليم اليوم ممتاز.
+              <b className="text-white">{noAnswer.length}</b> بدون رد. التنبيهات الذكية ترتّب
+              الأولويات التي تحتاج تدخلك أدناه.
             </p>
           </div>
           <div className="flex gap-5">
@@ -196,6 +201,62 @@ function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <section className="dc-card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-divider px-5 py-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <CircleAlert className="h-4 w-4 text-primary" />
+              <h3 className="text-[14.5px] font-extrabold">مركز التنبيهات الذكية</h3>
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              الطلبات والمخزون والتكاليف التي تحتاج تدخلاً الآن
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-[11px]">
+            {criticalAlerts > 0 && (
+              <span className="rounded-full bg-red-500/10 px-2.5 py-1 font-bold text-red-500">
+                {criticalAlerts} عاجل
+              </span>
+            )}
+            <span className="rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
+              {alerts.length} تنبيه
+            </span>
+          </div>
+        </div>
+
+        {alerts.length === 0 ? (
+          <div className="px-5 py-8 text-center">
+            <p className="text-[13px] font-bold text-emerald-500">كل شيء تحت السيطرة</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">لا يوجد إجراء عاجل حالياً</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 p-3 lg:grid-cols-2">
+            {alerts.slice(0, 6).map((alert) => (
+              <Link
+                key={alert.id}
+                to={alert.destination}
+                className="group flex items-start gap-3 rounded-xl border border-border/70 p-3 transition-colors hover:border-primary/30 hover:bg-muted/50"
+              >
+                {alert.severity === 'critical' ? (
+                  <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                ) : alert.severity === 'warning' ? (
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                ) : (
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-bold">{alert.title}</p>
+                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                    {alert.message}
+                  </p>
+                </div>
+                <ArrowLeft className="mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:-translate-x-1" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Primary KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

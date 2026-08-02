@@ -65,6 +65,15 @@ describe('product inventory', () => {
     expect(product).toMatchObject({ availableUnits: 3, health: 'low' })
   })
 
+  it('counts one quantity per line for multi-product sheet cells', () => {
+    const [product] = aggregateProductInventory(
+      [order({ status: STATUS.CONFIRMED, quantity: '1\n2' })],
+      [setting()],
+    )
+
+    expect(product).toMatchObject({ reservedUnits: 3, availableUnits: 7 })
+  })
+
   it('keeps products without stock settings visible as untracked', () => {
     const [product] = aggregateProductInventory([order()], [])
     expect(product).toMatchObject({ stockQuantity: null, health: 'untracked' })

@@ -1,6 +1,6 @@
 import { STATUS } from './sheet-mapping'
 import type { Order } from './types'
-import { getOrderTotal } from './order-record'
+import { getOrderTotal, parseOrderQuantity } from './order-record'
 
 export interface InventorySetting {
   productName: string
@@ -73,7 +73,7 @@ export function aggregateProductInventory(
     }
 
     const product = products.get(name)!
-    const quantity = Math.max(Number(order.quantity) || 1, 0)
+    const quantity = Math.max(parseOrderQuantity(order.quantity), 0)
     product.totalOrders += 1
     product.orderedUnits += quantity
     product.totalRevenue += getOrderTotal(order)

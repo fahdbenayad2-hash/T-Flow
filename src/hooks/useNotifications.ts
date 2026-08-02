@@ -1,46 +1,26 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { useOrders } from '~/lib/queries'
+import { inventorySettingsQueryOptions, useOrders } from '~/lib/queries'
 import { supabase } from '~/utils/supabase-client'
-import { STATUS } from '~/lib/sheet-mapping'
-import type { Notification } from '~/lib/types'
 import { useTenantId } from '~/hooks/useTenantScope'
+import { useRole } from '~/hooks/useRole'
+import { buildSmartAlerts } from '~/lib/smart-alerts'
 
-function isPendingOver48h(dateStr: string): boolean {
-  if (!dateStr) return false
-  try {
-    const clean = dateStr.replace(/[‎‏]/g, '').trim()
-    const parts = clean.split(/[,/:\s]+/)
-    if (parts.length < 5) return false
-
-    const day = parseInt(parts[0])
-    const month = parseInt(parts[1])
-    const year = parseInt(parts[2]) || 2026
-    const hourStr = parts[3] || '0'
-    const minStr = parts[4] || '0'
-    const isPM = parts[5] === 'م' || parts[5] === 'ص'
-
-    let hour = parseInt(hourStr)
-    if (isPM && hour < 12) hour += 12
-    if (!isPM && hour === 12) hour = 0
-
-    const orderDate = new Date(year, month - 1, day, hour, parseInt(minStr))
-    const now = new Date()
-    const diffHours = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60)
-    return diffHours > 48
-  } catch {
-    return false
-  }
-}
-
-export function useNotifications() {
+export function useNotifications(options: { realtime?: boolean } = {}) {
   const tenantId = useTenantId()
-  const { data } = useOrders()
+  const { isAdmin } = useRole()
+  const ordersQuery = useOrders()
+  const inventoryQuery = useQuery({
+    ...inventorySettingsQueryOptions(tenantId),
+    enabled: isAdmin,
+  })
   const queryClient = useQueryClient()
   const [realtimeEnabled, setRealtimeEnabled] = useState(false)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const shouldSubscribe = options.realtime !== false
 
   useEffect(() => {
+    if (!shouldSubscribe) return
     const url = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL
     if (!url || url.includes('your-project')) return
 
@@ -65,51 +45,18 @@ export function useNotifications() {
         supabase.removeChannel(channelRef.current)
       }
     }
-  }, [queryClient])
+  }, [queryClient, shouldSubscribe])
 
   const query = useQuery({
-    queryKey: ['notifications', tenantId],
-    queryFn: async () => {
-      const notifications: Notification[] = []
-
-      if (data?.orders) {
-        const orders = data.orders
-
-        for (const order of orders) {
-          if (order.status === STATUS.PROCESSING && isPendingOver48h(order.date)) {
-            notifications.push({
-              type: 'pending_order',
-              message: `طلب معلق +48 ساعة: ${order.customerName}`,
-              orderId: order.order_id,
-              createdAt: order.date,
-            })
-          }
-        }
-
-        const phoneMap = new Map<string, typeof orders>()
-        for (const order of orders) {
-          const phone = String(order.phone)
-          if (!phoneMap.has(phone)) phoneMap.set(phone, [])
-          phoneMap.get(phone)!.push(order)
-        }
-
-        for (const [, phoneOrders] of phoneMap) {
-          if (phoneOrders.length > 1) {
-            const dates = phoneOrders.map((o) => o.date).filter(Boolean)
-            if (dates.length >= 2) {
-              notifications.push({
-                type: 'duplicate_order',
-                message: `طلب مكرر: ${phoneOrders[0].customerName} (${phoneOrders.length} طلبات)`,
-                orderId: phoneOrders[0].order_id,
-              })
-            }
-          }
-        }
-      }
-
-      return notifications
-    },
-    enabled: !!data,
+    queryKey: [
+      'notifications',
+      tenantId,
+      ordersQuery.dataUpdatedAt,
+      isAdmin ? inventoryQuery.dataUpdatedAt : 0,
+    ],
+    queryFn: () =>
+      buildSmartAlerts(ordersQuery.data?.orders ?? [], isAdmin ? (inventoryQuery.data ?? []) : []),
+    enabled: !!ordersQuery.data && (!isAdmin || inventoryQuery.isSuccess),
     refetchInterval: realtimeEnabled ? false : 60_000,
     staleTime: realtimeEnabled ? 10_000 : 30_000,
   })
