@@ -3,6 +3,7 @@ import { normalizeStorefrontOrigin, readLandingPageConfig } from '~/lib/landing-
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
 import { requireAdmin } from './auth'
 import { resolveDefaultStoreId } from './order-repository'
+import { assertStoreResourceLimit } from './subscriptions'
 
 interface StoreConnectionConfig {
   landingPage?: {
@@ -112,6 +113,15 @@ export const createStoreConnection = createServerFn({ method: 'POST' })
 
     const supabase = getSupabaseAdminClient()
     const storeId = await resolveDefaultStoreId(userId, supabase)
+    const { count, error: countError } = await supabase
+      .from('store_integrations')
+      .select('id', { count: 'exact', head: true })
+      .eq('store_id', storeId)
+      .eq('provider', 'webhook')
+      .eq('is_active', true)
+    if (countError) throw countError
+    await assertStoreResourceLimit(supabase, storeId, 'storeConnections', count || 0)
+
     const endpointKey = generateEndpointKey()
     const secret = generateWebhookSecret()
     const { data: created, error } = await supabase
@@ -176,6 +186,29 @@ export const setStoreConnectionActive = createServerFn({ method: 'POST' })
     const userId = await requireAdmin()
     const supabase = getSupabaseAdminClient()
     const storeId = await resolveDefaultStoreId(userId, supabase)
+    if (data.isActive) {
+      const [{ data: connection, error: lookupError }, { count, error: countError }] =
+        await Promise.all([
+          supabase
+            .from('store_integrations')
+            .select('is_active')
+            .eq('id', data.id)
+            .eq('store_id', storeId)
+            .eq('provider', 'webhook')
+            .maybeSingle(),
+          supabase
+            .from('store_integrations')
+            .select('id', { count: 'exact', head: true })
+            .eq('store_id', storeId)
+            .eq('provider', 'webhook')
+            .eq('is_active', true),
+        ])
+      if (lookupError) throw lookupError
+      if (countError) throw countError
+      if (connection && !connection.is_active) {
+        await assertStoreResourceLimit(supabase, storeId, 'storeConnections', count || 0)
+      }
+    }
     const { data: updated, error } = await supabase
       .from('store_integrations')
       .update({ is_active: data.isActive })

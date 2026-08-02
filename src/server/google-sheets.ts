@@ -19,6 +19,7 @@ import { generateOrderId } from '~/lib/utils'
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
 import { requireAdmin } from './auth'
 import { resolveDefaultStoreId } from './order-repository'
+import { assertStoreResourceLimit } from './subscriptions'
 
 const GOOGLE_PROVIDER = 'google_sheets_oauth'
 const OAUTH_STATE_COOKIE = 'tf-google-oauth'
@@ -536,6 +537,16 @@ export const saveGoogleSheetConnection = createServerFn({ method: 'POST' })
 
     const supabase = getSupabaseAdminClient()
     const storeId = await resolveDefaultStoreId(userId, supabase)
+    if (!data.id) {
+      const { count, error: countError } = await supabase
+        .from('store_integrations')
+        .select('id', { count: 'exact', head: true })
+        .eq('store_id', storeId)
+        .eq('provider', GOOGLE_PROVIDER)
+        .eq('is_active', true)
+      if (countError) throw countError
+      await assertStoreResourceLimit(supabase, storeId, 'sheetConnections', count || 0)
+    }
     const account = await loadAccount(data.accountId, storeId)
     if (account.email !== data.accountEmail) throw new Error('بيانات حساب Google غير متطابقة')
 
@@ -599,6 +610,29 @@ export const setGoogleSheetConnectionActive = createServerFn({ method: 'POST' })
     const userId = await requireAdmin()
     const supabase = getSupabaseAdminClient()
     const storeId = await resolveDefaultStoreId(userId, supabase)
+    if (data.isActive) {
+      const [{ data: connection, error: lookupError }, { count, error: countError }] =
+        await Promise.all([
+          supabase
+            .from('store_integrations')
+            .select('is_active')
+            .eq('id', data.id)
+            .eq('store_id', storeId)
+            .eq('provider', GOOGLE_PROVIDER)
+            .maybeSingle(),
+          supabase
+            .from('store_integrations')
+            .select('id', { count: 'exact', head: true })
+            .eq('store_id', storeId)
+            .eq('provider', GOOGLE_PROVIDER)
+            .eq('is_active', true),
+        ])
+      if (lookupError) throw lookupError
+      if (countError) throw countError
+      if (connection && !connection.is_active) {
+        await assertStoreResourceLimit(supabase, storeId, 'sheetConnections', count || 0)
+      }
+    }
     const { data: updated, error } = await supabase
       .from('store_integrations')
       .update({ is_active: Boolean(data.isActive) })

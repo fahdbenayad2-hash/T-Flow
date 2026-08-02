@@ -46,6 +46,8 @@ import {
 import type { GoogleSheetColumnMapping } from '~/lib/google-sheet-mapping'
 import { ORDER_CACHE_TTL_S, ORDER_GC_TIME_MS } from '~/config'
 import { useTenantId } from '~/hooks/useTenantScope'
+import { getSubscriptionOverview, requestPlanUpgrade } from '~/server/subscriptions'
+import type { SubscriptionPlanCode } from './subscription-plans'
 
 export const ordersQueryOptions = (tenantId: string) =>
   queryOptions({
@@ -59,6 +61,23 @@ export const ordersQueryOptions = (tenantId: string) =>
 export function useOrders() {
   const tenantId = useTenantId()
   return useQuery(ordersQueryOptions(tenantId))
+}
+
+export function useSubscriptionOverview() {
+  const tenantId = useTenantId()
+  return useQuery({
+    queryKey: ['subscription-overview', tenantId],
+    queryFn: () => getSubscriptionOverview(),
+    staleTime: 30_000,
+  })
+}
+
+export function useRequestPlanUpgrade() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (planCode: SubscriptionPlanCode) => requestPlanUpgrade({ data: { planCode } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscription-overview'] }),
+  })
 }
 
 export function useUpdateOrder() {

@@ -4,6 +4,7 @@ import { getSupabaseAdminClient } from '~/utils/supabase-server'
 import { requireAdmin } from './auth'
 import { resolveDefaultStoreId } from './order-repository'
 import type { AppRole } from '~/lib/types'
+import { assertStoreResourceLimit } from './subscriptions'
 
 async function requireStoreAdmin() {
   const callerId = await requireAdmin()
@@ -123,6 +124,15 @@ export const createUser = createServerFn({ method: 'POST' })
     }
 
     const { storeId, supabase } = await requireStoreAdmin()
+    const { data: activeMembers, error: memberCountError } = await supabase
+      .from('store_members')
+      .select('user_id')
+      .eq('store_id', storeId)
+      .eq('is_active', true)
+    if (memberCountError) throw memberCountError
+    const currentUserCount = new Set((activeMembers || []).map((member) => member.user_id)).size
+    await assertStoreResourceLimit(supabase, storeId, 'users', currentUserCount)
+
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: data.email.trim().toLowerCase(),
       password: data.password,
