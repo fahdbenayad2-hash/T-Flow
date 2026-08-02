@@ -1,12 +1,14 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMemo } from 'react'
-import { useOrders } from '~/lib/queries'
-import { DollarSign } from 'lucide-react'
+import { useInventorySettings, useOrders } from '~/lib/queries'
+import { AlertTriangle, DollarSign } from 'lucide-react'
 import { STATUS } from '~/lib/sheet-mapping'
 import { formatCurrency } from '~/lib/utils'
 import { ErrorState, EmptyState } from '~/components/empty-state'
 import { RoleGuard } from '~/components/role-guard'
 import { getOrderTotal } from '~/lib/order-record'
+import { buildProfitabilityInsights } from '~/lib/profitability-insights'
+import { getOrderReportDate } from '~/lib/report-insights'
 
 export const Route = createFileRoute('/_authenticated/earnings')({
   component: EarningsPage,
@@ -27,20 +29,25 @@ function EarningsSkeleton() {
 }
 
 function EarningsPage() {
-  const { data, isLoading, isError, error, refetch } = useOrders()
+  const ordersQuery = useOrders()
+  const inventoryQuery = useInventorySettings()
 
-  const orders = useMemo(() => data?.orders ?? [], [data])
+  const orders = useMemo(() => ordersQuery.data?.orders ?? [], [ordersQuery.data])
+  const inventorySettings = useMemo(() => inventoryQuery.data ?? [], [inventoryQuery.data])
+  const profitability = useMemo(
+    () => buildProfitabilityInsights(orders, inventorySettings),
+    [inventorySettings, orders],
+  )
 
   const stats = useMemo(() => {
     const delivered = orders.filter((o) => o.status === STATUS.DELIVERED)
 
-    const totalRevenue = delivered.reduce((sum, order) => sum + getOrderTotal(order), 0)
-    const avgOrderValue = delivered.length > 0 ? Math.round(totalRevenue / delivered.length) : 0
-
     // Monthly trend — last 6 months
     const monthlyMap = new Map<string, { revenue: number; orders: number }>()
     for (const o of delivered) {
-      const month = o.date?.slice(0, 7) || 'غير معروف'
+      const orderDate = getOrderReportDate(o)
+      if (!orderDate) continue
+      const month = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`
       const existing = monthlyMap.get(month) || { revenue: 0, orders: 0 }
       existing.revenue += getOrderTotal(o)
       existing.orders++
@@ -49,19 +56,6 @@ function EarningsPage() {
     const monthlyTrend = Array.from(monthlyMap.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
       .slice(-6)
-
-    // By product
-    const byProduct = new Map<string, { revenue: number; orders: number }>()
-    for (const o of delivered) {
-      const product = o.product || 'غير معروف'
-      const existing = byProduct.get(product) || { revenue: 0, orders: 0 }
-      existing.revenue += getOrderTotal(o)
-      existing.orders++
-      byProduct.set(product, existing)
-    }
-    const productEntries = Array.from(byProduct.entries()).sort(
-      (a, b) => b[1].revenue - a[1].revenue,
-    )
 
     // Monthly growth (compare last month vs previous)
     let monthlyGrowth = 0
@@ -72,25 +66,26 @@ function EarningsPage() {
     }
 
     return {
-      totalRevenue,
-      avgOrderValue,
-      deliveredCount: delivered.length,
       monthlyGrowth,
       monthlyTrend,
-      productEntries,
       maxMonthlyRevenue:
         monthlyTrend.length > 0 ? Math.max(...monthlyTrend.map(([, d]) => d.revenue)) : 1,
-      maxProductRevenue: productEntries.length > 0 ? productEntries[0][1].revenue : 1,
+      maxProductRevenue:
+        profitability.productEntries.length > 0 ? profitability.productEntries[0].revenue : 1,
     }
-  }, [orders])
+  }, [orders, profitability.productEntries])
 
-  if (isLoading) return <EarningsSkeleton />
+  if (ordersQuery.isLoading || inventoryQuery.isLoading) return <EarningsSkeleton />
 
-  if (isError) {
+  if (ordersQuery.isError || inventoryQuery.isError) {
+    const error = ordersQuery.error || inventoryQuery.error
     return (
       <ErrorState
         message={error instanceof Error ? error.message : undefined}
-        onRetry={() => refetch()}
+        onRetry={() => {
+          ordersQuery.refetch()
+          inventoryQuery.refetch()
+        }}
       />
     )
   }
@@ -105,13 +100,41 @@ function EarningsPage() {
   }
 
   const kpis = [
-    { label: 'إيرادات صافية', value: formatCurrency(stats.totalRevenue), accent: '#22c55e' },
-    { label: 'متوسط طلب', value: formatCurrency(stats.avgOrderValue), accent: '#3b82f6' },
-    { label: 'تم التسليم', value: stats.deliveredCount, accent: '#8b5cf6' },
     {
-      label: 'نمو شهر',
+      label: 'الإيرادات المحققة',
+      value: formatCurrency(profitability.totalRevenue),
+      detail: `${profitability.deliveredCount} طلب مسلّم`,
+      accent: '#22c55e',
+    },
+    {
+      label: 'تكلفة المنتجات المسجّلة',
+      value: formatCurrency(profitability.knownProductCost),
+      detail: `محسوبة على ${profitability.costedOrders} طلب`,
+      accent: '#f59e0b',
+    },
+    {
+      label: profitability.isProfitComplete ? 'الربح الإجمالي' : 'الربح المغطّى',
+      value: formatCurrency(profitability.grossProfit),
+      detail: `هامش ${profitability.grossMargin}% ضمن الطلبات المغطاة`,
+      accent: '#3b82f6',
+    },
+    {
+      label: 'تغطية تكاليف المنتجات',
+      value: `${profitability.costCoverage}%`,
+      detail:
+        profitability.uncostedOrders > 0
+          ? `${profitability.uncostedOrders} طلب بلا تكلفة مسجّلة`
+          : 'كل الطلبات المسلّمة مغطاة',
+      accent: profitability.costCoverage === 100 ? '#8b5cf6' : '#ef4444',
+    },
+  ]
+
+  const secondaryKpis = [
+    { label: 'متوسط الطلب المسلّم', value: formatCurrency(profitability.averageOrderValue) },
+    { label: 'طلبات تم تسليمها', value: profitability.deliveredCount },
+    {
+      label: 'نمو آخر شهر',
       value: `${stats.monthlyGrowth > 0 ? '+' : ''}${stats.monthlyGrowth}%`,
-      accent: stats.monthlyGrowth >= 0 ? '#22c55e' : '#ef4444',
     },
   ]
 
@@ -151,6 +174,37 @@ function EarningsPage() {
               >
                 {kpi.value}
               </div>
+              <div className="mt-1.5 text-[10.5px] text-muted-foreground">{kpi.detail}</div>
+            </div>
+          ))}
+        </div>
+
+        {profitability.uncostedOrders > 0 && (
+          <div className="flex flex-col gap-3 rounded-[15px] border border-amber-500/30 bg-amber-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+              <div>
+                <p className="text-[13px] font-bold">الربح مازال جزئياً</p>
+                <p className="mt-1 text-[11.5px] leading-5 text-muted-foreground">
+                  يوجد {profitability.uncostedOrders} طلب مسلّم لمنتجات بلا تكلفة وحدة. الربح
+                  المعروض يحسب فقط الطلبات التي عُرّفت تكلفتها حتى لا يعطيك رقماً مضلّلاً.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/products"
+              className="shrink-0 rounded-lg border border-amber-500/30 bg-background px-3 py-2 text-center text-[11.5px] font-bold text-amber-600 hover:bg-amber-500/10 dark:text-amber-300"
+            >
+              إكمال تكاليف المنتجات
+            </Link>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {secondaryKpis.map((kpi) => (
+            <div key={kpi.label} className="dc-card-sm p-3.5">
+              <div className="text-[11.5px] text-muted-foreground">{kpi.label}</div>
+              <div className="mt-1 font-mono text-[19px] font-bold">{kpi.value}</div>
             </div>
           ))}
         </div>
@@ -186,22 +240,53 @@ function EarningsPage() {
           </div>
         </div>
 
-        {/* Product breakdown */}
+        {/* Product profitability */}
         <div className="dc-card p-5">
-          <h3 className="text-[14.5px] font-extrabold mb-4">الإيرادات حسب المنتج</h3>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-[14.5px] font-extrabold">ربحية المنتجات</h3>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                الإيراد والربح الإجمالي للطلبات المسلّمة فقط
+              </p>
+            </div>
+            <span className="rounded-full bg-muted px-3 py-1 text-[10.5px] text-muted-foreground">
+              التغطية {profitability.costCoverage}%
+            </span>
+          </div>
           <div className="flex flex-col gap-3.5">
-            {stats.productEntries.map(([name, data]) => {
+            {profitability.productEntries.map((product) => {
               const percent =
                 stats.maxProductRevenue > 0
-                  ? Math.round((data.revenue / stats.maxProductRevenue) * 100)
+                  ? Math.round((product.revenue / stats.maxProductRevenue) * 100)
                   : 0
               return (
-                <div key={name} className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12.5px] font-medium">{name}</span>
-                    <span className="font-mono text-[12px] font-bold">
-                      {formatCurrency(data.revenue)}
-                    </span>
+                <div
+                  key={product.name}
+                  className="space-y-2 rounded-xl border border-border/70 p-3"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[12.5px] font-bold">{product.name}</span>
+                      <p className="mt-0.5 text-[10.5px] text-muted-foreground">
+                        {product.orders} طلب · {product.units} وحدة
+                      </p>
+                    </div>
+                    <div className="text-start">
+                      <p className="font-mono text-[12px] font-bold">
+                        {formatCurrency(product.revenue)}
+                      </p>
+                      {product.grossProfit === null ? (
+                        <p className="text-[10.5px] font-semibold text-amber-500">التكلفة ناقصة</p>
+                      ) : (
+                        <p
+                          className={`text-[10.5px] font-semibold ${
+                            product.grossProfit >= 0 ? 'text-emerald-500' : 'text-red-500'
+                          }`}
+                        >
+                          ربح {formatCurrency(product.grossProfit)} · {product.grossMargin}%
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-[7px] bg-muted rounded-full overflow-hidden">
@@ -215,8 +300,8 @@ function EarningsPage() {
                         }}
                       />
                     </div>
-                    <span className="text-[11px] text-muted-foreground w-16 text-start shrink-0">
-                      {data.orders} طلب
+                    <span className="w-16 shrink-0 text-start text-[11px] text-muted-foreground">
+                      {percent}%
                     </span>
                   </div>
                 </div>

@@ -22,7 +22,8 @@ import {
   filterOrdersByReportRange,
   type ReportRange,
 } from '~/lib/report-insights'
-import { useOrders } from '~/lib/queries'
+import { buildProfitabilityInsights } from '~/lib/profitability-insights'
+import { useInventorySettings, useOrders } from '~/lib/queries'
 import { STATUS_MAP, toExportRow } from '~/lib/sheet-mapping'
 import { cn, formatCurrency } from '~/lib/utils'
 
@@ -58,24 +59,34 @@ function ReportsSkeleton() {
 }
 
 function ReportsPage() {
-  const { data, isLoading, isError, error, refetch } = useOrders()
+  const ordersQuery = useOrders()
+  const inventoryQuery = useInventorySettings()
   const [range, setRange] = useState<ReportRange>('all')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
 
-  const orders = useMemo(() => data?.orders ?? [], [data])
+  const orders = useMemo(() => ordersQuery.data?.orders ?? [], [ordersQuery.data])
+  const inventorySettings = useMemo(() => inventoryQuery.data ?? [], [inventoryQuery.data])
   const filteredOrders = useMemo(
     () => filterOrdersByReportRange(orders, { range, customStart, customEnd }),
     [customEnd, customStart, orders, range],
   )
   const insights = useMemo(() => buildReportInsights(filteredOrders), [filteredOrders])
+  const profitability = useMemo(
+    () => buildProfitabilityInsights(filteredOrders, inventorySettings),
+    [filteredOrders, inventorySettings],
+  )
 
-  if (isLoading) return <ReportsSkeleton />
-  if (isError) {
+  if (ordersQuery.isLoading || inventoryQuery.isLoading) return <ReportsSkeleton />
+  if (ordersQuery.isError || inventoryQuery.isError) {
+    const error = ordersQuery.error || inventoryQuery.error
     return (
       <ErrorState
         message={error instanceof Error ? error.message : undefined}
-        onRetry={() => refetch()}
+        onRetry={() => {
+          ordersQuery.refetch()
+          inventoryQuery.refetch()
+        }}
       />
     )
   }
@@ -109,6 +120,10 @@ function ReportsPage() {
       { المؤشر: 'نسبة التسليم', القيمة: `${insights.deliveryRate}%` },
       { المؤشر: 'الإيرادات المحققة', القيمة: insights.totalRevenue },
       { المؤشر: 'متوسط الطلب المسلّم', القيمة: insights.averageOrderValue },
+      { المؤشر: 'تكلفة المنتجات المسجّلة', القيمة: profitability.knownProductCost },
+      { المؤشر: 'الربح الإجمالي للطلبات المغطاة', القيمة: profitability.grossProfit },
+      { المؤشر: 'هامش الربح للطلبات المغطاة', القيمة: `${profitability.grossMargin}%` },
+      { المؤشر: 'تغطية تكاليف المنتجات', القيمة: `${profitability.costCoverage}%` },
     ]
     const orderRows = filteredOrders.map((order) => ({
       'رقم الطلب': order.order_id,
@@ -121,13 +136,22 @@ function ReportsPage() {
       'نسبة التسليم': `${item.rate}%`,
       الإيرادات: item.revenue,
     }))
-    const productRows = insights.products.map((item) => ({
-      المنتج: item.label,
-      الطلبات: item.orders,
-      'تم التسليم': item.delivered,
-      'نسبة التسليم': `${item.rate}%`,
-      الإيرادات: item.revenue,
-    }))
+    const profitabilityByProduct = new Map(
+      profitability.productEntries.map((item) => [item.name, item]),
+    )
+    const productRows = insights.products.map((item) => {
+      const profit = profitabilityByProduct.get(item.label)
+      return {
+        المنتج: item.label,
+        الطلبات: item.orders,
+        'تم التسليم': item.delivered,
+        'نسبة التسليم': `${item.rate}%`,
+        الإيرادات: item.revenue,
+        'تكلفة المنتجات': profit?.productCost ?? 'غير مكتملة',
+        'الربح الإجمالي': profit?.grossProfit ?? 'غير مكتمل',
+        'هامش الربح': profit?.grossMargin === null ? 'غير مكتمل' : `${profit?.grossMargin ?? 0}%`,
+      }
+    })
 
     const workbook = XLSX.utils.book_new()
     const summarySheet = XLSX.utils.json_to_sheet(summaryRows)
@@ -137,7 +161,7 @@ function ReportsPage() {
     summarySheet['!cols'] = [{ wch: 24 }, { wch: 22 }]
     ordersSheet['!cols'] = Array(15).fill({ wch: 18 })
     wilayasSheet['!cols'] = Array(5).fill({ wch: 18 })
-    productsSheet['!cols'] = Array(5).fill({ wch: 22 })
+    productsSheet['!cols'] = Array(8).fill({ wch: 22 })
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'الملخص')
     XLSX.utils.book_append_sheet(workbook, ordersSheet, 'الطلبات')
     XLSX.utils.book_append_sheet(workbook, wilayasSheet, 'الولايات')
@@ -282,6 +306,51 @@ function ReportsPage() {
             )
           })}
         </div>
+
+        <section className="grid grid-cols-1 gap-3 rounded-[15px] border border-border bg-card p-4 sm:grid-cols-3">
+          <div>
+            <p className="text-[11px] text-muted-foreground">تكلفة المنتجات المسجّلة</p>
+            <p className="mt-1 font-mono text-[19px] font-bold text-amber-500">
+              {formatCurrency(profitability.knownProductCost)}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] text-muted-foreground">
+              {profitability.isProfitComplete ? 'الربح الإجمالي' : 'الربح ضمن الطلبات المغطاة'}
+            </p>
+            <p
+              className={cn(
+                'mt-1 font-mono text-[19px] font-bold',
+                profitability.grossProfit >= 0 ? 'text-emerald-500' : 'text-red-500',
+              )}
+            >
+              {formatCurrency(profitability.grossProfit)}
+              <span className="mr-2 text-[11px] text-muted-foreground">
+                هامش {profitability.grossMargin}%
+              </span>
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] text-muted-foreground">اكتمال تكاليف المنتجات</p>
+            <div className="mt-2 flex items-center gap-3">
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                <div
+                  className={cn(
+                    'h-full rounded-full',
+                    profitability.costCoverage === 100 ? 'bg-emerald-500' : 'bg-amber-500',
+                  )}
+                  style={{ width: `${profitability.costCoverage}%` }}
+                />
+              </div>
+              <span className="font-mono text-[12px] font-bold">{profitability.costCoverage}%</span>
+            </div>
+            {profitability.uncostedOrders > 0 && (
+              <p className="mt-1.5 text-[10.5px] text-amber-500">
+                {profitability.uncostedOrders} طلب مسلّم بلا تكلفة مسجّلة
+              </p>
+            )}
+          </div>
+        </section>
 
         {filteredOrders.length === 0 ? (
           <div className="dc-card py-14">
@@ -488,7 +557,7 @@ function ReportsPage() {
           </>
         )}
 
-        {data?.fromCache && (
+        {ordersQuery.data?.fromCache && (
           <p className="text-[10px] text-muted-foreground text-center">
             البيانات من الذاكرة المؤقتة — آخر تحديث: {new Date().toLocaleTimeString('ar-DZ')}
           </p>
