@@ -48,6 +48,7 @@ import { ORDER_CACHE_TTL_S, ORDER_GC_TIME_MS } from '~/config'
 import { useTenantId } from '~/hooks/useTenantScope'
 import { getSubscriptionOverview, requestPlanUpgrade } from '~/server/subscriptions'
 import type { SubscriptionPlanCode } from './subscription-plans'
+import { getSystemHealthOverview, recordBackupExport } from '~/server/system-health'
 
 export const ordersQueryOptions = (tenantId: string) =>
   queryOptions({
@@ -77,6 +78,26 @@ export function useRequestPlanUpgrade() {
   return useMutation({
     mutationFn: (planCode: SubscriptionPlanCode) => requestPlanUpgrade({ data: { planCode } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscription-overview'] }),
+  })
+}
+
+export function useSystemHealthOverview() {
+  const tenantId = useTenantId()
+  return useQuery({
+    queryKey: ['system-health', tenantId],
+    queryFn: () => getSystemHealthOverview(),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  })
+}
+
+export function useRecordBackupExport() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { orderCount: number; fileName: string; byteSize: number }) =>
+      recordBackupExport({ data }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['system-health'] }),
   })
 }
 

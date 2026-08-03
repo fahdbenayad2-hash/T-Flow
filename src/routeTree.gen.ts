@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
+import { Route as AuthenticatedSystemHealthRouteImport } from './routes/_authenticated/system-health'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
@@ -53,6 +54,12 @@ const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSystemHealthRoute =
+  AuthenticatedSystemHealthRouteImport.update({
+    id: '/system-health',
+    path: '/system-health',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -177,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/products': typeof AuthenticatedProductsRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/system-health': typeof AuthenticatedSystemHealthRoute
   '/users': typeof AuthenticatedUsersRoute
   '/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
@@ -202,6 +210,7 @@ export interface FileRoutesByTo {
   '/products': typeof AuthenticatedProductsRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/system-health': typeof AuthenticatedSystemHealthRoute
   '/users': typeof AuthenticatedUsersRoute
   '/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
@@ -229,6 +238,7 @@ export interface FileRoutesById {
   '/_authenticated/products': typeof AuthenticatedProductsRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/system-health': typeof AuthenticatedSystemHealthRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/customers/$phone': typeof AuthenticatedCustomersPhoneRoute
   '/_authenticated/integration-test/$id': typeof AuthenticatedIntegrationTestIdRoute
@@ -256,6 +266,7 @@ export interface FileRouteTypes {
     | '/products'
     | '/reports'
     | '/settings'
+    | '/system-health'
     | '/users'
     | '/customers/$phone'
     | '/integration-test/$id'
@@ -281,6 +292,7 @@ export interface FileRouteTypes {
     | '/products'
     | '/reports'
     | '/settings'
+    | '/system-health'
     | '/users'
     | '/customers/$phone'
     | '/integration-test/$id'
@@ -307,6 +319,7 @@ export interface FileRouteTypes {
     | '/_authenticated/products'
     | '/_authenticated/reports'
     | '/_authenticated/settings'
+    | '/_authenticated/system-health'
     | '/_authenticated/users'
     | '/_authenticated/customers/$phone'
     | '/_authenticated/integration-test/$id'
@@ -357,6 +370,13 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/users'
       preLoaderRoute: typeof AuthenticatedUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/system-health': {
+      id: '/_authenticated/system-health'
+      path: '/system-health'
+      fullPath: '/system-health'
+      preLoaderRoute: typeof AuthenticatedSystemHealthRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings': {
@@ -540,6 +560,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSystemHealthRoute: typeof AuthenticatedSystemHealthRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedIntegrationTestIdRoute: typeof AuthenticatedIntegrationTestIdRoute
 }
@@ -557,6 +578,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSystemHealthRoute: AuthenticatedSystemHealthRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedIntegrationTestIdRoute: AuthenticatedIntegrationTestIdRoute,
 }

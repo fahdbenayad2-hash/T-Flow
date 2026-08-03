@@ -13,6 +13,7 @@ import {
   Webhook,
   LogOut,
   CreditCard,
+  Activity,
 } from 'lucide-react'
 import { cn } from '~/lib/utils'
 import { useRole, getRoleLabel } from '~/hooks/useRole'
@@ -50,6 +51,13 @@ export const navItems: NavItem[] = [
     to: '/billing',
     label: 'الباقات والاستعمال',
     icon: CreditCard,
+    group: 'system',
+    roles: ['admin'],
+  },
+  {
+    to: '/system-health',
+    label: 'صحة النظام',
+    icon: Activity,
     group: 'system',
     roles: ['admin'],
   },
