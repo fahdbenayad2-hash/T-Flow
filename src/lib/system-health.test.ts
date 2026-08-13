@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSystemHealth, type SystemHealthInput } from './system-health'
+import { buildSystemHealth, buildSystemHealthAlerts, type SystemHealthInput } from './system-health'
 
 const HEALTHY_INPUT: SystemHealthInput = {
   activeSheets: 1,
@@ -36,5 +36,21 @@ describe('system health', () => {
       new Date('2026-08-03T10:00:00.000Z'),
     )
     expect(health.checks.find((check) => check.id === 'google_sheets')?.status).toBe('warning')
+  })
+
+  it('turns operational warnings into navigable notifications', () => {
+    const health = buildSystemHealth(
+      { ...HEALTHY_INPUT, deliveryExceptions: 2 },
+      new Date('2026-08-03T10:00:00.000Z'),
+    )
+    const alerts = buildSystemHealthAlerts(health)
+
+    expect(alerts).toContainEqual(
+      expect.objectContaining({
+        type: 'delivery_exception',
+        destination: '/delivery',
+        severity: 'warning',
+      }),
+    )
   })
 })

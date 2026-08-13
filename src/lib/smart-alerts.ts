@@ -27,6 +27,24 @@ export function buildSmartAlerts(
   const alerts: Notification[] = []
   const pendingStatuses = new Set<string>([STATUS.PROCESSING, STATUS.PREPARING])
 
+  const recentOrders = orders.filter((order) => {
+    if (!order._orderedAt || order.status !== STATUS.PROCESSING) return false
+    const orderedAt = new Date(order._orderedAt).getTime()
+    const age = now.getTime() - orderedAt
+    return Number.isFinite(orderedAt) && age >= 0 && age <= HOUR_MS
+  })
+  if (recentOrders.length > 0) {
+    alerts.push({
+      id: 'new-orders',
+      type: 'new_order',
+      severity: 'info',
+      title: 'طلبات جديدة',
+      message: `${recentOrders.length} طلب وصل خلال آخر ساعة`,
+      destination: '/orders',
+      createdAt: recentOrders[0]._orderedAt,
+    })
+  }
+
   for (const order of orders) {
     const orderedAt = getOrderDate(order)
     if (!pendingStatuses.has(order.status) || !orderedAt) continue

@@ -3,6 +3,7 @@ import { DEMO_MODE_SERVER as DEMO_MODE } from '~/config'
 import { buildSystemHealth } from '~/lib/system-health'
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
 import { requireAdmin } from './auth'
+import { createStoreBackupSnapshot } from './maintenance'
 import { resolveDefaultStoreId } from './order-repository'
 
 interface StoreIntegrationHealthRow {
@@ -121,7 +122,7 @@ export const getSystemHealthOverview = createServerFn({ method: 'GET' }).handler
       .from('audit_log')
       .select('created_at,new_value')
       .eq('store_id', storeId)
-      .eq('action', 'system_backup_export')
+      .in('action', ['system_backup_snapshot', 'system_backup_export'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -236,18 +237,17 @@ export const recordBackupExport = createServerFn({ method: 'POST' })
     const userId = await requireAdmin()
     const supabase = getSupabaseAdminClient()
     const storeId = await resolveDefaultStoreId(userId, supabase)
-    const createdAt = new Date().toISOString()
-    const { error } = await supabase.from('audit_log').insert({
+    const backup = await createStoreBackupSnapshot({ storeId, actorId: userId, source: 'manual' })
+    await supabase.from('audit_log').insert({
       actor_id: userId,
       store_id: storeId,
       action: 'system_backup_export',
       new_value: {
+        snapshotId: backup.id,
         orderCount: Math.max(0, Math.floor(data.orderCount)),
         fileName: data.fileName.trim().slice(0, 120),
         byteSize: Math.max(0, Math.floor(data.byteSize)),
       },
-      created_at: createdAt,
     })
-    if (error) throw error
-    return { createdAt }
+    return backup
   })

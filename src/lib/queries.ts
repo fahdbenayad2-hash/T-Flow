@@ -14,6 +14,7 @@ import { getInventorySettings, updateInventorySetting } from '~/server/inventory
 import {
   createDeliveryBatch,
   getDeliveryShipments,
+  resolveDeliveryExceptions,
   simulateDeliveryShipments,
 } from '~/server/delivery'
 import type { SimulationOutcome } from '~/lib/delivery-simulator'
@@ -81,7 +82,7 @@ export function useRequestPlanUpgrade() {
   })
 }
 
-export function useSystemHealthOverview() {
+export function useSystemHealthOverview(options: { enabled?: boolean } = {}) {
   const tenantId = useTenantId()
   return useQuery({
     queryKey: ['system-health', tenantId],
@@ -89,6 +90,7 @@ export function useSystemHealthOverview() {
     staleTime: 30_000,
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
+    enabled: options.enabled ?? true,
   })
 }
 
@@ -188,6 +190,19 @@ export function useSimulateDeliveryShipments() {
       simulateDeliveryShipments({ data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['delivery-shipments'] })
+    },
+  })
+}
+
+export function useResolveDeliveryExceptions() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (shipmentIds: string[]) => resolveDeliveryExceptions({ data: { shipmentIds } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['delivery-shipments'] })
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+      queryClient.invalidateQueries({ queryKey: ['system-health'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },
   })
 }

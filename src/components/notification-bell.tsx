@@ -21,6 +21,8 @@ export function NotificationBell() {
     if (notification.destination === '/call-center') navigate({ to: '/call-center' })
     else if (notification.destination === '/products') navigate({ to: '/products' })
     else if (notification.destination === '/customers') navigate({ to: '/customers' })
+    else if (notification.destination === '/delivery') navigate({ to: '/delivery' })
+    else if (notification.destination === '/system-health') navigate({ to: '/system-health' })
     else navigate({ to: '/orders' })
   }
 

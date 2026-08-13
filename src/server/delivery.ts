@@ -262,3 +262,57 @@ export const simulateDeliveryShipments = createServerFn({ method: 'POST' })
 
     return transitions
   })
+
+export const resolveDeliveryExceptions = createServerFn({ method: 'POST' })
+  .validator((data: { shipmentIds: string[] }) => data)
+  .handler(async ({ data }) => {
+    const shipmentIds = [...new Set(data.shipmentIds.map((id) => id.trim()).filter(Boolean))]
+    if (!shipmentIds.length) throw new Error('حدد شحنة استثنائية واحدة على الأقل')
+    if (shipmentIds.length > 100) throw new Error('الحد الأقصى هو 100 شحنة')
+
+    const { userId, storeId } = await requireDeliveryOperator()
+    if (DEMO_MODE)
+      return shipmentIds.map((shipmentId) => ({ shipmentId, status: 'ready' as const }))
+
+    const supabase = getSupabaseAdminClient()
+    const { data: rows, error } = await supabase
+      .from('delivery_shipments')
+      .select('id,status')
+      .eq('store_id', storeId)
+      .eq('status', 'exception')
+      .in('id', shipmentIds)
+    if (error) throw error
+    if ((rows || []).length !== shipmentIds.length) {
+      throw new Error('بعض الشحنات ليست في حالة استثناء أو لم تعد موجودة')
+    }
+
+    const resolvedAt = new Date().toISOString()
+    const { error: updateError } = await supabase
+      .from('delivery_shipments')
+      .update({ status: 'ready', shipped_at: null, delivered_at: null })
+      .eq('store_id', storeId)
+      .in('id', shipmentIds)
+    if (updateError) throw updateError
+
+    const { error: eventsError } = await supabase.from('delivery_shipment_events').insert(
+      shipmentIds.map((shipmentId) => ({
+        store_id: storeId,
+        shipment_id: shipmentId,
+        status: 'ready',
+        source: 'manual',
+        description: 'تمت معالجة الاستثناء وإرجاع الشحنة إلى التجهيز',
+        metadata: { resolvedAt },
+        created_by: userId,
+      })),
+    )
+    if (eventsError) throw eventsError
+
+    await supabase.from('audit_log').insert({
+      store_id: storeId,
+      actor_id: userId,
+      action: 'resolve_delivery_exception',
+      new_value: { shipmentIds, count: shipmentIds.length },
+    })
+
+    return shipmentIds.map((shipmentId) => ({ shipmentId, status: 'ready' as const }))
+  })

@@ -1,3 +1,5 @@
+import type { Notification } from './types'
+
 export type HealthStatus = 'healthy' | 'warning' | 'critical'
 
 export interface HealthCheck {
@@ -152,4 +154,20 @@ export function buildSystemHealth(input: SystemHealthInput, now = new Date()) {
     criticalCount > 0 ? 'critical' : warningCount > 0 ? 'warning' : 'healthy'
 
   return { checks, criticalCount, warningCount, score, status }
+}
+
+export function buildSystemHealthAlerts(
+  health: ReturnType<typeof buildSystemHealth> | undefined,
+): Notification[] {
+  if (!health) return []
+  return health.checks
+    .filter((check) => check.status !== 'healthy')
+    .map((check) => ({
+      id: `system:${check.id}`,
+      type: check.id === 'delivery' ? ('delivery_exception' as const) : ('system_health' as const),
+      severity: check.status === 'critical' ? ('critical' as const) : ('warning' as const),
+      title: check.label,
+      message: check.message,
+      destination: check.id === 'delivery' ? ('/delivery' as const) : ('/system-health' as const),
+    }))
 }

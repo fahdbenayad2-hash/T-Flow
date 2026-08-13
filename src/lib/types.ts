@@ -74,10 +74,14 @@ export interface Notification {
     | 'low_stock'
     | 'out_of_stock'
     | 'missing_cost'
+    | 'new_order'
+    | 'system_health'
+    | 'delivery_exception'
   severity: 'info' | 'warning' | 'critical'
   title: string
   message: string
-  destination: '/orders' | '/call-center' | '/products' | '/customers'
+  destination:
+    '/orders' | '/call-center' | '/products' | '/customers' | '/delivery' | '/system-health'
   orderId?: string
   createdAt?: string
 }

@@ -81,4 +81,16 @@ describe('smart alerts', () => {
     expect(alerts.some((alert) => alert.type === 'out_of_stock')).toBe(true)
     expect(alerts.some((alert) => alert.type === 'missing_cost')).toBe(true)
   })
+
+  it('announces processing orders received during the last hour', () => {
+    const alerts = buildSmartAlerts(
+      [order({ _orderedAt: '2026-08-02T11:30:00.000Z' })],
+      [],
+      new Date('2026-08-02T12:00:00.000Z'),
+    )
+
+    expect(alerts).toContainEqual(
+      expect.objectContaining({ type: 'new_order', destination: '/orders', severity: 'info' }),
+    )
+  })
 })

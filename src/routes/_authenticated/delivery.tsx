@@ -9,6 +9,7 @@ import {
   MapPin,
   PackageCheck,
   Printer,
+  RotateCcw,
   Search,
   Send,
   TestTubeDiagonal,
@@ -45,6 +46,7 @@ import {
   useCreateDeliveryBatch,
   useDeliveryShipments,
   useOrders,
+  useResolveDeliveryExceptions,
   useSimulateDeliveryShipments,
 } from '~/lib/queries'
 import { STATUS } from '~/lib/sheet-mapping'
@@ -180,6 +182,7 @@ function DeliveryPage() {
   const shipmentsQuery = useDeliveryShipments()
   const createBatch = useCreateDeliveryBatch()
   const simulateShipments = useSimulateDeliveryShipments()
+  const resolveExceptions = useResolveDeliveryExceptions()
   const bulkUpdate = useBulkUpdateOrders()
   const [filter, setFilter] = useState<DeliveryFilter>('all')
   const [search, setSearch] = useState('')
@@ -244,6 +247,11 @@ function DeliveryPage() {
     .map((item) => shipmentFor(item))
     .filter((shipment): shipment is DeliveryShipmentAssignment =>
       Boolean(shipment && shipment.carrier === TEST_DELIVERY_CARRIER),
+    )
+  const selectedExceptionShipments = selectedItems
+    .map((item) => shipmentFor(item))
+    .filter((shipment): shipment is DeliveryShipmentAssignment =>
+      Boolean(shipment && shipment.status === 'exception'),
     )
   const allVisibleSelected =
     selectableItems.length > 0 && selectableItems.every((item) => selectedRows.has(item.order._row))
@@ -382,6 +390,30 @@ function DeliveryPage() {
       setSelectedRows(new Set())
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'تعذر تشغيل المحاكاة')
+    }
+  }
+
+  const handleResolveExceptions = async () => {
+    try {
+      const exceptionIds = new Set(selectedExceptionShipments.map((shipment) => shipment.id))
+      await resolveExceptions.mutateAsync([...exceptionIds])
+      const affectedItems = selectedItems.filter((item) => {
+        const shipment = shipmentFor(item)
+        return Boolean(shipment && exceptionIds.has(shipment.id))
+      })
+      await bulkUpdate.mutateAsync(
+        affectedItems.map(({ order }) => ({
+          row: order._row,
+          order_id: order._sourceOrderId || order.order_id,
+          phone: String(order.phone),
+          product: order.product,
+          updates: { status: STATUS.PREPARING },
+        })),
+      )
+      toast.success(`تمت معالجة ${affectedItems.length} شحنة وإرجاعها إلى التجهيز`)
+      setSelectedRows(new Set())
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر معالجة استثناءات التوصيل')
     }
   }
 
@@ -595,6 +627,23 @@ function DeliveryPage() {
                   <CheckCircle2 className="h-4 w-4" />
                   تم التسليم
                 </Button>
+                {selectedExceptionShipments.length > 0 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleResolveExceptions}
+                    disabled={resolveExceptions.isPending || bulkUpdate.isPending}
+                    className="h-9 rounded-xl border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
+                  >
+                    {resolveExceptions.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RotateCcw className="h-4 w-4" />
+                    )}
+                    معالجة الاستثناء ({selectedExceptionShipments.length})
+                  </Button>
+                )}
               </div>
             </div>
 

@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { syncActiveGoogleSheetsInBackground } from '~/server/google-sheets'
+import { runScheduledMaintenance } from '~/server/maintenance'
 
 function isAuthorized(request: Request) {
   const secret = process.env.CRON_SECRET
@@ -15,15 +15,15 @@ export const Route = createFileRoute('/api/cron/google-sheets')({
         }
 
         try {
-          const result = await syncActiveGoogleSheetsInBackground()
+          const result = await runScheduledMaintenance()
           return Response.json(
             { ok: true, ...result },
             { headers: { 'Cache-Control': 'no-store' } },
           )
         } catch (error) {
-          console.error('Background Google Sheets sync failed:', error)
+          console.error('Scheduled maintenance failed:', error)
           return Response.json(
-            { ok: false, error: 'BACKGROUND_SYNC_FAILED' },
+            { ok: false, error: 'SCHEDULED_MAINTENANCE_FAILED' },
             { status: 500, headers: { 'Cache-Control': 'no-store' } },
           )
         }

@@ -287,7 +287,8 @@ function SystemHealthPage() {
             </div>
             <h3 className="text-[15px] font-extrabold">النسخ الاحتياطي</h3>
             <p className="mt-2 text-[11.5px] leading-5 text-muted-foreground">
-              ملف JSON يحتوي على الطلبات الحالية وإعدادات المخزون وهو معزول لهذا المتجر فقط.
+              ملف JSON يحتوي على الطلبات الحالية وإعدادات المخزون وهو معزول لهذا المتجر فقط. تحفظ
+              المنصة أيضاً نسخة تلقائية يومية في قاعدة البيانات وتحتفظ بآخر 30 يوماً.
             </p>
             <div className="my-5 rounded-xl border border-border bg-muted/30 p-3">
               <div className="flex items-center gap-2 text-[10.5px] text-muted-foreground">
