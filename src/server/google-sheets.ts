@@ -19,7 +19,7 @@ import { generateOrderId } from '~/lib/utils'
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
 import { requireAdmin } from './auth'
 import { resolveDefaultStoreId } from './order-repository'
-import { assertStoreResourceLimit } from './subscriptions'
+import { assertStoreOrderCapacity, assertStoreResourceLimit } from './subscription-policy'
 
 const GOOGLE_PROVIDER = 'google_sheets_oauth'
 const OAUTH_STATE_COOKIE = 'tf-google-oauth'
@@ -1143,6 +1143,11 @@ async function syncGoogleSheetConnectionInternal({
         Number(rawData.sheetRow) !== Number(existing.raw_data?.sheetRow)
       )
     })
+
+    const incomingCount = sourceRowsToUpsert.filter(
+      (row) => !existingIds.has(String(row.source_order_id)),
+    ).length
+    await assertStoreOrderCapacity(supabase, storeId, incomingCount)
 
     for (let index = 0; index < sourceRowsToUpsert.length; index += 250) {
       const { error } = await supabase

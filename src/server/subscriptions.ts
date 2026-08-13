@@ -17,6 +17,8 @@ interface SubscriptionRow {
   trial_ends_at: string | null
   current_period_start: string | null
   current_period_end: string | null
+  cancel_at_period_end?: boolean
+  cancelled_at?: string | null
 }
 
 function isMissingSubscriptionTable(error: { code?: string; message?: string } | null) {
@@ -27,10 +29,16 @@ function isMissingSubscriptionTable(error: { code?: string; message?: string } |
   )
 }
 
-async function resolveSubscription(supabase: AdminClient, storeId: string, storeCreatedAt: string) {
+export async function resolveSubscription(
+  supabase: AdminClient,
+  storeId: string,
+  storeCreatedAt: string,
+) {
   const { data, error } = await supabase
     .from('store_subscriptions')
-    .select('plan_code,status,trial_ends_at,current_period_start,current_period_end')
+    .select(
+      'plan_code,status,trial_ends_at,current_period_start,current_period_end,cancel_at_period_end,cancelled_at',
+    )
     .eq('store_id', storeId)
     .maybeSingle()
 
@@ -42,12 +50,19 @@ async function resolveSubscription(supabase: AdminClient, storeId: string, store
       row.status === 'trialing' &&
       Boolean(row.trial_ends_at) &&
       new Date(row.trial_ends_at as string).getTime() <= Date.now()
+    const paidPeriodExpired =
+      row.status === 'active' &&
+      Boolean(row.current_period_end) &&
+      new Date(row.current_period_end as string).getTime() <= Date.now()
+    const inactive = row.status === 'cancelled' || row.status === 'past_due' || paidPeriodExpired
     return {
-      planCode: trialExpired ? ('starter' as const) : row.plan_code,
-      status: trialExpired ? ('expired' as const) : row.status,
+      planCode: trialExpired || inactive ? ('starter' as const) : row.plan_code,
+      status: trialExpired || paidPeriodExpired ? ('expired' as const) : row.status,
       trialEndsAt: row.trial_ends_at,
       currentPeriodStart: row.current_period_start,
       currentPeriodEnd: row.current_period_end,
+      cancelAtPeriodEnd: row.cancel_at_period_end || false,
+      cancelledAt: row.cancelled_at || null,
       persistent: true,
     }
   }
@@ -62,11 +77,13 @@ async function resolveSubscription(supabase: AdminClient, storeId: string, store
     trialEndsAt: trialEndsAt.toISOString(),
     currentPeriodStart: null,
     currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
+    cancelledAt: null,
     persistent: false,
   }
 }
 
-async function getStoreContext() {
+export async function getAdminStoreContext() {
   const userId = await requireAdmin()
   const supabase = getSupabaseAdminClient()
   const storeId = await resolveDefaultStoreId(userId, supabase)
@@ -77,6 +94,48 @@ async function getStoreContext() {
     .single()
   if (error) throw error
   return { userId, storeId, store, supabase }
+}
+
+function currentAlgiersMonthRange(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Algiers',
+    year: 'numeric',
+    month: 'numeric',
+  }).formatToParts(now)
+  const values = Object.fromEntries(parts.map((part) => [part.type, Number(part.value)]))
+  const start = new Date(Date.UTC(values.year, values.month - 1, 1) - 3_600_000)
+  const end = new Date(Date.UTC(values.year, values.month, 1) - 3_600_000)
+  return { start: start.toISOString(), end: end.toISOString() }
+}
+
+export async function assertStoreOrderCapacity(
+  supabase: AdminClient,
+  storeId: string,
+  incomingOrders = 1,
+) {
+  if (incomingOrders <= 0) return
+  const { data: store, error: storeError } = await supabase
+    .from('stores')
+    .select('created_at')
+    .eq('id', storeId)
+    .single()
+  if (storeError) throw storeError
+  const subscription = await resolveSubscription(supabase, storeId, store.created_at)
+  const plan = getSubscriptionPlan(subscription.planCode)
+  const limit = plan.limits.orders
+  if (limit === null) return
+  const { start, end } = currentAlgiersMonthRange()
+  const { count, error } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('store_id', storeId)
+    .is('deleted_at', null)
+    .gte('ordered_at', start)
+    .lt('ordered_at', end)
+  if (error) throw error
+  if ((count || 0) + incomingOrders > limit) {
+    throw new Error(`PLAN_LIMIT_REACHED: بلغت الحد الشهري للطلبات في باقة ${plan.name}`)
+  }
 }
 
 export async function assertStoreResourceLimit(
@@ -116,7 +175,7 @@ export const getSubscriptionOverview = createServerFn({ method: 'GET' }).handler
     }
   }
 
-  const { storeId, store, supabase } = await getStoreContext()
+  const { storeId, store, supabase } = await getAdminStoreContext()
   const [subscription, membersResult, webhooksResult, sheetsResult] = await Promise.all([
     resolveSubscription(supabase, storeId, store.created_at),
     supabase.from('store_members').select('user_id').eq('store_id', storeId).eq('is_active', true),
@@ -156,7 +215,7 @@ export const requestPlanUpgrade = createServerFn({ method: 'POST' })
     const requestedPlan = getSubscriptionPlan(data.planCode)
     if (requestedPlan.code === 'starter') throw new Error('اختر باقة مدفوعة للترقية')
 
-    const { userId, storeId, supabase } = await getStoreContext()
+    const { userId, storeId, supabase } = await getAdminStoreContext()
     const { error } = await supabase.from('audit_log').insert({
       actor_id: userId,
       store_id: storeId,

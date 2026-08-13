@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useOrders } from '~/lib/queries'
 import { Skeleton } from '~/components/ui/skeleton'
-import { AlertTriangle, ArrowLeft, CircleAlert, Info, ShoppingCart } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, CircleAlert, Info, Rocket, ShoppingCart } from 'lucide-react'
 import { STATUS_MAP, STATUS } from '~/lib/sheet-mapping'
 import { formatCurrency } from '~/lib/utils'
 import { ErrorState } from '~/components/empty-state'
@@ -9,6 +9,7 @@ import { useRole, getRoleLabel } from '~/hooks/useRole'
 import { StatusBadge } from '~/components/status-badge'
 import { getOrderTotal } from '~/lib/order-record'
 import { useNotifications } from '~/hooks/useNotifications'
+import { useSellerOnboarding } from '~/lib/queries'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   component: DashboardPage,
@@ -39,6 +40,7 @@ function DashboardSkeleton() {
 function DashboardPage() {
   const { data, isLoading, isError, error, refetch } = useOrders()
   const notificationsQuery = useNotifications({ realtime: false })
+  const onboardingQuery = useSellerOnboarding()
   const { roles } = useRole()
 
   if (isLoading) return <DashboardSkeleton />
@@ -146,6 +148,24 @@ function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-5" style={{ animation: 'tfUp 0.4s ease both' }}>
+      {roles.includes('admin') && onboardingQuery.data && onboardingQuery.data.percent < 100 && (
+        <Link
+          to="/onboarding"
+          className="flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/10 p-4 transition-colors hover:bg-primary/15"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white">
+            <Rocket className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-extrabold">أكمل تجهيز متجرك — {onboardingQuery.data.percent}%</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              بقيت {onboardingQuery.data.total - onboardingQuery.data.completed} خطوات قبل أن يصبح
+              المتجر جاهزاً بالكامل.
+            </p>
+          </div>
+          <ArrowLeft className="h-5 w-5 text-primary" />
+        </Link>
+      )}
       {/* Hero banner */}
       <div
         className="relative overflow-hidden rounded-[16px] text-white p-6"

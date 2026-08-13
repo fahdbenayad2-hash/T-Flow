@@ -18,6 +18,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
 import { Route as AuthenticatedOrdersRouteImport } from './routes/_authenticated/orders'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
 import { Route as AuthenticatedGoogleSheetsRouteImport } from './routes/_authenticated/google-sheets'
 import { Route as AuthenticatedEarningsRouteImport } from './routes/_authenticated/earnings'
@@ -30,6 +31,7 @@ import { Route as ApiCronGoogleSheetsRouteImport } from './routes/api/cron/googl
 import { Route as AuthenticatedOrdersRowRouteImport } from './routes/_authenticated/orders.$row'
 import { Route as AuthenticatedIntegrationTestIdRouteImport } from './routes/_authenticated/integration-test.$id'
 import { Route as AuthenticatedCustomersPhoneRouteImport } from './routes/_authenticated/customers.$phone'
+import { Route as ApiPaymentsChargilyWebhookRouteImport } from './routes/api/payments/chargily/webhook'
 import { Route as ApiIntegrationsWidgetEndpointKeyRouteImport } from './routes/api/integrations/widget/$endpointKey'
 import { Route as ApiIntegrationsWebhookEndpointKeyRouteImport } from './routes/api/integrations/webhook/$endpointKey'
 import { Route as ApiIntegrationsPublicEndpointKeyRouteImport } from './routes/api/integrations/public/$endpointKey'
@@ -78,6 +80,11 @@ const AuthenticatedProductsRoute = AuthenticatedProductsRouteImport.update({
 const AuthenticatedOrdersRoute = AuthenticatedOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedIntegrationsRoute =
@@ -144,6 +151,12 @@ const AuthenticatedCustomersPhoneRoute =
     path: '/$phone',
     getParentRoute: () => AuthenticatedCustomersRoute,
   } as any)
+const ApiPaymentsChargilyWebhookRoute =
+  ApiPaymentsChargilyWebhookRouteImport.update({
+    id: '/api/payments/chargily/webhook',
+    path: '/api/payments/chargily/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiIntegrationsWidgetEndpointKeyRoute =
   ApiIntegrationsWidgetEndpointKeyRouteImport.update({
     id: '/api/integrations/widget/$endpointKey',
@@ -180,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/earnings': typeof AuthenticatedEarningsRoute
   '/google-sheets': typeof AuthenticatedGoogleSheetsRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/orders': typeof AuthenticatedOrdersRouteWithChildren
   '/products': typeof AuthenticatedProductsRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -194,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/api/integrations/public/$endpointKey': typeof ApiIntegrationsPublicEndpointKeyRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
   '/api/integrations/widget/$endpointKey': typeof ApiIntegrationsWidgetEndpointKeyRoute
+  '/api/payments/chargily/webhook': typeof ApiPaymentsChargilyWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -206,6 +221,7 @@ export interface FileRoutesByTo {
   '/earnings': typeof AuthenticatedEarningsRoute
   '/google-sheets': typeof AuthenticatedGoogleSheetsRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/orders': typeof AuthenticatedOrdersRouteWithChildren
   '/products': typeof AuthenticatedProductsRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -220,6 +236,7 @@ export interface FileRoutesByTo {
   '/api/integrations/public/$endpointKey': typeof ApiIntegrationsPublicEndpointKeyRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
   '/api/integrations/widget/$endpointKey': typeof ApiIntegrationsWidgetEndpointKeyRoute
+  '/api/payments/chargily/webhook': typeof ApiPaymentsChargilyWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -234,6 +251,7 @@ export interface FileRoutesById {
   '/_authenticated/earnings': typeof AuthenticatedEarningsRoute
   '/_authenticated/google-sheets': typeof AuthenticatedGoogleSheetsRoute
   '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/orders': typeof AuthenticatedOrdersRouteWithChildren
   '/_authenticated/products': typeof AuthenticatedProductsRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
@@ -248,6 +266,7 @@ export interface FileRoutesById {
   '/api/integrations/public/$endpointKey': typeof ApiIntegrationsPublicEndpointKeyRoute
   '/api/integrations/webhook/$endpointKey': typeof ApiIntegrationsWebhookEndpointKeyRoute
   '/api/integrations/widget/$endpointKey': typeof ApiIntegrationsWidgetEndpointKeyRoute
+  '/api/payments/chargily/webhook': typeof ApiPaymentsChargilyWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -262,6 +281,7 @@ export interface FileRouteTypes {
     | '/earnings'
     | '/google-sheets'
     | '/integrations'
+    | '/onboarding'
     | '/orders'
     | '/products'
     | '/reports'
@@ -276,6 +296,7 @@ export interface FileRouteTypes {
     | '/api/integrations/public/$endpointKey'
     | '/api/integrations/webhook/$endpointKey'
     | '/api/integrations/widget/$endpointKey'
+    | '/api/payments/chargily/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -288,6 +309,7 @@ export interface FileRouteTypes {
     | '/earnings'
     | '/google-sheets'
     | '/integrations'
+    | '/onboarding'
     | '/orders'
     | '/products'
     | '/reports'
@@ -302,6 +324,7 @@ export interface FileRouteTypes {
     | '/api/integrations/public/$endpointKey'
     | '/api/integrations/webhook/$endpointKey'
     | '/api/integrations/widget/$endpointKey'
+    | '/api/payments/chargily/webhook'
   id:
     | '__root__'
     | '/'
@@ -315,6 +338,7 @@ export interface FileRouteTypes {
     | '/_authenticated/earnings'
     | '/_authenticated/google-sheets'
     | '/_authenticated/integrations'
+    | '/_authenticated/onboarding'
     | '/_authenticated/orders'
     | '/_authenticated/products'
     | '/_authenticated/reports'
@@ -329,6 +353,7 @@ export interface FileRouteTypes {
     | '/api/integrations/public/$endpointKey'
     | '/api/integrations/webhook/$endpointKey'
     | '/api/integrations/widget/$endpointKey'
+    | '/api/payments/chargily/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -340,6 +365,7 @@ export interface RootRouteChildren {
   ApiIntegrationsPublicEndpointKeyRoute: typeof ApiIntegrationsPublicEndpointKeyRoute
   ApiIntegrationsWebhookEndpointKeyRoute: typeof ApiIntegrationsWebhookEndpointKeyRoute
   ApiIntegrationsWidgetEndpointKeyRoute: typeof ApiIntegrationsWidgetEndpointKeyRoute
+  ApiPaymentsChargilyWebhookRoute: typeof ApiPaymentsChargilyWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -405,6 +431,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/orders'
       preLoaderRoute: typeof AuthenticatedOrdersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/integrations': {
@@ -491,6 +524,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCustomersPhoneRouteImport
       parentRoute: typeof AuthenticatedCustomersRoute
     }
+    '/api/payments/chargily/webhook': {
+      id: '/api/payments/chargily/webhook'
+      path: '/api/payments/chargily/webhook'
+      fullPath: '/api/payments/chargily/webhook'
+      preLoaderRoute: typeof ApiPaymentsChargilyWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/integrations/widget/$endpointKey': {
       id: '/api/integrations/widget/$endpointKey'
       path: '/api/integrations/widget/$endpointKey'
@@ -556,6 +596,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedEarningsRoute: typeof AuthenticatedEarningsRoute
   AuthenticatedGoogleSheetsRoute: typeof AuthenticatedGoogleSheetsRoute
   AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedOrdersRoute: typeof AuthenticatedOrdersRouteWithChildren
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
@@ -574,6 +615,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEarningsRoute: AuthenticatedEarningsRoute,
   AuthenticatedGoogleSheetsRoute: AuthenticatedGoogleSheetsRoute,
   AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedOrdersRoute: AuthenticatedOrdersRouteWithChildren,
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
@@ -596,6 +638,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiIntegrationsWebhookEndpointKeyRoute:
     ApiIntegrationsWebhookEndpointKeyRoute,
   ApiIntegrationsWidgetEndpointKeyRoute: ApiIntegrationsWidgetEndpointKeyRoute,
+  ApiPaymentsChargilyWebhookRoute: ApiPaymentsChargilyWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

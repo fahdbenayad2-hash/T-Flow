@@ -1,6 +1,7 @@
 import { normalizeStorefrontOrder } from '~/lib/storefront-order'
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
 import { clearOrdersMemoryCache } from './orders'
+import { assertStoreOrderCapacity } from './subscription-policy'
 
 interface StorefrontIntegration {
   id: string
@@ -113,6 +114,34 @@ export async function ingestStorefrontOrder({
     customerName: order.customerName,
     phone: order.phone,
     product: order.product,
+  }
+  const { data: duplicate } = await supabase
+    .from('orders')
+    .select('id')
+    .eq('store_id', integration.store_id)
+    .eq('source', 'webhook')
+    .eq('source_order_id', sourceOrderId)
+    .maybeSingle()
+  if (duplicate) {
+    await recordStorefrontResult(integration.id, {
+      store_id: integration.store_id,
+      external_order_id: order.externalOrderId,
+      status: 'duplicate',
+      request_summary: summary,
+    })
+    return { body: { ok: true, duplicate: true, orderId: order.displayOrderId }, status: 200 }
+  }
+  try {
+    await assertStoreOrderCapacity(supabase, integration.store_id, 1)
+  } catch (error) {
+    await recordStorefrontResult(integration.id, {
+      store_id: integration.store_id,
+      external_order_id: order.externalOrderId,
+      status: 'rejected',
+      request_summary: summary,
+      error_message: error instanceof Error ? error.message : 'PLAN_LIMIT_REACHED',
+    })
+    return { body: { ok: false, error: 'PLAN_LIMIT_REACHED' }, status: 402 }
   }
   const { data: created, error: insertError } = await supabase
     .from('orders')

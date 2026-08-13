@@ -1,6 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMemo } from 'react'
-import { Check, CreditCard, Gauge, Link2, Sheet, ShoppingCart, Sparkles, Users } from 'lucide-react'
+import {
+  CalendarClock,
+  Check,
+  CreditCard,
+  Gauge,
+  Link2,
+  Receipt,
+  RotateCcw,
+  Sheet,
+  ShoppingCart,
+  Sparkles,
+  Users,
+  XCircle,
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ErrorState } from '~/components/empty-state'
 import { RoleGuard } from '~/components/role-guard'
@@ -15,7 +28,15 @@ import {
   type SubscriptionPlanCode,
   type SubscriptionResource,
 } from '~/lib/subscription-plans'
-import { useOrders, useRequestPlanUpgrade, useSubscriptionOverview } from '~/lib/queries'
+import {
+  useBillingOverview,
+  useCancelSubscriptionRenewal,
+  useCreateSubscriptionCheckout,
+  useOrders,
+  useRequestPlanUpgrade,
+  useResumeSubscriptionRenewal,
+  useSubscriptionOverview,
+} from '~/lib/queries'
 import { cn, formatCurrency } from '~/lib/utils'
 
 export const Route = createFileRoute('/_authenticated/billing')({
@@ -179,6 +200,10 @@ function BillingPage() {
   const overviewQuery = useSubscriptionOverview()
   const ordersQuery = useOrders()
   const upgradeMutation = useRequestPlanUpgrade()
+  const billingQuery = useBillingOverview()
+  const checkoutMutation = useCreateSubscriptionCheckout()
+  const cancelMutation = useCancelSubscriptionRenewal()
+  const resumeMutation = useResumeSubscriptionRenewal()
   const monthOrders = useMemo(
     () => countOrdersInCurrentMonth(ordersQuery.data?.orders || []),
     [ordersQuery.data],
@@ -204,8 +229,17 @@ function BillingPage() {
   const usage = { orders: monthOrders, ...overview.usage }
 
   const requestUpgrade = (planCode: SubscriptionPlanCode) => {
+    if (billingQuery.data?.paymentConfigured) {
+      checkoutMutation.mutate(planCode, {
+        onSuccess: ({ checkoutUrl }) => window.location.assign(checkoutUrl),
+        onError: (error) =>
+          toast.error(error instanceof Error ? error.message : 'تعذر فتح صفحة الدفع'),
+      })
+      return
+    }
     upgradeMutation.mutate(planCode, {
-      onSuccess: () => toast.success('تم تسجيل طلب الترقية. سنتواصل معك لإتمام التفعيل.'),
+      onSuccess: () =>
+        toast.success('تم تسجيل طلب الترقية. الدفع الإلكتروني ينتظر إضافة مفتاح Chargily.'),
       onError: (error) => toast.error(error instanceof Error ? error.message : 'تعذر تسجيل الطلب'),
     })
   }
@@ -273,7 +307,8 @@ function BillingPage() {
           <div className="mb-3">
             <h3 className="text-[17px] font-black">اختر الباقة المناسبة</h3>
             <p className="mt-1 text-[11.5px] text-muted-foreground">
-              الأسعار شهرية بالدينار الجزائري. الدفع الإلكتروني سيُربط بعد اعتماد بوابة الدفع.
+              الأسعار شهرية بالدينار الجزائري، والدفع عبر CIB أو البطاقة الذهبية بواسطة Chargily
+              Pay.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -283,10 +318,125 @@ function BillingPage() {
                 code={plan.code}
                 currentCode={currentPlan.code}
                 onRequest={requestUpgrade}
-                requesting={upgradeMutation.isPending}
+                requesting={upgradeMutation.isPending || checkoutMutation.isPending}
               />
             ))}
           </div>
+        </section>
+
+        <section className="dc-card p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <CalendarClock className="h-4 w-4 text-primary" />
+                <h3 className="font-black">التجديد والإلغاء</h3>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                الدفع يفعّل شهراً كاملاً، ويمكن إيقاف التجديد مع الاحتفاظ بالباقة إلى نهاية الفترة.
+              </p>
+            </div>
+            {overview.subscription.status === 'active' &&
+              (overview.subscription.cancelAtPeriodEnd ? (
+                <Button
+                  variant="outline"
+                  disabled={resumeMutation.isPending}
+                  onClick={() =>
+                    resumeMutation.mutate(undefined, {
+                      onSuccess: () => toast.success('تم استئناف التجديد'),
+                      onError: (error) =>
+                        toast.error(error instanceof Error ? error.message : 'تعذر الاستئناف'),
+                    })
+                  }
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  استئناف التجديد
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  disabled={cancelMutation.isPending}
+                  onClick={() =>
+                    cancelMutation.mutate(undefined, {
+                      onSuccess: () => toast.success('سيتوقف الاشتراك عند نهاية الفترة الحالية'),
+                      onError: (error) =>
+                        toast.error(error instanceof Error ? error.message : 'تعذر الإلغاء'),
+                    })
+                  }
+                >
+                  <XCircle className="h-4 w-4" />
+                  إيقاف التجديد
+                </Button>
+              ))}
+          </div>
+          {overview.subscription.currentPeriodEnd && (
+            <p className="mt-4 rounded-xl bg-muted px-4 py-3 text-xs">
+              نهاية الفترة الحالية:{' '}
+              <b>{new Date(overview.subscription.currentPeriodEnd).toLocaleDateString('ar-DZ')}</b>
+              {overview.subscription.cancelAtPeriodEnd ? ' — لن يتم التجديد بعدها.' : ''}
+            </p>
+          )}
+        </section>
+
+        <section className="dc-card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border/70 px-5 py-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-primary" />
+                <h3 className="font-black">سجل الفواتير</h3>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                كل محاولات الدفع وحالتها محفوظة هنا.
+              </p>
+            </div>
+            {billingQuery.data?.paymentMode === 'test' && (
+              <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-500">
+                وضع الاختبار
+              </span>
+            )}
+          </div>
+          {!billingQuery.data?.migrationReady ? (
+            <p className="p-5 text-sm text-amber-500">طبّق ترحيل الفوترة لإظهار الفواتير.</p>
+          ) : billingQuery.data.invoices.length === 0 ? (
+            <p className="p-8 text-center text-sm text-muted-foreground">لا توجد فواتير بعد.</p>
+          ) : (
+            <div className="divide-y divide-border/70">
+              {billingQuery.data.invoices.map((invoice) => (
+                <div
+                  key={invoice.id}
+                  className="grid grid-cols-2 gap-3 px-5 py-4 text-xs md:grid-cols-5"
+                >
+                  <b>{getSubscriptionPlan(invoice.planCode).name}</b>
+                  <span className="font-mono">{formatCurrency(invoice.amount)}</span>
+                  <span>{new Date(invoice.createdAt).toLocaleDateString('ar-DZ')}</span>
+                  <span
+                    className={
+                      invoice.status === 'paid'
+                        ? 'text-emerald-500'
+                        : invoice.status === 'pending'
+                          ? 'text-amber-500'
+                          : 'text-red-500'
+                    }
+                  >
+                    {invoice.status === 'paid'
+                      ? 'مدفوعة'
+                      : invoice.status === 'pending'
+                        ? 'بانتظار الدفع'
+                        : 'غير مكتملة'}
+                  </span>
+                  {invoice.status === 'pending' && invoice.checkoutUrl ? (
+                    <a
+                      href={invoice.checkoutUrl}
+                      className="font-bold text-primary hover:underline"
+                    >
+                      إكمال الدفع
+                    </a>
+                  ) : (
+                    <span />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </RoleGuard>

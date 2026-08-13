@@ -14,6 +14,7 @@ import {
   LogOut,
   CreditCard,
   Activity,
+  Rocket,
 } from 'lucide-react'
 import { cn } from '~/lib/utils'
 import { useRole, getRoleLabel } from '~/hooks/useRole'
@@ -32,6 +33,7 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
+  { to: '/onboarding', label: 'تجهيز المتجر', icon: Rocket, group: 'ops', roles: ['admin'] },
   { to: '/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard, group: 'ops' },
   { to: '/orders', label: 'الطلبات', icon: ShoppingCart, group: 'ops' },
   { to: '/customers', label: 'العملاء', icon: Users, group: 'ops' },

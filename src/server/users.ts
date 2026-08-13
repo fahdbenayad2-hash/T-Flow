@@ -4,7 +4,7 @@ import { getSupabaseAdminClient } from '~/utils/supabase-server'
 import { requireAdmin } from './auth'
 import { resolveDefaultStoreId } from './order-repository'
 import type { AppRole } from '~/lib/types'
-import { assertStoreResourceLimit } from './subscriptions'
+import { assertStoreResourceLimit } from './subscription-policy'
 
 async function requireStoreAdmin() {
   const callerId = await requireAdmin()

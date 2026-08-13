@@ -3,7 +3,7 @@ import { normalizeStorefrontOrigin, readLandingPageConfig } from '~/lib/landing-
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
 import { requireAdmin } from './auth'
 import { resolveDefaultStoreId } from './order-repository'
-import { assertStoreResourceLimit } from './subscriptions'
+import { assertStoreResourceLimit } from './subscription-policy'
 
 interface StoreConnectionConfig {
   landingPage?: {

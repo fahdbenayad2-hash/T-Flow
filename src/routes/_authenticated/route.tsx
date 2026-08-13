@@ -15,6 +15,7 @@ const allNavRoutes = [
   ...navItems,
   { to: '/users', label: 'إدارة المستخدمين' },
   { to: '/google-sheets', label: 'ربط Google Sheets' },
+  { to: '/onboarding', label: 'تجهيز المتجر' },
 ].sort((a, b) => b.to.length - a.to.length)
 
 export const Route = createFileRoute('/_authenticated')({

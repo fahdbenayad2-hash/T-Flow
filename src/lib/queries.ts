@@ -50,6 +50,13 @@ import { useTenantId } from '~/hooks/useTenantScope'
 import { getSubscriptionOverview, requestPlanUpgrade } from '~/server/subscriptions'
 import type { SubscriptionPlanCode } from './subscription-plans'
 import { getSystemHealthOverview, recordBackupExport } from '~/server/system-health'
+import { getSellerOnboarding } from '~/server/onboarding'
+import {
+  cancelSubscriptionRenewal,
+  createSubscriptionCheckout,
+  getBillingOverview,
+  resumeSubscriptionRenewal,
+} from '~/server/payments'
 
 export const ordersQueryOptions = (tenantId: string) =>
   queryOptions({
@@ -71,6 +78,47 @@ export function useSubscriptionOverview() {
     queryKey: ['subscription-overview', tenantId],
     queryFn: () => getSubscriptionOverview(),
     staleTime: 30_000,
+  })
+}
+
+export function useSellerOnboarding() {
+  const tenantId = useTenantId()
+  return useQuery({
+    queryKey: ['seller-onboarding', tenantId],
+    queryFn: () => getSellerOnboarding(),
+    staleTime: 15_000,
+  })
+}
+
+export function useBillingOverview() {
+  const tenantId = useTenantId()
+  return useQuery({
+    queryKey: ['billing-overview', tenantId],
+    queryFn: () => getBillingOverview(),
+    staleTime: 15_000,
+  })
+}
+
+export function useCreateSubscriptionCheckout() {
+  return useMutation({
+    mutationFn: (planCode: SubscriptionPlanCode) =>
+      createSubscriptionCheckout({ data: { planCode } }),
+  })
+}
+
+export function useCancelSubscriptionRenewal() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => cancelSubscriptionRenewal(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscription-overview'] }),
+  })
+}
+
+export function useResumeSubscriptionRenewal() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => resumeSubscriptionRenewal(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscription-overview'] }),
   })
 }
 

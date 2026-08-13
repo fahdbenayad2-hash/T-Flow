@@ -8,6 +8,7 @@ import {
   type DatabaseOrderRow,
 } from '~/lib/order-record'
 import { getSupabaseAdminClient } from '~/utils/supabase-server'
+import { assertStoreOrderCapacity } from './subscription-policy'
 
 const DEFAULT_STORE_SLUG = process.env.DEFAULT_STORE_SLUG || 'main'
 const PAGE_SIZE = 1000
@@ -332,6 +333,7 @@ export async function ingestNewSheetOrdersToSupabase(
   const { rows, skipped } = prepareSheetOrderRows(orders, storeId)
   const existingIds = await loadExistingSourceOrderIds(supabase, storeId)
   const newRows = rows.filter((row) => !existingIds.has(row.source_order_id))
+  await assertStoreOrderCapacity(supabase, storeId, newRows.length)
 
   for (const group of chunks(newRows, UPSERT_BATCH_SIZE)) {
     const { error } = await supabase.from('orders').upsert(group, {
@@ -375,6 +377,8 @@ export async function importOrdersToSupabase(
 
   try {
     const existingIds = await loadExistingSourceOrderIds(supabase, storeId)
+    const insertedCount = rows.filter((row) => !existingIds.has(row.source_order_id)).length
+    await assertStoreOrderCapacity(supabase, storeId, insertedCount)
 
     // Sheet rows shift after deletions. Clear old pointers before assigning the
     // current snapshot so the partial unique index cannot conflict transiently.
