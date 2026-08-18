@@ -181,8 +181,7 @@ function HeroMark() {
       playsInline
       aria-hidden="true"
     >
-      <source src="/cheetah-run.webm" type="video/webm" />
-      <source src="/cheetah-run.mp4" type="video/mp4" />
+      <source src="/cheetah-flow.mp4" type="video/mp4" />
     </video>
   )
 }
