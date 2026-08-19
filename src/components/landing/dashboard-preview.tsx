@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react'
+import { BadgeCheck, CircleDollarSign, Clock3 } from 'lucide-react'
 
 const stats = [
-  { label: 'طلبات اليوم', value: '28', emoji: '⏱' },
-  { label: 'الإيرادات', value: '184,500 DZD', emoji: '💰' },
-  { label: 'معدل التأكيد', value: '86%', emoji: '✔' },
+  { label: 'طلبات اليوم', value: '28', icon: Clock3 },
+  { label: 'الإيرادات', value: '184,500 DZD', icon: CircleDollarSign },
+  { label: 'معدل التأكيد', value: '86%', icon: BadgeCheck },
 ]
 
 const recentOrders = [
@@ -84,7 +85,9 @@ export function DashboardPreview() {
           <div className="lp-kpis">
             {stats.map((s) => (
               <div key={s.label} className="lp-kpi">
-                <div className="lp-kpi-ic">{s.emoji}</div>
+                <div className="lp-kpi-ic">
+                  <s.icon aria-hidden="true" />
+                </div>
                 <div>
                   <b>{s.value}</b>
                   <span>{s.label}</span>

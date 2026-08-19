@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { Link } from '@tanstack/react-router'
-import { PageLoader } from '~/components/landing/page-loader'
 import { Hero } from '~/components/landing/hero'
 import { Marquee } from '~/components/landing/marquee'
 import { FeatureList } from '~/components/landing/feature-list'
@@ -8,6 +7,7 @@ import { HowItWorks } from '~/components/landing/how-it-works'
 import { Specs } from '~/components/landing/specs'
 import { Cta } from '~/components/landing/cta'
 import { Pricing } from '~/components/landing/pricing'
+import { Faq } from '~/components/landing/faq'
 
 function RaceBar() {
   useEffect(() => {
@@ -51,11 +51,16 @@ function Header() {
           <a href="#features">المميزات</a>
           <a href="#how">كيف يعمل</a>
           <a href="#pricing">الباقات</a>
-          <a href="#specs">المواصفات</a>
+          <a href="#faq">الأسئلة</a>
         </div>
-        <Link to="/auth" className="lp-btn lp-btn-primary">
-          تسجيل الدخول
-        </Link>
+        <div className="lp-nav-actions">
+          <Link to="/auth" className="lp-nav-login">
+            دخول
+          </Link>
+          <Link to="/auth" className="lp-btn lp-btn-primary">
+            ابدأ مجاناً <span aria-hidden="true">←</span>
+          </Link>
+        </div>
       </div>
     </header>
   )
@@ -83,10 +88,9 @@ export function LandingPage() {
   // theme toggle — it's a marketing surface, not a themed app view. Do not wire
   // this to the theme context.
   return (
-    <div style={{ background: 'var(--color-ink)', minHeight: '100vh', color: '#fff' }}>
+    <div className="lp-site-pro">
       <RaceBar />
       <div id="lp-grain" />
-      <PageLoader />
       <Header />
       <main>
         <Hero />
@@ -94,6 +98,7 @@ export function LandingPage() {
         <FeatureList />
         <HowItWorks />
         <Pricing />
+        <Faq />
         <Specs />
         <Cta />
       </main>
