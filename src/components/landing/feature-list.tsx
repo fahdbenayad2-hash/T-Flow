@@ -42,7 +42,7 @@ export function FeatureList() {
           <p>نفس ترتيب القائمة الجانبية لديك — من أول ما يدخل الطلب، إلى آخر خطوة في التسليم.</p>
         </div>
 
-        <div className="lp-feature-grid">
+        <div>
           {FEATURES.map((f) => (
             <div key={f.num} className="lp-feature-row">
               <div className="lp-feature-num">
@@ -53,9 +53,7 @@ export function FeatureList() {
                 <h3>{f.title}</h3>
                 <p>{f.desc}</p>
               </div>
-              <div className="lp-feature-arrow" aria-hidden="true">
-                ↙
-              </div>
+              <div className="lp-feature-arrow">←</div>
             </div>
           ))}
         </div>

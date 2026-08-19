@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from '@tanstack/react-router'
+import { PageLoader } from '~/components/landing/page-loader'
 import { Hero } from '~/components/landing/hero'
 import { Marquee } from '~/components/landing/marquee'
 import { FeatureList } from '~/components/landing/feature-list'
@@ -50,15 +51,11 @@ function Header() {
           <a href="#features">المميزات</a>
           <a href="#how">كيف يعمل</a>
           <a href="#pricing">الباقات</a>
+          <a href="#specs">المواصفات</a>
         </div>
-        <div className="lp-nav-actions">
-          <Link to="/auth" className="lp-nav-login">
-            دخول
-          </Link>
-          <Link to="/auth" className="lp-btn lp-btn-primary">
-            افتح حسابك <span aria-hidden="true">←</span>
-          </Link>
-        </div>
+        <Link to="/auth" className="lp-btn lp-btn-primary">
+          تسجيل الدخول
+        </Link>
       </div>
     </header>
   )
@@ -82,10 +79,14 @@ function Footer() {
 }
 
 export function LandingPage() {
+  // Landing page is intentionally always-dark regardless of the app's light/dark
+  // theme toggle — it's a marketing surface, not a themed app view. Do not wire
+  // this to the theme context.
   return (
-    <div className="lp-site">
+    <div style={{ background: 'var(--color-ink)', minHeight: '100vh', color: '#fff' }}>
       <RaceBar />
       <div id="lp-grain" />
+      <PageLoader />
       <Header />
       <main>
         <Hero />
